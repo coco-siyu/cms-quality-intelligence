@@ -1,0 +1,38 @@
+[project]
+name = "cms-quality-intelligence-backend"
+version = "0.1.0"
+description = "FastAPI backend for CMS Quality Intelligence"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.123.0,<1.0.0",
+    "pydantic>=2.12.0,<3.0.0",
+    "uvicorn[standard]>=0.38.0,<1.0.0",
+]
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28.0,<1.0.0",
+    "openapi-spec-validator>=0.7.2,<1.0.0",
+    "pytest>=9.0.0,<10.0.0",
+    "pyyaml>=6.0.0,<7.0.0",
+    "ruff>=0.14.0,<1.0.0",
+]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
