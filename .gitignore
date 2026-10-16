@@ -21,4 +21,3 @@ backend/.coverage
 backend/htmlcov/
 __pycache__/
 *.py[cod]
-

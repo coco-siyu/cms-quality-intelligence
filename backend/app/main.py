@@ -19,4 +19,3 @@ app = FastAPI(
 async def health() -> HealthResponse:
     """Report whether the API process is available."""
     return HealthResponse(status="ok")
-
