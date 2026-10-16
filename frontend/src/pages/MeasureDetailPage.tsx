@@ -17,6 +17,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs"
 import { comparisonStatus, parseDemoFilters } from "../features/measures/demo/filters";
 import { useDemoMeasure, useDemoMeasureList } from "../features/measures/demo/queries";
 import type { DemoMeasure, DemoSpecField } from "../features/measures/demo/types";
+import { getDataMode } from "../features/measures/dataMode";
+import { ApiMeasureDetailPage } from "./ApiMeasureDetailPage";
 
 function DiffText({ field, year }: { field: DemoSpecField; year: number }) {
   const text = year === 2025 ? field.before : field.after;
@@ -94,7 +96,7 @@ function Comparison({ measure, from, to }: { measure: DemoMeasure; from: string;
   );
 }
 
-export function MeasureDetailPage() {
+function DemoMeasureDetailPage() {
   const params = useParams({ strict: false });
   const rawSearch = useSearch({ strict: false });
   const filters = parseDemoFilters(rawSearch);
@@ -394,4 +396,8 @@ export function MeasureDetailPage() {
       </Tabs>
     </>
   );
+}
+
+export function MeasureDetailPage() {
+  return getDataMode() === "demo" ? <DemoMeasureDetailPage /> : <ApiMeasureDetailPage />;
 }

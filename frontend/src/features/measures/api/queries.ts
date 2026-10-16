@@ -1,0 +1,29 @@
+import { useQuery } from "@tanstack/react-query";
+
+import type { DemoFilters } from "../demo/types";
+import { filtersToApiParameters } from "./adapters";
+import { measureApi } from "./client";
+
+export function useApiMeasureList(filters: DemoFilters) {
+  const parameters = filtersToApiParameters(filters);
+  return useQuery({
+    queryKey: ["public-measures", parameters],
+    queryFn: ({ signal }) => measureApi.list(parameters, signal),
+  });
+}
+
+export function useApiMeasure(measureId: string, filters: DemoFilters) {
+  return useQuery({
+    queryKey: ["public-measure", measureId, filters.from, filters.to],
+    queryFn: ({ signal }) =>
+      measureApi.get(measureId, Number(filters.from), Number(filters.to), signal),
+    enabled: Boolean(measureId),
+  });
+}
+
+export function usePerformanceYears() {
+  return useQuery({
+    queryKey: ["performance-years"],
+    queryFn: ({ signal }) => measureApi.performanceYears(signal),
+  });
+}

@@ -2,7 +2,7 @@ import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { ArrowRight, Newspaper, Rows3 } from "lucide-react";
 
 import { ChangeLedger } from "../components/cms/ChangeLedger";
-import { LoadingState } from "../components/cms/shared";
+import { DemoBadge, LoadingState } from "../components/cms/shared";
 import { parseDemoFilters } from "../features/measures/demo/filters";
 import { useDemoMeasureList } from "../features/measures/demo/queries";
 
@@ -33,7 +33,10 @@ export function DashboardPage() {
   return (
     <>
       <header className="dashboard-header">
-        <h1>CMS Quality Intelligence</h1>
+        <div className="route-title-row">
+          <h1>CMS Quality Intelligence</h1>
+          <DemoBadge />
+        </div>
         <p>Track, understand, and act on CMS quality measure changes.</p>
       </header>
 

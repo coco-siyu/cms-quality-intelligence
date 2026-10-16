@@ -69,6 +69,27 @@ export function LoadingState({ label }: { label: string }) {
   );
 }
 
+export function ErrorState({
+  message,
+  onRetry,
+}: {
+  message: string;
+  onRetry?: () => void;
+}) {
+  return (
+    <div className="empty-state api-error-state" role="alert">
+      <h2>Data unavailable</h2>
+      <p>{message}</p>
+      <p className="quiet-label">No fictional records were substituted for this API failure.</p>
+      {onRetry && (
+        <Button variant="outline" onClick={onRetry}>
+          Try again
+        </Button>
+      )}
+    </div>
+  );
+}
+
 export function TextButton(props: React.ComponentProps<typeof Button>) {
   return <Button variant="link" {...props} />;
 }

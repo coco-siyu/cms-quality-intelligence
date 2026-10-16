@@ -12,11 +12,13 @@ export function MeasureTable({
   measures,
   total,
   onFiltersChange,
+  dataMode = "demo",
 }: {
   filters: DemoFilters;
   measures: DemoMeasure[];
   total: number;
   onFiltersChange: (values: Partial<DemoFilters>) => void;
+  dataMode?: "api" | "demo";
 }) {
   const options = (values: string[], first = "All") => [
     { value: "all", label: first },
@@ -33,7 +35,7 @@ export function MeasureTable({
           <SectionTitle>Measure directory</SectionTitle>
         </div>
         <span className="quiet-label" aria-live="polite">
-          Showing {measures.length} of {total} fictional measures
+          Showing {measures.length} of {total} {dataMode === "demo" ? "fictional " : ""}measures
         </span>
       </div>
 
@@ -53,7 +55,13 @@ export function MeasureTable({
           value={filters.status}
           options={[
             { value: "all", label: "All" },
-            ...["added", "removed", "modified", "unchanged"].map((value) => ({
+            ...[
+              "added",
+              "removed",
+              "modified",
+              "unchanged",
+              ...(dataMode === "api" ? ["unknown"] : []),
+            ].map((value) => ({
               value,
               label: value.charAt(0).toUpperCase() + value.slice(1),
             })),
@@ -74,13 +82,14 @@ export function MeasureTable({
           label="Field"
           value={filters.field}
           options={options([
+            "Definition",
             "Numerator",
             "Denominator",
             "Exclusions",
             "Eligibility",
             "Calculation logic",
             "Measure set",
-            "No change",
+            ...(dataMode === "demo" ? ["No change"] : []),
           ])}
           onChange={(field) => onFiltersChange({ field })}
         />
@@ -136,7 +145,9 @@ export function MeasureTable({
                 <td>
                   {measure.field}
                   {measure.unavailable && (
-                    <span className="unavailable-label">Unavailable in fictional source</span>
+                    <span className="unavailable-label">
+                      Unavailable in {dataMode === "demo" ? "fictional " : "approved "}source
+                    </span>
                   )}
                 </td>
                 <td>
@@ -166,7 +177,7 @@ export function MeasureTable({
 
       {measures.length === 0 && (
         <div className="empty-state">
-          <h3>No fictional measures match these filters.</h3>
+          <h3>No {dataMode === "demo" ? "fictional " : ""}measures match these filters.</h3>
           <Button variant="link" onClick={clearFilters}>
             Clear filters
           </Button>

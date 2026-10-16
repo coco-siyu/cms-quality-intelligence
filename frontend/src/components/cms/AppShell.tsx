@@ -16,6 +16,7 @@ import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { FICTIONAL_DATA_NOTICE } from "../../features/measures/demo/fixtures";
 import { parseDemoFilters } from "../../features/measures/demo/filters";
+import { getDataMode } from "../../features/measures/dataMode";
 import { FilterSelect } from "./shared";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -24,6 +25,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const search = useSearch({ strict: false });
   const filters = parseDemoFilters(search);
   const path = useRouterState({ select: (state) => state.location.pathname });
+  const dataMode = getDataMode();
 
   function updateComparison(values: Partial<typeof filters>) {
     const nextSearch = { ...filters, ...values };
@@ -158,7 +160,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <Input
               type="search"
               aria-label="Search measures by ID, name, or description"
-              placeholder="Search fictional measures or IDs"
+              placeholder={`Search ${dataMode === "demo" ? "fictional " : ""}measures or IDs`}
               value={filters.q}
               onChange={(event) => searchMeasures(event.target.value)}
             />
@@ -179,13 +181,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               onChange={(to) => updateComparison({ to })}
             />
           </div>
-          <span className="demo-mode">Prototype mode</span>
+          <span className="demo-mode">
+            {dataMode === "demo" ? "Prototype mode" : "API mode · M2 views demo"}
+          </span>
         </div>
 
         <div className="page-sheet">
           {children}
           <footer className="sheet-footer">
-            <span>{FICTIONAL_DATA_NOTICE}</span>
+            <span>
+              {dataMode === "demo"
+                ? FICTIONAL_DATA_NOTICE
+                : "Public API mode. Confirm freshness and source evidence before operational use."}
+            </span>
             <a
               href="https://www.cms.gov/medicare/payment/fee-for-service-providers/shared-savings-program-ssp-acos"
               target="_blank"

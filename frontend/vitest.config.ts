@@ -5,6 +5,7 @@ export default defineConfig({
   plugins: [react()],
   test: {
     environment: "jsdom",
+    env: { VITE_DATA_MODE: "demo" },
     globals: true,
     setupFiles: ["./src/test/setup.ts"],
   },
