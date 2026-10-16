@@ -5,6 +5,7 @@ import {
   comparisonStatus,
   defaultDemoFilters,
   filterDemoMeasures,
+  parseDemoFilters,
 } from "../features/measures/demo/filters";
 
 describe("fictional measure adapter", () => {
@@ -45,5 +46,13 @@ describe("fictional measure adapter", () => {
     expect(
       comparisonStatus(measure, { ...defaultDemoFilters, from: "2026", to: "2025" }),
     ).toBe("removed");
+  });
+
+  it("normalizes numeric search values from direct browser URLs", () => {
+    expect(parseDemoFilters({ from: 2026, to: 2025, year: 2026 })).toMatchObject({
+      from: "2026",
+      to: "2025",
+      year: "2026",
+    });
   });
 });

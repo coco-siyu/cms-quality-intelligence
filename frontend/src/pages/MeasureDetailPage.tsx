@@ -136,7 +136,7 @@ export function MeasureDetailPage() {
             Dashboard
           </Link>
           <ChevronRight size={12} />
-          <Link to="/" search={filters} hash="measures">
+          <Link to="/measures" search={filters}>
             Measures
           </Link>
           <ChevronRight size={12} />

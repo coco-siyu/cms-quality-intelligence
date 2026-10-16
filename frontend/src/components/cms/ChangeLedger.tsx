@@ -83,7 +83,8 @@ export function ChangeLedger({
               key={status}
               variant="ghost"
               aria-pressed={selected}
-              onClick={() => onStatus(selected && status !== "all" ? "all" : status)}
+              aria-label={`View ${status === "all" ? "all" : status} measures in Measure Explorer`}
+              onClick={() => onStatus(status)}
               className={`summary-metric ${
                 status === "all" ? "status-total" : `status-${status}`
               } ${selected ? "selected" : ""}`}

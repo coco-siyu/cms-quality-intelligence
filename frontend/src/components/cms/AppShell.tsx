@@ -25,13 +25,36 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const filters = parseDemoFilters(search);
   const path = useRouterState({ select: (state) => state.location.pathname });
 
-  function update(values: Partial<typeof filters>) {
+  function updateComparison(values: Partial<typeof filters>) {
+    const nextSearch = { ...filters, ...values };
+
+    if (path === "/") {
+      void navigate({ to: "/", search: nextSearch, replace: true });
+    } else if (path === "/measures") {
+      void navigate({ to: "/measures", search: nextSearch, replace: true });
+    } else if (path === "/whats-new") {
+      void navigate({ to: "/whats-new", search: nextSearch, replace: true });
+    } else if (path.startsWith("/measures/")) {
+      void navigate({
+        to: "/measures/$measureId",
+        params: { measureId: decodeURIComponent(path.slice("/measures/".length)) },
+        search: nextSearch,
+        replace: true,
+      });
+    }
+  }
+
+  function searchMeasures(q: string) {
     void navigate({
-      to: "/",
-      search: { ...filters, ...values },
-      replace: path === "/",
+      to: "/measures",
+      search: { ...filters, q },
+      replace: path === "/measures",
     });
   }
+
+  const dashboardActive = path === "/";
+  const measuresActive = path === "/measures" || path.startsWith("/measures/");
+  const whatsNewActive = path === "/whats-new";
 
   const years = [
     { value: "2025", label: "PY2025" },
@@ -69,10 +92,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <Button
             asChild
             variant="ghost"
-            className={`sidebar-link ${path === "/" ? "active" : ""}`}
+            className={`sidebar-link ${dashboardActive ? "active" : ""}`}
             title="Dashboard"
           >
-            <Link to="/" search={filters}>
+            <Link to="/" search={filters} aria-current={dashboardActive ? "page" : undefined}>
               <LayoutDashboard />
               <span>Dashboard</span>
             </Link>
@@ -80,16 +103,29 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <Button
             asChild
             variant="ghost"
-            className={`sidebar-link ${path !== "/" ? "active" : ""}`}
+            className={`sidebar-link ${measuresActive ? "active" : ""}`}
             title="Measure Explorer"
           >
-            <Link to="/" search={filters} hash="measures">
+            <Link
+              to="/measures"
+              search={filters}
+              aria-current={measuresActive ? "page" : undefined}
+            >
               <ListFilter />
               <span>Measure Explorer</span>
             </Link>
           </Button>
-          <Button asChild variant="ghost" className="sidebar-link" title="What's new">
-            <Link to="/" search={filters} hash="whats-new">
+          <Button
+            asChild
+            variant="ghost"
+            className={`sidebar-link ${whatsNewActive ? "active" : ""}`}
+            title="What's new"
+          >
+            <Link
+              to="/whats-new"
+              search={filters}
+              aria-current={whatsNewActive ? "page" : undefined}
+            >
               <Newspaper />
               <span>What&apos;s New</span>
             </Link>
@@ -121,10 +157,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <Search size={16} />
             <Input
               type="search"
-              aria-label="Search all measure attributes"
+              aria-label="Search measures by ID, name, or description"
               placeholder="Search fictional measures or IDs"
               value={filters.q}
-              onChange={(event) => update({ q: event.target.value })}
+              onChange={(event) => searchMeasures(event.target.value)}
             />
           </div>
           <div className="compare-control">
@@ -133,14 +169,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               label="Baseline year"
               value={filters.from}
               options={years}
-              onChange={(from) => update({ from })}
+              onChange={(from) => updateComparison({ from })}
             />
             <ArrowRight size={14} />
             <FilterSelect
               label="Comparison year"
               value={filters.to}
               options={years}
-              onChange={(to) => update({ to })}
+              onChange={(to) => updateComparison({ to })}
             />
           </div>
           <span className="demo-mode">Prototype mode</span>

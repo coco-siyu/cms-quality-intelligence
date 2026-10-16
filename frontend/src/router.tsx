@@ -9,7 +9,9 @@ import {
 import { AppShell } from "./components/cms/AppShell";
 import { parseDemoFilters } from "./features/measures/demo/filters";
 import { DashboardPage } from "./pages/DashboardPage";
+import { MeasureExplorerPage } from "./pages/MeasureExplorerPage";
 import { MeasureDetailPage } from "./pages/MeasureDetailPage";
+import { WhatsNewPage } from "./pages/WhatsNewPage";
 
 const rootRoute = createRootRoute({
   component: () => (
@@ -32,6 +34,13 @@ const indexRoute = createRoute({
   component: DashboardPage,
 });
 
+const measureExplorerRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/measures",
+  validateSearch: parseDemoFilters,
+  component: MeasureExplorerPage,
+});
+
 const measureDetailRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/measures/$measureId",
@@ -39,7 +48,19 @@ const measureDetailRoute = createRoute({
   component: MeasureDetailPage,
 });
 
-const routeTree = rootRoute.addChildren([indexRoute, measureDetailRoute]);
+const whatsNewRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/whats-new",
+  validateSearch: parseDemoFilters,
+  component: WhatsNewPage,
+});
+
+const routeTree = rootRoute.addChildren([
+  indexRoute,
+  measureExplorerRoute,
+  measureDetailRoute,
+  whatsNewRoute,
+]);
 
 export function createAppRouter(history?: RouterHistory) {
   return createRouter({ routeTree, ...(history ? { history } : {}) });

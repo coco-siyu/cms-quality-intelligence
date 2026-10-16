@@ -36,8 +36,10 @@ The development server defaults to `http://localhost:5173`.
 
 The current prototype routes are:
 
-- `/` — dashboard, change ledger, news, search, and measure filters
+- `/` — introduction, comparison ledger, and linked summary metrics
+- `/measures` — searchable and filterable fictional measure directory
 - `/measures/:measureId` — comparison, evidence, overview, AI-impact, and review-history tabs
+- `/whats-new` — dedicated fictional update feed
 
 Frontend checks:
 

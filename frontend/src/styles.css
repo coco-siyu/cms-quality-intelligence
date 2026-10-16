@@ -368,6 +368,35 @@ h3 {
   line-height: 1.55;
 }
 
+.route-page-header {
+  max-width: 760px;
+}
+
+.route-kicker {
+  display: block;
+  margin-bottom: 10px;
+  color: var(--muted-foreground);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.route-page-header > p {
+  max-width: 680px;
+  margin-top: 16px;
+  color: var(--secondary-foreground);
+  font-size: 16px;
+  line-height: 1.65;
+}
+
+.route-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+}
+
 .section-title {
   display: flex;
   flex-wrap: wrap;
@@ -584,32 +613,81 @@ h3 {
   font-weight: 500;
 }
 
-.news-section,
 .measures-section {
   margin-top: 64px;
-  scroll-margin-top: 24px;
 }
 
-.news-grid {
+.route-section {
+  margin-top: 48px;
+}
+
+.dashboard-next {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 32px;
-  margin-top: 24px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+  margin-top: 64px;
 }
 
-.news-item {
+.dashboard-next a {
   display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding-top: 16px;
+  min-width: 0;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 0;
   border-top: 1px solid var(--foreground);
 }
 
-.news-status {
+.dashboard-next a > svg:first-child {
+  color: var(--primary);
+}
+
+.dashboard-next a > svg:last-child {
+  margin-left: auto;
+  transition: transform 0.2s ease;
+}
+
+.dashboard-next a:hover > svg:last-child {
+  transform: translateX(3px);
+}
+
+.dashboard-next a > span {
   display: flex;
-  min-height: 18px;
-  flex-wrap: wrap;
-  align-items: center;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.dashboard-next small {
+  color: var(--muted-foreground);
+  font-size: 12px;
+}
+
+.dashboard-next strong {
+  overflow: hidden;
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 400;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.editorial-feed {
+  margin-top: 48px;
+  border-bottom: 1px solid var(--border);
+}
+
+.editorial-update {
+  display: grid;
+  grid-template-columns: 190px minmax(0, 1fr);
+  gap: 48px;
+  padding: 30px 0 34px;
+  border-top: 1px solid var(--foreground);
+}
+
+.update-rail {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
   gap: 12px;
 }
 
@@ -619,32 +697,60 @@ h3 {
   font-weight: 600;
 }
 
-.news-item > p {
-  color: var(--secondary-foreground);
-  font-size: 14px;
-  line-height: 1.6;
+.update-rail .warning-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
 }
 
-.news-dates {
-  display: flex;
-  gap: 24px;
-  margin-top: auto;
-  padding-top: 4px;
+.update-rail dl {
+  display: grid;
+  gap: 12px;
+  margin: 10px 0 0;
 }
 
-.news-dates > div {
-  display: flex;
-  flex-direction: column;
+.update-rail dl > div {
+  display: grid;
   gap: 2px;
 }
 
-.news-dates span {
+.update-rail dt {
   color: var(--muted-foreground);
+  font-size: 11px;
+}
+
+.update-rail dd {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.update-story {
+  max-width: 720px;
+}
+
+.update-measure-id {
+  color: var(--primary);
+  font-family: var(--font-mono);
   font-size: 12px;
 }
 
-.news-dates strong {
-  font-size: 13px;
+.update-story h2 {
+  margin-top: 8px;
+  font-size: 28px;
+}
+
+.update-story > p {
+  max-width: 620px;
+  margin-top: 12px;
+  color: var(--secondary-foreground);
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.update-story .measure-link {
+  margin-top: 18px;
 }
 
 .measure-link {
@@ -1419,8 +1525,9 @@ h3 {
     font-size: 44px;
   }
 
-  .news-grid {
-    grid-template-columns: 1fr;
+  .editorial-update {
+    grid-template-columns: 160px minmax(0, 1fr);
+    gap: 32px;
   }
 
   .summary-metrics {
@@ -1520,9 +1627,41 @@ h3 {
     font-size: 38px;
   }
 
-  .news-section,
   .measures-section {
     margin-top: 44px;
+  }
+
+  .route-section {
+    margin-top: 36px;
+  }
+
+  .dashboard-next {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    margin-top: 48px;
+  }
+
+  .dashboard-next strong {
+    white-space: normal;
+  }
+
+  .editorial-feed {
+    margin-top: 36px;
+  }
+
+  .editorial-update {
+    grid-template-columns: 1fr;
+    gap: 20px;
+    padding: 24px 0 28px;
+  }
+
+  .update-rail dl {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .update-story h2 {
+    font-size: 24px;
   }
 
   .table-search {

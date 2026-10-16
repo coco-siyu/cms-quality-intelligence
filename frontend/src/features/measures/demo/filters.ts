@@ -13,8 +13,12 @@ export const defaultDemoFilters: DemoFilters = {
 const allowedYears = new Set(["2025", "2026"]);
 
 export function parseDemoFilters(value: Record<string, unknown>): DemoFilters {
-  const stringValue = (key: keyof DemoFilters, fallback: string) =>
-    typeof value[key] === "string" ? value[key] : fallback;
+  const stringValue = (key: keyof DemoFilters, fallback: string) => {
+    const candidate = value[key];
+    return typeof candidate === "string" || typeof candidate === "number"
+      ? String(candidate)
+      : fallback;
+  };
 
   const from = stringValue("from", defaultDemoFilters.from);
   const to = stringValue("to", defaultDemoFilters.to);
