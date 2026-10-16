@@ -14,6 +14,7 @@ from app.repositories.measures import (
     list_performance_years,
 )
 from app.schemas import (
+    ApiError,
     MeasureVersionList,
     PerformanceYearList,
     PublicMeasureDetail,
@@ -23,6 +24,19 @@ from app.schemas import (
 router = APIRouter(prefix="/api", tags=["Public measures"])
 DatabaseSession = Annotated[Session, Depends(get_db)]
 ApplicationSettings = Annotated[Settings, Depends(get_settings)]
+validation_response = {
+    422: {
+        "model": ApiError,
+        "description": "One or more request parameters are invalid.",
+    }
+}
+resource_responses = {
+    404: {
+        "model": ApiError,
+        "description": "The requested public resource was not found.",
+    },
+    **validation_response,
+}
 
 
 def _not_found(measure_id: str) -> HTTPException:
@@ -57,7 +71,12 @@ def performance_years(
     )
 
 
-@router.get("/measures", response_model=PublicMeasurePage, operation_id="listMeasures")
+@router.get(
+    "/measures",
+    response_model=PublicMeasurePage,
+    operation_id="listMeasures",
+    responses=validation_response,
+)
 def measures(
     session: DatabaseSession,
     q: Annotated[str | None, Query(max_length=200)] = None,
@@ -90,6 +109,7 @@ def measures(
     "/measures/{measure_id}",
     response_model=PublicMeasureDetail,
     operation_id="getMeasure",
+    responses=resource_responses,
 )
 def measure_detail(
     session: DatabaseSession,
@@ -107,6 +127,7 @@ def measure_detail(
     "/measures/{measure_id}/versions",
     response_model=MeasureVersionList,
     operation_id="listMeasureVersions",
+    responses=resource_responses,
 )
 def measure_versions(
     session: DatabaseSession,

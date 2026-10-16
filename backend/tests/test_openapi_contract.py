@@ -3,9 +3,34 @@ from pathlib import Path
 import yaml
 from openapi_spec_validator import validate
 
+from app.main import app
+
 
 def test_root_openapi_contract_is_valid() -> None:
     contract_path = Path(__file__).parents[2] / "openapi.yaml"
     contract = yaml.safe_load(contract_path.read_text(encoding="utf-8"))
 
     validate(contract)
+
+
+def test_runtime_openapi_exposes_contract_operation_ids_and_error_models() -> None:
+    schema = app.openapi()
+    operations = {
+        "/health": "getHealth",
+        "/api/performance-years": "listPerformanceYears",
+        "/api/measures": "listMeasures",
+        "/api/measures/{measure_id}": "getMeasure",
+        "/api/measures/{measure_id}/versions": "listMeasureVersions",
+    }
+
+    for path, operation_id in operations.items():
+        assert schema["paths"][path]["get"]["operationId"] == operation_id
+
+    list_responses = schema["paths"]["/api/measures"]["get"]["responses"]
+    detail_responses = schema["paths"]["/api/measures/{measure_id}"]["get"]["responses"]
+    assert list_responses["422"]["content"]["application/json"]["schema"]["$ref"].endswith(
+        "/ApiError"
+    )
+    assert detail_responses["404"]["content"]["application/json"]["schema"]["$ref"].endswith(
+        "/ApiError"
+    )
