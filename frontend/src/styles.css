@@ -1,0 +1,40 @@
+:root {
+  font-family: system-ui, sans-serif;
+  color: #0f1f3d;
+  background: #edf1f8;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+.foundation-page {
+  box-sizing: border-box;
+  max-width: 52rem;
+  margin: 4rem auto;
+  padding: 3rem;
+  border-radius: 1rem;
+  background: #ffffff;
+}
+
+.foundation-page h1 {
+  margin: 0.5rem 0 1rem;
+}
+
+.foundation-page p {
+  line-height: 1.6;
+}
+
+.eyebrow {
+  margin: 0;
+  color: #2563eb;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
