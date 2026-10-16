@@ -1,5 +1,19 @@
 # CMS Quality Intelligence — Implementation Backlog
 
+## Checkpoint status (October 16, 2026)
+
+- Tasks 1, 2, and 5–9: implemented and verified through Checkpoints A, B, and C1.
+- Tasks 14–16, 18, 19, and 21: C1 implementation is present against synthetic
+  contract fixtures, including public/private isolation and explicit
+  unavailable/unresolved states.
+- Tasks 10–13, 17, 20, and 22: not complete. Authoritative 2025–2026 CMS source
+  inventory, reconciliation, verified seeds, and full end-to-end M1 validation
+  remain required before the Measure Explorer can be described as complete;
+  dynamic year options and server-paginated Previous/Next also remain open.
+- Tasks 23 onward: not started. The dashboard change ledger, What's New feed,
+  comparison highlighting, and AI Impact content remain visibly fictional
+  prototypes and are not production-backed.
+
 This backlog implements the scoped 2025–2026 MSSP / APP Plus MVP in independent, one-session work items. Tasks are ordered for incremental delivery (M1–M4), but each description provides enough context for an assignee to begin without reading preceding tasks. Keep all official CMS facts source-backed, treat unverified extractions as drafts, and do not use patient-level data. **This document is planning only; no implementation code is included.**
 
 ## M1 — Foundation and Measure Explorer

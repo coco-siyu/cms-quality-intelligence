@@ -32,7 +32,7 @@ export function MeasureTable({
     <section className="measures-section route-section" aria-labelledby="measure-directory-title">
       <div className="section-heading-row">
         <div id="measure-directory-title">
-          <SectionTitle>Measure directory</SectionTitle>
+          <SectionTitle demo={dataMode === "demo"}>Measure directory</SectionTitle>
         </div>
         <span className="quiet-label" aria-live="polite">
           Showing {measures.length} of {total} {dataMode === "demo" ? "fictional " : ""}measures

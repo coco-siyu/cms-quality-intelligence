@@ -9,7 +9,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.domain import AffectedField, FieldAvailability
-from app.models import Measure, MeasureVersion, SpecificationField
+from app.models import Measure, MeasureVersion, SourceDocument, SourceRevision, SpecificationField
 
 
 def test_unavailable_field_cannot_carry_a_value(session: Session) -> None:
@@ -40,6 +40,54 @@ def test_unavailable_field_cannot_carry_a_value(session: Session) -> None:
 
     with pytest.raises(IntegrityError):
         session.commit()
+
+
+def test_historical_measure_versions_and_source_revisions_are_retained(session: Session) -> None:
+    checked_at = datetime(2026, 10, 1, 12, tzinfo=UTC)
+    document = SourceDocument(
+        source_id="DEMO-HISTORY-SOURCE",
+        title="Fictional revision history source",
+        official_url="https://example.invalid/history-source",
+        mime_type="text/html",
+        revisions=[
+            SourceRevision(
+                revision_id="DEMO-HISTORY-R1",
+                revision_number=1,
+                content_hash="history-hash-1",
+                retrieved_at=checked_at,
+                last_source_check_at=checked_at,
+            ),
+            SourceRevision(
+                revision_id="DEMO-HISTORY-R2",
+                revision_number=2,
+                content_hash="history-hash-2",
+                retrieved_at=checked_at,
+                last_source_check_at=checked_at,
+            ),
+        ],
+    )
+    measure = Measure(
+        measure_id="DEMO-HISTORY",
+        name="Version history test",
+        description="Synthetic history record.",
+        is_public=False,
+        versions=[
+            MeasureVersion(
+                version_id=f"DEMO-HISTORY-V{version_number}",
+                program="Fictional Quality Program",
+                performance_year=2026,
+                version_number=version_number,
+                is_program_member=True,
+                last_source_check_at=checked_at,
+            )
+            for version_number in (1, 2)
+        ],
+    )
+    session.add_all([document, measure])
+    session.commit()
+
+    assert [revision.revision_number for revision in document.revisions] == [1, 2]
+    assert [version.version_number for version in measure.versions] == [1, 2]
 
 
 def test_initial_migration_builds_and_reverts_schema(
