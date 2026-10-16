@@ -3,24 +3,49 @@ import {
   createRootRoute,
   createRoute,
   createRouter,
+  type RouterHistory,
 } from "@tanstack/react-router";
 
-import { FoundationPage } from "./app/FoundationPage";
+import { AppShell } from "./components/cms/AppShell";
+import { parseDemoFilters } from "./features/measures/demo/filters";
+import { DashboardPage } from "./pages/DashboardPage";
+import { MeasureDetailPage } from "./pages/MeasureDetailPage";
 
 const rootRoute = createRootRoute({
-  component: () => <Outlet />,
-  notFoundComponent: () => <p>Page not found.</p>,
+  component: () => (
+    <AppShell>
+      <Outlet />
+    </AppShell>
+  ),
+  notFoundComponent: () => (
+    <div className="empty-state">
+      <h1>Page not found</h1>
+      <p>The requested prototype page does not exist.</p>
+    </div>
+  ),
 });
 
 const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/",
-  component: FoundationPage,
+  validateSearch: parseDemoFilters,
+  component: DashboardPage,
 });
 
-const routeTree = rootRoute.addChildren([indexRoute]);
+const measureDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/measures/$measureId",
+  validateSearch: parseDemoFilters,
+  component: MeasureDetailPage,
+});
 
-export const router = createRouter({ routeTree });
+const routeTree = rootRoute.addChildren([indexRoute, measureDetailRoute]);
+
+export function createAppRouter(history?: RouterHistory) {
+  return createRouter({ routeTree, ...(history ? { history } : {}) });
+}
+
+export const router = createAppRouter();
 
 declare module "@tanstack/react-router" {
   interface Register {
