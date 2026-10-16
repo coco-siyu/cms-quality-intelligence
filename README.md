@@ -15,9 +15,14 @@ The application is being built as a small modular monolith:
 ## Current status
 
 Checkpoint A provides runnable frontend and backend foundations, smoke tests,
-and an initial read-only M1 API contract. CMS records shown in future prototype
-fixtures must be explicitly fictional and must never be represented as verified
-production data.
+and an initial read-only M1 API contract. Checkpoint B adds the Lovable-derived
+dashboard and measure-detail experience at `/` and `/measures/:measureId`, with
+responsive editorial layouts and typed client-side interactions.
+
+Until Checkpoint C connects the frontend to the FastAPI contract, these screens
+read only from the clearly isolated `frontend/src/features/measures/demo/`
+adapter and fictional fixtures. The prototype records are not verified CMS data
+and must not be treated or seeded as production records.
 
 ## Frontend
 
@@ -28,6 +33,11 @@ npm run dev
 ```
 
 The development server defaults to `http://localhost:5173`.
+
+The current prototype routes are:
+
+- `/` — dashboard, change ledger, news, search, and measure filters
+- `/measures/:measureId` — comparison, evidence, overview, AI-impact, and review-history tabs
 
 Frontend checks:
 
