@@ -1,0 +1,133 @@
+{
+  "dataset_id": "CMS-MSSP-APPPLUS-PY2025-PY2026-R1",
+  "prepared_at": "2026-10-16",
+  "program": "Medicare Shared Savings Program — APP Plus",
+  "publication_state": "draft",
+  "is_public": false,
+  "verification_scope": "Program membership, official titles, performance-year applicability, and specification-variant locations are verified. Detailed clinical specification fields remain unresolved and non-public.",
+  "membership_evidence_sets": {
+    "2025": [
+      "CMS-APPPLUS-MEMBERSHIP-PY2025-POLICY",
+      "CMS-APPPLUS-MEMBERSHIP-PY2025-ROSTER"
+    ],
+    "2026": [
+      "CMS-APPPLUS-MEMBERSHIP-PY2026-POLICY",
+      "CMS-APPPLUS-MEMBERSHIP-PY2026-ROSTER"
+    ]
+  },
+  "measures": [
+    {
+      "measure_id": "001",
+      "name": "Diabetes: Glycemic Status Assessment Greater Than 9%",
+      "description": "Percentage of patients 18-75 years of age with diabetes who had a glycemic status assessment greater than 9.0% during the measurement period.",
+      "memberships": [2025, 2026],
+      "membership_verification_status": "verified",
+      "specification_variant_ids": [
+        "CMS-001-PY2025-ECQM",
+        "CMS-001-PY2025-MIPSCQM",
+        "CMS-001-PY2025-MEDICARECQM",
+        "CMS-001-PY2026-ECQM",
+        "CMS-001-PY2026-MIPSCQM",
+        "CMS-001-PY2026-MEDICARECQM"
+      ]
+    },
+    {
+      "measure_id": "112",
+      "name": "Breast Cancer Screening",
+      "description": "Percentage of women 40-74 years of age who had a mammogram to screen for breast cancer in the 27 months before the end of the measurement period.",
+      "memberships": [2025, 2026],
+      "membership_verification_status": "verified",
+      "specification_variant_ids": [
+        "CMS-112-PY2025-ECQM",
+        "CMS-112-PY2025-MIPSCQM",
+        "CMS-112-PY2025-MEDICARECQM",
+        "CMS-112-PY2026-ECQM",
+        "CMS-112-PY2026-MIPSCQM",
+        "CMS-112-PY2026-MEDICARECQM"
+      ]
+    },
+    {
+      "measure_id": "113",
+      "name": "Colorectal Cancer Screening",
+      "description": "Percentage of patients 45-75 years of age who had appropriate screening for colorectal cancer.",
+      "memberships": [2026],
+      "membership_verification_status": "verified",
+      "specification_variant_ids": [
+        "CMS-113-PY2026-ECQM",
+        "CMS-113-PY2026-MIPSCQM",
+        "CMS-113-PY2026-MEDICARECQM"
+      ]
+    },
+    {
+      "measure_id": "134",
+      "name": "Preventive Care and Screening: Screening for Depression and Follow-Up Plan",
+      "description": "Percentage of patients aged 12 years and older screened for depression using an age-appropriate standardized tool with a documented follow-up plan when the screen is positive.",
+      "memberships": [2025, 2026],
+      "membership_verification_status": "verified",
+      "specification_variant_ids": [
+        "CMS-134-PY2025-ECQM",
+        "CMS-134-PY2025-MIPSCQM",
+        "CMS-134-PY2025-MEDICARECQM",
+        "CMS-134-PY2026-ECQM",
+        "CMS-134-PY2026-MIPSCQM",
+        "CMS-134-PY2026-MEDICARECQM"
+      ]
+    },
+    {
+      "measure_id": "236",
+      "name": "Controlling High Blood Pressure",
+      "description": "Percentage of patients 18-85 years of age with essential hypertension whose most recent blood pressure was adequately controlled below 140/90 mmHg during the measurement period.",
+      "memberships": [2025, 2026],
+      "membership_verification_status": "verified",
+      "specification_variant_ids": [
+        "CMS-236-PY2025-ECQM",
+        "CMS-236-PY2025-MIPSCQM",
+        "CMS-236-PY2025-MEDICARECQM",
+        "CMS-236-PY2026-ECQM",
+        "CMS-236-PY2026-MIPSCQM",
+        "CMS-236-PY2026-MEDICARECQM"
+      ]
+    },
+    {
+      "measure_id": "321",
+      "name": "CAHPS for MIPS",
+      "description": "A CMS-administered survey measure of patients' experiences of care for groups and APM Entities, including Shared Savings Program ACOs.",
+      "memberships": [2025, 2026],
+      "membership_verification_status": "verified",
+      "specification_variant_ids": [
+        "CMS-321-PY2025-CAHPS",
+        "CMS-321-PY2026-CAHPS"
+      ]
+    },
+    {
+      "measure_id": "479",
+      "name": "Hospital-Wide, 30-day, All-Cause Unplanned Readmission (HWR) Rate for MIPS Eligible Clinician Groups",
+      "description": "A risk-standardized measure of unplanned readmissions within 30 days for Medicare fee-for-service beneficiaries aged 65 or older.",
+      "memberships": [2025, 2026],
+      "membership_verification_status": "verified",
+      "specification_variant_ids": [
+        "CMS-479-PY2025-ADMIN",
+        "CMS-479-PY2026-ADMIN"
+      ]
+    },
+    {
+      "measure_id": "484",
+      "name": "Clinician and Clinician Group Risk-standardized Hospital Admission Rates for Patients with Multiple Chronic Conditions",
+      "description": "A risk-standardized rate of acute, unplanned hospital admissions among Medicare fee-for-service patients aged 65 or older with multiple chronic conditions.",
+      "memberships": [2026],
+      "membership_verification_status": "verified",
+      "specification_variant_ids": [
+        "CMS-484-PY2026-ADMIN"
+      ]
+    }
+  ],
+  "unresolved_variant_candidates": [
+    {
+      "performance_year": 2025,
+      "quality_ids": ["001", "112", "134", "236"],
+      "collection_type": "Medicare Part B Claims",
+      "status": "manual_policy_confirmation_required",
+      "reason": "The PY2025 APP Quality Requirements bundle lists Medicare Part B Claims, while the final-rule phase-in table and March 2026 PY2025 quality-standard roster identify eCQM, MIPS CQM, and Medicare CQM. The claims specifications are not imported until CMS program-level applicability is reconciled."
+    }
+  ]
+}

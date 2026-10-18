@@ -2,14 +2,20 @@
 
 ## Checkpoint status (October 16, 2026)
 
-- Tasks 1, 2, and 5–9: implemented and verified through Checkpoints A, B, and C1.
+- Tasks 1, 2, 5–12: implemented and verified through Checkpoints A, B, C1,
+  C2.1, and C2.2. The official PY2025–PY2026 roster has two-source evidence,
+  exact locators, and hashed source revisions.
 - Tasks 14–16, 18, 19, and 21: C1 implementation is present against synthetic
   contract fixtures, including public/private isolation and explicit
   unavailable/unresolved states.
-- Tasks 10–13, 17, 20, and 22: not complete. Authoritative 2025–2026 CMS source
-  inventory, reconciliation, verified seeds, and full end-to-end M1 validation
-  remain required before the Measure Explorer can be described as complete;
-  dynamic year options and server-paginated Previous/Next also remain open.
+- Task 13 is partially complete: a validated, draft, non-public seed artifact now
+  contains all eight identities and 14 verified program-year memberships. Detailed
+  specification candidates now have a 352-item reviewer crosswalk, but every
+  field-level decision remains pending. The collection-variant schema decision and
+  publication approval remain open. The guarded PostgreSQL import is idempotent and
+  preserves private draft state. Tasks 17, 20, and 22 also remain open, including
+  dynamic year options, server-paginated Previous/Next, and full end-to-end M1
+  validation.
 - Tasks 23 onward: not started. The dashboard change ledger, What's New feed,
   comparison highlighting, and AI Impact content remain visibly fictional
   prototypes and are not production-backed.
