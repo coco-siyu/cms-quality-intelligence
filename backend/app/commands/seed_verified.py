@@ -12,6 +12,8 @@ from sqlalchemy.orm import Session
 from app.database import SessionLocal
 from app.domain import (
     AffectedField,
+    CandidateReviewDecision,
+    CollectionType,
     FieldAvailability,
     PublicationState,
     PublicVerificationStatus,
@@ -24,12 +26,20 @@ from app.models import (
     SourceDocument,
     SourceRevision,
     SpecificationField,
+    SpecificationFieldCandidate,
 )
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
 SEED_PATH = REPOSITORY_ROOT / "backend/app/data/cms_app_plus_2025_2026.seed.json"
 SOURCES_DIR = REPOSITORY_ROOT / "docs/sources"
 PROGRAM = "Medicare Shared Savings Program — APP Plus"
+COLLECTION_TYPES = {
+    "eCQM": CollectionType.ECQM,
+    "MIPS CQM": CollectionType.MIPS_CQM,
+    "Medicare CQM": CollectionType.MEDICARE_CQM,
+    "CAHPS for MIPS Survey": CollectionType.CAHPS_SURVEY,
+    "Administrative Claims": CollectionType.ADMINISTRATIVE_CLAIMS,
+}
 
 
 def _csv_rows(filename: str) -> list[dict[str, str]]:
@@ -49,6 +59,9 @@ def _source_revisions(session: Session) -> dict[str, SourceRevision]:
     inventory = {row["source_id"]: row for row in _csv_rows("source-inventory.csv")}
     manifests = {row["source_id"]: row for row in _csv_rows("source-revisions.csv")}
     evidence_source_ids = {row["source_id"] for row in _csv_rows("evidence-locators.csv")}
+    evidence_source_ids.update(
+        row["source_id"] for row in _csv_rows("field-review-crosswalk.csv")
+    )
     revisions: dict[str, SourceRevision] = {}
 
     for source_id in sorted(evidence_source_ids):
@@ -116,15 +129,18 @@ def _membership_evidence(
     ]
 
 
-def seed_verified_drafts(session: Session) -> tuple[int, int]:
+def seed_verified_drafts(session: Session) -> tuple[int, int, int, int]:
     seed = _load_seed()
     if seed["is_public"] is not False or seed["publication_state"] != "draft":
         raise RuntimeError("Verified seed artifact must remain draft and non-public.")
 
     source_revisions = _source_revisions(session)
     created_measures = 0
-    created_versions = 0
+    created_roster_versions = 0
+    created_variant_versions = 0
+    created_candidates = 0
     checked_at = max(revision.retrieved_at for revision in source_revisions.values())
+    measures: dict[str, Measure] = {}
 
     for record in seed["measures"]:
         measure = session.scalar(
@@ -144,6 +160,7 @@ def seed_verified_drafts(session: Session) -> tuple[int, int]:
             raise RuntimeError(
                 f"Existing measure conflicts with verified draft seed: {record['measure_id']}"
             )
+        measures[record["measure_id"]] = measure
 
         for year in record["memberships"]:
             membership = session.scalar(
@@ -174,6 +191,8 @@ def seed_verified_drafts(session: Session) -> tuple[int, int]:
                         version_id=version_id,
                         program=PROGRAM,
                         performance_year=year,
+                        collection_type=CollectionType.PROGRAM_ROSTER,
+                        specification_identifier=None,
                         version_number=1,
                         is_program_member=True,
                         publication_state=PublicationState.DRAFT,
@@ -193,10 +212,87 @@ def seed_verified_drafts(session: Session) -> tuple[int, int]:
                         ],
                     )
                 )
-                created_versions += 1
+                created_roster_versions += 1
+
+    variants = _csv_rows("collection-variants.csv")
+    candidates_by_variant: dict[str, list[dict[str, str]]] = {}
+    for candidate in _csv_rows("field-review-crosswalk.csv"):
+        candidates_by_variant.setdefault(candidate["variant_id"], []).append(candidate)
+
+    for variant in variants:
+        collection_type = COLLECTION_TYPES.get(variant["collection_type"])
+        if collection_type is None:
+            raise RuntimeError(
+                f"Unsupported collection type in verified seed: {variant['collection_type']}"
+            )
+        measure = measures[variant["quality_id"]]
+        version = session.scalar(
+            select(MeasureVersion).where(MeasureVersion.version_id == variant["variant_id"])
+        )
+        if version is None:
+            version = MeasureVersion(
+                version_id=variant["variant_id"],
+                program=PROGRAM,
+                performance_year=int(variant["performance_year"]),
+                collection_type=collection_type,
+                specification_identifier=variant["specification_identifier"],
+                version_number=1,
+                is_program_member=True,
+                publication_state=PublicationState.DRAFT,
+                verification_status=PublicVerificationStatus.PARTIALLY_VERIFIED,
+                verified_at=None,
+                last_source_check_at=checked_at,
+                newer_revision_detected=False,
+            )
+            measure.versions.append(version)
+            session.flush()
+            created_variant_versions += 1
+        elif (
+            version.collection_type != collection_type
+            or version.specification_identifier != variant["specification_identifier"]
+            or version.publication_state != PublicationState.DRAFT
+            or measure.is_public
+        ):
+            raise RuntimeError(
+                f"Existing specification variant conflicts with private staging: "
+                f"{variant['variant_id']}"
+            )
+
+        for candidate in candidates_by_variant[variant["variant_id"]]:
+            existing = session.scalar(
+                select(SpecificationFieldCandidate).where(
+                    SpecificationFieldCandidate.review_item_id
+                    == candidate["review_item_id"]
+                )
+            )
+            if existing is not None:
+                continue
+            revision = source_revisions[candidate["source_id"]]
+            if revision.content_hash != candidate["source_sha256"]:
+                raise RuntimeError(
+                    f"Candidate source hash does not match frozen revision: "
+                    f"{candidate['review_item_id']}"
+                )
+            version.field_candidates.append(
+                SpecificationFieldCandidate(
+                    review_item_id=candidate["review_item_id"],
+                    field_name=candidate["field_name"],
+                    candidate_value=candidate["candidate_value"],
+                    extraction_status=candidate["extraction_status"],
+                    source_revision=revision,
+                    evidence_locator=candidate["evidence_locator"],
+                    review_decision=CandidateReviewDecision.PENDING,
+                )
+            )
+            created_candidates += 1
 
     session.flush()
-    return created_measures, created_versions
+    return (
+        created_measures,
+        created_roster_versions,
+        created_variant_versions,
+        created_candidates,
+    )
 
 
 def _assert_safe_target() -> None:
@@ -214,10 +310,16 @@ def _assert_safe_target() -> None:
 def main() -> None:
     _assert_safe_target()
     with SessionLocal.begin() as session:
-        created_measures, created_versions = seed_verified_drafts(session)
+        created_measures, roster_versions, variant_versions, candidates = (
+            seed_verified_drafts(session)
+        )
     print(
         f"Prepared {created_measures} new non-public measures and "
-        f"{created_versions} new draft roster versions."
+        f"{roster_versions} new draft roster versions."
+    )
+    print(
+        f"Prepared {variant_versions} private specification variants and "
+        f"{candidates} pending field candidates."
     )
     print("No records were published; running the command again is idempotent.")
 

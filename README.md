@@ -17,11 +17,11 @@ The application is being built as a small modular monolith:
 Checkpoints A and B provide the runnable application foundation and the
 Lovable-derived editorial interface. Checkpoint C1 adds PostgreSQL persistence,
 Alembic migrations, the M1 public measure endpoints, and typed frontend API
-queries. Checkpoints C2.1 and C2.2 add the reviewed PY2025–PY2026 source
-inventory, immutable retrieval manifest, exact roster evidence locators, and a
-guarded non-public draft seed. The next review-preparation step adds a field-level
-crosswalk for qualified CMS measure review; all detailed-field decisions remain
-pending and non-public.
+queries. Checkpoints C2.1–C2.4 add the reviewed PY2025–PY2026 source inventory,
+immutable retrieval manifest, exact roster evidence locators, explicit
+collection variants, and a guarded private staging workflow. The database can
+hold 32 collection-specific variants and 352 source-backed field candidates,
+but all detailed-field decisions remain pending and non-public.
 
 The Measure Explorer and API-mode measure detail pages now read from FastAPI.
 The Dashboard comparison ledger, What's New feed, and AI Impact prototype remain
@@ -87,9 +87,10 @@ CMSQI_ALLOW_DEMO_SEED=true uv run python -m app.commands.seed_demo
 CMSQI_ALLOW_DEMO_SEED=true uv run python -m app.commands.seed_demo --reset
 ```
 
-To load the reviewed PY2025–PY2026 roster as idempotent, non-public draft
-records, use the separate guarded command. It refuses database names that do
-not contain `demo` or `dev` and never changes records to published:
+To load the reviewed PY2025–PY2026 roster, collection variants, and field
+candidates as idempotent private draft records, use the separate guarded
+command. It refuses database names that do not contain `demo` or `dev` and
+never changes records to published:
 
 ```sh
 CMSQI_ALLOW_VERIFIED_DRAFT_SEED=true uv run python -m app.commands.seed_verified

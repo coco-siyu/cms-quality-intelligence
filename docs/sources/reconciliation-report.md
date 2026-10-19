@@ -1,12 +1,12 @@
 # PY2025–PY2026 CMS MSSP / APP Plus source reconciliation
 
-- Prepared: 2026-10-16
-- Checkpoint: C2.1 research and inventory preparation only
+- Prepared: 2026-10-16; updated through C2.4 on 2026-10-18
+- Checkpoint: C2.1–C2.4 research, source verification, and private staging
 - Publication state: candidate / non-public
 
 ## Scope and result
 
-This review establishes a source-backed candidate inventory for the MSSP APP Plus measure membership applicable to PY2025 and PY2026. It does not verify specification fields, import records, publish data, or implement comparison APIs.
+This review establishes a source-backed candidate inventory for the MSSP APP Plus measure membership applicable to PY2025 and PY2026. C2.4 also establishes private database staging for collection-specific variants and unapproved field candidates. It does not clinically verify specification fields, publish data, or implement comparison APIs.
 
 The candidate reconciliation is:
 
@@ -44,14 +44,14 @@ The CSV inventory is the machine-readable companion to this table. “No” for 
 
 - The PY2025 quality performance standard is a **March 2026 terminology update**. It is current supporting evidence for PY2025, not evidence that the measure membership took effect in 2026.
 - Methodology Version 13 applies to PY2025; Version 14 applies to PY2026. They are parallel year-specific authorities, not a reason to overwrite Version 13 with Version 14.
-- Methodology Version 14 cites an alternate CMS URL for the PY2026 quality performance standard. The current CMS guidance page uses a different URL. Until both files are downloaded and hashes match, the second URL is recorded as an unconfirmed alias.
+- Methodology Version 14 cites an alternate CMS URL for the PY2026 quality performance standard. The current CMS guidance page uses a different URL. Both URLs were downloaded in C2.2 and produced identical bytes, so the second URL is recorded as a confirmed alias rather than a separate revision.
 - The CMS guidance page is mutable and reported “Page Last Modified: 07/16/2026 12:17 PM” when retrieved. Its linked URLs must be rechecked when records are verified.
 - ZIP package publication dates are not exposed reliably by the CMS landing page. Upload identifiers are retained, but no publication date is guessed.
 - **Superseded revisions identified in C2.1: none.** No historical revision is designated superseded merely because a later-year document exists. A revision can be marked superseded only after a reviewer confirms that CMS replaced it for the same performance year and document lineage.
 
 ## Missing or ambiguous evidence
 
-1. **Detailed specification fields are not yet verified.** C2.2 located the year-specific specification variants, but numerator, denominator, exclusions, eligibility, and calculation logic still require field-by-field extraction and review.
+1. **Detailed specification fields are not yet verified.** Source-backed candidates are now staged for every variant, but numerator, denominator, exclusions, eligibility, and calculation logic still require field-by-field expert review.
 2. **MIPS CQM and Medicare CQM release numbers need field-level review.** Exact archive members are recorded, and the package hashes establish revision identity, but release-history semantics have not been normalized into database version numbers.
 3. **The PY2025 eCQM landing target remains ambiguous, but the artifacts are located.** The link currently exposed by the CMS guidance page resolves to a generic eCQI view. The year-specific APP Quality Requirements bundle contains the four PY2025 eCQM PDFs and confirms CMS122v13, CMS125v13, CMS2v14, and CMS165v13.
 4. **Quality ID 001 has a title correction.** The final-rule fact sheet notes the former “Diabetes Hemoglobin A1c (HbA1c) Poor Control” title and a planned technical correction. Identity should remain anchored to Quality ID 001; titles must be stored per revision rather than used as identifiers.
@@ -59,7 +59,7 @@ The CSV inventory is the machine-readable companion to this table. “No” for 
 6. **CAHPS requires a separate evidence model.** Quality ID 321 is a survey measure and should not be forced into clinical numerator/denominator extraction assumptions.
 7. **Administrative claims measures require specialized review.** Quality IDs 479 and 484 use CMS-calculated claims methodologies. Their evidence locators and fields will differ from clinical measure packages.
 8. **No removal event is independently stated.** The reconciliation supports zero removals because both complete year rosters were positively established. The system still must never create a removal solely from an absent row in an incomplete source.
-9. **PY2025 Medicare Part B Claims guidance conflicts with the policy rosters.** The PY2025 APP Quality Requirements bundle lists Medicare Part B Claims for Quality IDs 001, 112, 134, and 236. The final-rule phase-in table and March 2026 PY2025 quality-standard roster identify eCQM, MIPS CQM, and Medicare CQM. This fourth candidate variant stays unresolved and out of the verified seed until CMS program-level applicability is confirmed.
+9. **PY2025 Medicare Part B Claims files are supporting artifacts, not APP Plus variants.** The PY2025 APP Quality Requirements bundle contains Medicare Part B Claims specifications for Quality IDs 001, 112, 134, and 236. The final-rule APP Plus phase-in table, PY2025 quality-performance-standard roster, CMS program guidance, and Methodology Version 13 identify eCQM, MIPS CQM, and Medicare CQM as the reportable clinical collection types. The Part B Claims files are therefore recorded as excluded from the APP Plus variant inventory rather than treated as an unresolved or verified fourth collection type.
 
 ## C2.2 verification outcome
 
@@ -76,16 +76,19 @@ The two official PY2026 quality-standard URLs produced the same 266,777-byte PDF
 
 The prepared seed artifact at `backend/app/data/cms_app_plus_2025_2026.seed.json` contains all eight identities and their 14 verified program-year memberships. It explicitly sets `is_public=false` and `publication_state=draft`. The guarded importer was validated against the local PostgreSQL database: the first run prepared eight identities and 14 roster versions, and the second run created no duplicates. All imported C2.2 measures remained private and all memberships and versions remained draft.
 
-## Field review preparation outcome
+## C2.3–C2.4 field review and staging outcome
 
-The C2.3 review preparation covers all 32 located performance-year and collection-type variants. It creates 11 review items per variant, for 352 field-level items total:
+The review preparation covers all 32 located performance-year and collection-type variants. It creates 11 review items per variant, for 352 field-level items total:
 
-- 235 candidate values extracted from the frozen source snapshot;
+- 275 candidate values extracted from the frozen source snapshot;
 - 70 items requiring manual extraction or policy review;
-- 40 PY2026 eCQM detail fields whose specification pages were not included in the frozen snapshot;
 - 7 collection-model fields proposed as not applicable, pending subject-matter confirmation.
 
-Every item remains `pending`. The crosswalk records source hashes and evidence locators but does not represent extracted text as clinically verified. The reviewer workbook separates editable human decisions from source-derived candidates and keeps publication outside the review workflow.
+Five official PY2026 eCQM human-readable specification pages were added to the frozen manifest, bringing it from 19 to 24 source revisions. Those pages close the prior source-detail gap for 40 PY2026 eCQM fields; the extracted values remain candidates.
+
+C2.4 adds `collection_type` and `specification_identifier` to `MeasureVersion` and introduces a separate `SpecificationFieldCandidate` table. The guarded seed imports the 32 variants and 352 review items into private staging. Every item remains `pending`, every variant remains draft, and every measure remains non-public. The public repositories and API contract are unchanged.
+
+The C2.4 migration and guarded seed were validated against the local PostgreSQL development database on 2026-10-18. The first C2.4 seed run added 32 private variants and 352 pending candidates to the existing roster; the second added zero records. Aggregate checks found 14 program-roster versions, 32 collection variants, 352 pending candidates, zero public CMS measures, and zero published CMS versions.
 
 ## Recommended verification rules
 
@@ -104,33 +107,27 @@ A candidate may advance to `verified` and then `published` only when all applica
 
 ## PostgreSQL import workflow
 
-C2.2 implements steps 1–4 and the roster-only subset of steps 5, 7, and 8. The remaining steps are required before detailed specification fields or any record can be published.
+C2.2 implements the frozen roster and roster-only seed. C2.4 extends steps 2–5 to collection-specific private variants and stages the review queue described in step 6. The remaining review, evidence-promotion, and publication steps are required before detailed specification fields can become public.
 
 1. **Freeze a retrieval manifest.** Download official files, store original bytes outside public serving paths, calculate SHA-256, and record HTTP metadata and UTC retrieval time.
 2. **Register document lineages.** Upsert `SourceDocument` by stable `source_id` and official URL. Preserve alternate URLs as separately reviewed aliases until content identity is established.
 3. **Append revisions.** Insert `SourceRevision` rows by document lineage and content hash. Never update an existing row’s bytes-derived identity.
 4. **Stage candidates.** Insert or update `Measure` identities by CMS Quality ID with `is_public=false`. Create draft `ProgramMembership` rows only from the reviewed membership matrix.
-5. **Create year-specific versions.** Insert draft `MeasureVersion` rows for each program year and required specification variant. The present schema has one version stream per measure/program/year, so collection-type representation must be approved before importing multiple variants.
-6. **Extract fields to staging.** Populate `SpecificationField` values as `available`, `unavailable`, or `unresolved`; never fabricate a value to satisfy a UI field.
-7. **Attach evidence.** Create `EvidenceReference` rows pointing to immutable revisions and reviewer-confirmed locators/excerpts.
+5. **Create year-specific variants.** Insert draft `MeasureVersion` rows for each program year and collection type. Keep the separate `program_roster` version for membership evidence.
+6. **Extract fields to private staging.** Populate `SpecificationFieldCandidate` with the frozen value, extraction status, source revision, and locator. Keep the review decision `pending`; never fabricate a value to satisfy a UI field.
+7. **Promote reviewed evidence.** After qualified approval, create or update public-model `SpecificationField` and `EvidenceReference` rows from the reviewed value and immutable source revision. Candidate rows do not become public merely because they exist.
 8. **Run reconciliation checks.** Assert PY2025 count 6, PY2026 count 8, additions `{113, 484}`, unchanged `{001, 112, 134, 236, 321, 479}`, and no unsupported removal rows.
 9. **Review conflicts and variants.** A human reviewer resolves titles, version IDs, collection types, and any source conflict. Unresolved rows stay draft and non-public.
 10. **Publish transactionally.** Only after approval, set verification timestamps/statuses and publication states in one transaction. Public API queries continue to return only published records.
 11. **Preserve audit history.** Record the import batch, reviewer, source hashes, validation results, and any supersession relationship without deleting historical revisions.
 
-## Schema decision required before field-level import
+## Implemented schema decision
 
-The existing database protects source and revision history well, but `MeasureVersion` does not currently have a collection-type column. Because one Quality ID can have eCQM, MIPS CQM, and Medicare CQM variants in the same performance year, one of these options must be approved before field-level import:
-
-- add an explicit collection-type/variant dimension to `MeasureVersion` and its uniqueness constraint; or
-- designate one canonical display variant and store other variants in a separate related table.
-
-No schema change is made in C2.2. The roster-only draft versions do not claim a collection type. The first option is recommended before detailed fields are imported because it preserves source fidelity and avoids conflating specifications.
+C2.4 implements the approved explicit variant dimension. `MeasureVersion` now identifies `collection_type` and an optional `specification_identifier`, and its uniqueness rule includes collection type. A separate private candidate table records field-level review state and source provenance. This allows eCQM, MIPS CQM, Medicare CQM, survey, and administrative-claims variants to coexist for one measure and year without treating unapproved text as a published specification.
 
 ## Review questions before the next data checkpoint
 
-1. Approve adding a collection-type/variant dimension before importing clinical specification fields.
-2. Decide whether CMS-hosted QPP S3 and the CMS-linked eCQI Resource Center are accepted as first-party specification authorities alongside `cms.gov`.
-3. Resolve whether the PY2025 Medicare Part B Claims entries are program-applicable collection variants or supporting reporting artifacts.
-4. Confirm whether archived source bytes belong in object storage with hashes in PostgreSQL, or in another immutable document store.
-5. Assign the human reviewer responsible for approving detailed fields and changing draft records to published.
+1. Confirm whether archived source bytes belong in object storage with hashes in PostgreSQL, or in another immutable document store.
+2. Assign a qualified CMS quality-measure reviewer for the 352 pending field decisions.
+3. Define the audited promotion transaction that converts approved candidate values into `SpecificationField` and `EvidenceReference` rows without overwriting review history.
+4. Recheck all mutable official URLs immediately before any publication decision.

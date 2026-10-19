@@ -36,7 +36,7 @@ def test_evidence_hashes_match_retrieved_source_revisions() -> None:
     revisions = {row["source_id"]: row for row in _csv_rows("source-revisions.csv")}
     evidence = _csv_rows("evidence-locators.csv")
 
-    assert len(revisions) == 19
+    assert len(revisions) == 24
     assert all(row["verification_state"] == "downloaded_unreviewed" for row in revisions.values())
     assert all(row["review_status"] == "verified_membership" for row in evidence)
     for row in evidence:
@@ -65,13 +65,13 @@ def test_every_seed_variant_has_a_located_source() -> None:
             assert variant["quality_id"] == measure["measure_id"]
             assert int(variant["performance_year"]) in measure["memberships"]
 
-    unresolved = seed["unresolved_variant_candidates"]
-    assert unresolved == [
+    excluded = seed["excluded_variant_candidates"]
+    assert excluded == [
         {
             "performance_year": 2025,
             "quality_ids": ["001", "112", "134", "236"],
             "collection_type": "Medicare Part B Claims",
-            "status": "manual_policy_confirmation_required",
-            "reason": unresolved[0]["reason"],
+            "status": "excluded_not_app_plus_collection_type",
+            "reason": excluded[0]["reason"],
         }
     ]

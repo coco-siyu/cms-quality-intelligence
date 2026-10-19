@@ -8,7 +8,7 @@ from sqlalchemy import inspect
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.domain import AffectedField, FieldAvailability
+from app.domain import AffectedField, CollectionType, FieldAvailability
 from app.models import Measure, MeasureVersion, SourceDocument, SourceRevision, SpecificationField
 
 
@@ -90,6 +90,39 @@ def test_historical_measure_versions_and_source_revisions_are_retained(session: 
     assert [version.version_number for version in measure.versions] == [1, 2]
 
 
+def test_collection_variants_have_independent_version_streams(session: Session) -> None:
+    checked_at = datetime(2026, 10, 1, 12, tzinfo=UTC)
+    measure = Measure(
+        measure_id="DEMO-VARIANTS",
+        name="Collection variant test",
+        description="Synthetic collection-variant record.",
+        is_public=False,
+        versions=[
+            MeasureVersion(
+                version_id=f"DEMO-VARIANT-{collection_type.value}",
+                program="Fictional Quality Program",
+                performance_year=2026,
+                collection_type=collection_type,
+                specification_identifier=identifier,
+                version_number=1,
+                is_program_member=True,
+                last_source_check_at=checked_at,
+            )
+            for collection_type, identifier in (
+                (CollectionType.ECQM, "DEMO1v1"),
+                (CollectionType.MIPS_CQM, "Quality ID DEMO1"),
+            )
+        ],
+    )
+    session.add(measure)
+    session.commit()
+
+    assert {version.collection_type for version in measure.versions} == {
+        CollectionType.ECQM,
+        CollectionType.MIPS_CQM,
+    }
+
+
 def test_initial_migration_builds_and_reverts_schema(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -110,6 +143,7 @@ def test_initial_migration_builds_and_reverts_schema(
         "measures",
         "program_memberships",
         "measure_versions",
+        "specification_field_candidates",
         "specification_fields",
         "source_documents",
         "source_revisions",

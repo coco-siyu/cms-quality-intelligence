@@ -18,7 +18,9 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database import Base
 from app.domain import (
     AffectedField,
+    CandidateReviewDecision,
     ChangeStatus,
+    CollectionType,
     FieldAvailability,
     PublicationState,
     PublicVerificationStatus,
@@ -60,6 +62,20 @@ affected_field_enum = Enum(
 change_status_enum = Enum(
     ChangeStatus,
     name="change_status",
+    native_enum=False,
+    create_constraint=True,
+    values_callable=lambda values: [value.value for value in values],
+)
+collection_type_enum = Enum(
+    CollectionType,
+    name="collection_type",
+    native_enum=False,
+    create_constraint=True,
+    values_callable=lambda values: [value.value for value in values],
+)
+candidate_review_decision_enum = Enum(
+    CandidateReviewDecision,
+    name="candidate_review_decision",
     native_enum=False,
     create_constraint=True,
     values_callable=lambda values: [value.value for value in values],
@@ -154,12 +170,22 @@ class SourceRevision(Base):
     evidence_references: Mapped[list["EvidenceReference"]] = relationship(
         back_populates="source_revision"
     )
+    field_candidates: Mapped[list["SpecificationFieldCandidate"]] = relationship(
+        back_populates="source_revision"
+    )
 
 
 class MeasureVersion(Base):
     __tablename__ = "measure_versions"
     __table_args__ = (
-        UniqueConstraint("measure_id", "program", "performance_year", "version_number"),
+        UniqueConstraint(
+            "measure_id",
+            "program",
+            "performance_year",
+            "collection_type",
+            "version_number",
+            name="uq_measure_version_variant_revision",
+        ),
         CheckConstraint("performance_year >= 2000 AND performance_year <= 2100"),
     )
 
@@ -168,6 +194,10 @@ class MeasureVersion(Base):
     measure_id: Mapped[int] = mapped_column(ForeignKey("measures.id", ondelete="CASCADE"))
     program: Mapped[str] = mapped_column(String(120))
     performance_year: Mapped[int] = mapped_column(Integer, index=True)
+    collection_type: Mapped[CollectionType] = mapped_column(
+        collection_type_enum, default=CollectionType.PROGRAM_ROSTER, index=True
+    )
+    specification_identifier: Mapped[str | None] = mapped_column(String(120))
     version_number: Mapped[int] = mapped_column(Integer, default=1)
     is_program_member: Mapped[bool] = mapped_column(Boolean)
     publication_state: Mapped[PublicationState] = mapped_column(
@@ -185,6 +215,47 @@ class MeasureVersion(Base):
     fields: Mapped[list["SpecificationField"]] = relationship(
         back_populates="measure_version", cascade="all, delete-orphan"
     )
+    field_candidates: Mapped[list["SpecificationFieldCandidate"]] = relationship(
+        back_populates="measure_version", cascade="all, delete-orphan"
+    )
+
+
+class SpecificationFieldCandidate(Base):
+    __tablename__ = "specification_field_candidates"
+    __table_args__ = (
+        UniqueConstraint("measure_version_id", "field_name"),
+        CheckConstraint(
+            "(review_decision = 'pending' AND reviewed_at IS NULL) OR "
+            "(review_decision != 'pending' AND reviewed_at IS NOT NULL)",
+            name="ck_candidate_review_timestamp",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    review_item_id: Mapped[str] = mapped_column(String(180), unique=True, index=True)
+    measure_version_id: Mapped[int] = mapped_column(
+        ForeignKey("measure_versions.id", ondelete="CASCADE")
+    )
+    field_name: Mapped[str] = mapped_column(String(80))
+    candidate_value: Mapped[str] = mapped_column(Text)
+    extraction_status: Mapped[str] = mapped_column(String(80))
+    source_revision_id: Mapped[int] = mapped_column(
+        ForeignKey("source_revisions.id", ondelete="RESTRICT")
+    )
+    evidence_locator: Mapped[str] = mapped_column(String(1000))
+    review_decision: Mapped[CandidateReviewDecision] = mapped_column(
+        candidate_review_decision_enum,
+        default=CandidateReviewDecision.PENDING,
+        index=True,
+    )
+    reviewed_value: Mapped[str | None] = mapped_column(Text)
+    reviewer_name: Mapped[str | None] = mapped_column(String(200))
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    reviewer_notes: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+    measure_version: Mapped[MeasureVersion] = relationship(back_populates="field_candidates")
+    source_revision: Mapped[SourceRevision] = relationship(back_populates="field_candidates")
 
 
 class SpecificationField(Base):

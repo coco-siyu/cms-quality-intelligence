@@ -128,7 +128,9 @@ def download_source(row: dict[str, str], cache_dir: Path) -> DownloadResult:
 def write_manifest(results: list[DownloadResult], path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", newline="", encoding="utf-8") as manifest_file:
-        writer = csv.DictWriter(manifest_file, fieldnames=MANIFEST_FIELDS)
+        writer = csv.DictWriter(
+            manifest_file, fieldnames=MANIFEST_FIELDS, lineterminator="\n"
+        )
         writer.writeheader()
         writer.writerows(asdict(result) for result in results)
 

@@ -37,7 +37,6 @@ def test_review_crosswalk_remains_pending_and_source_backed() -> None:
         "candidate_extracted_needs_sme_review",
         "manual_extraction_or_policy_review_required",
         "not_applicable_candidate_needs_sme_confirmation",
-        "source_detail_not_snapshotted",
     }
 
     assert all(row["review_decision"] == "pending" for row in rows)
@@ -51,9 +50,9 @@ def test_review_crosswalk_remains_pending_and_source_backed() -> None:
         assert row["source_sha256"] == revisions[row["source_id"]]["sha256"]
 
 
-def test_unsnapshotted_2026_ecqm_details_are_not_silently_filled() -> None:
+def test_2026_ecqm_details_are_source_backed_and_pending_review() -> None:
     rows = _csv_rows("field-review-crosswalk.csv")
-    unavailable = [
+    candidates = [
         row
         for row in rows
         if row["performance_year"] == "2026"
@@ -62,8 +61,9 @@ def test_unsnapshotted_2026_ecqm_details_are_not_silently_filled() -> None:
         not in {"measure_title", "specification_identifier", "data_collection"}
     ]
 
-    assert len(unavailable) == 40
+    assert len(candidates) == 40
     assert all(
-        row["extraction_status"] == "source_detail_not_snapshotted"
-        for row in unavailable
+        row["extraction_status"] == "candidate_extracted_needs_sme_review"
+        for row in candidates
     )
+    assert all(row["source_id"].startswith("CMS-ECQI-PY2026-CMS") for row in candidates)

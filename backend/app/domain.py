@@ -19,6 +19,22 @@ class FieldAvailability(StrEnum):
     UNRESOLVED = "unresolved"
 
 
+class CollectionType(StrEnum):
+    PROGRAM_ROSTER = "program_roster"
+    ECQM = "ecqm"
+    MIPS_CQM = "mips_cqm"
+    MEDICARE_CQM = "medicare_cqm"
+    CAHPS_SURVEY = "cahps_survey"
+    ADMINISTRATIVE_CLAIMS = "administrative_claims"
+
+
+class CandidateReviewDecision(StrEnum):
+    PENDING = "pending"
+    APPROVE = "approve"
+    NEEDS_REVISION = "needs_revision"
+    NOT_APPLICABLE = "not_applicable"
+
+
 class ChangeStatus(StrEnum):
     ADDED = "added"
     REMOVED = "removed"

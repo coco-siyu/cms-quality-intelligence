@@ -1,5 +1,6 @@
 import argparse
 import csv
+import html
 import json
 import re
 import shutil
@@ -423,28 +424,47 @@ def _cahps_candidates(
 
 
 def _html_ecqm_candidates(
+    source_path: Path,
     title: str,
     variant: dict[str, str],
 ) -> dict[str, Candidate]:
-    base_locator = variant["locator"]
+    markup = source_path.read_text(encoding="utf-8")
+    cells: dict[str, str] = {}
+    pattern = re.compile(
+        r'<th[^>]*>.*?<span class="td_label">(?P<label>.*?)</span>.*?</th>'
+        r"\s*<td[^>]*>(?P<value>.*?)(?=<th|</tr>)",
+        flags=re.IGNORECASE | re.DOTALL,
+    )
+    for match in pattern.finditer(markup):
+        label = _normalize(html.unescape(re.sub(r"<[^>]+>", " ", match["label"])))
+        value = _normalize(html.unescape(re.sub(r"<[^>]+>", " ", match["value"])))
+        if label and value and label not in cells:
+            cells[label] = value
+
+    base_locator = "HTML measure-information table"
     result = {
-        "measure_title": _literal(title, base_locator),
+        "measure_title": _literal(cells.get("eCQM Title", title), f"{base_locator}; eCQM Title"),
         "specification_identifier": _literal(
             variant["specification_identifier"],
-            base_locator,
+            f"{base_locator}; CMS ID and eCQM Version Number",
         ),
-        "data_collection": _literal("eCQM", base_locator),
+        "data_collection": _literal("eCQM", f"{base_locator}; specification format"),
     }
-    for field_name in FIELD_NAMES:
-        if field_name not in result:
-            result[field_name] = Candidate(
-                value=(
-                    "The year-specific detail page was not included in the frozen "
-                    "source snapshot."
-                ),
-                locator=base_locator,
-                status="source_detail_not_snapshotted",
-            )
+    mappings = {
+        "description": ("Description",),
+        "measure_type": ("Measure Type",),
+        "scoring_direction": ("Improvement Notation", "Measure Scoring"),
+        "population_or_denominator": ("Denominator", "Initial Population"),
+        "numerator_or_outcome": ("Numerator",),
+        "exclusions": ("Denominator Exclusions",),
+        "denominator_exceptions": ("Denominator Exceptions",),
+        "risk_adjustment": ("Risk Adjustment",),
+    }
+    for field_name, labels in mappings.items():
+        for label in labels:
+            if label in cells:
+                result[field_name] = _literal(cells[label], f"{base_locator}; {label}")
+                break
     return result
 
 
@@ -456,13 +476,19 @@ def build_rows() -> list[dict[str, str]]:
     rows: list[dict[str, str]] = []
 
     for variant in variants:
-        pages = _variant_pages(variant, revisions)
         collection_type = variant["collection_type"]
         title = titles[variant["quality_id"]]
-        if pages is None:
-            candidates = _html_ecqm_candidates(title, variant)
+        source_path = REPOSITORY_ROOT / revisions[variant["source_id"]]["cache_path"]
+        if collection_type == "eCQM" and source_path.suffix.lower() in {".html", ".htm"}:
+            candidates = _html_ecqm_candidates(source_path, title, variant)
+            pages = None
+        else:
+            pages = _variant_pages(variant, revisions)
+        if pages is None and collection_type != "eCQM":
+            raise ValueError(f"Unsupported non-PDF source for {variant['variant_id']}")
         elif collection_type == "eCQM":
-            candidates = _ecqm_candidates(pages, title, variant)
+            if pages is not None:
+                candidates = _ecqm_candidates(pages, title, variant)
         elif collection_type in {"MIPS CQM", "Medicare CQM"}:
             candidates = _clinical_candidates(pages, title, variant)
         elif collection_type == "Administrative Claims":
@@ -503,7 +529,9 @@ def build_rows() -> list[dict[str, str]]:
 def write_crosswalk(rows: list[dict[str, str]], output_path: Path) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with output_path.open("w", newline="", encoding="utf-8") as output_file:
-        writer = csv.DictWriter(output_file, fieldnames=OUTPUT_FIELDS)
+        writer = csv.DictWriter(
+            output_file, fieldnames=OUTPUT_FIELDS, lineterminator="\n"
+        )
         writer.writeheader()
         writer.writerows(rows)
 

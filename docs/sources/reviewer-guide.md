@@ -15,8 +15,8 @@ Confirm that:
 - every candidate value has a source ID, SHA-256 hash, and evidence locator;
 - missing source detail and source conflicts remain visible;
 - reviewer identity, date, decision, and notes are captured;
-- pending or rejected values cannot enter a public dataset;
-- no patient-level data appears in the artifact.
+- pending, revision-requested, or unapproved not-applicable values cannot enter a public dataset;
+- no patient-level data appears in the artifact.ok
 
 The project owner should not approve a numerator, denominator, exclusion, scoring direction, or risk-adjustment rule based only on an extraction.
 
@@ -51,7 +51,6 @@ The workbook is a review aid, not the authoritative database. Approved decisions
 | --- | --- | --- |
 | `candidate_extracted_needs_sme_review` | Text was extracted from a frozen source and assigned to a field. | Compare it with the cited section and confirm its interpretation. |
 | `manual_extraction_or_policy_review_required` | The source format or policy question could not be normalized safely. | Review the source manually; do not approve the placeholder text. |
-| `source_detail_not_snapshotted` | The frozen inventory contains a catalog entry but not the detailed specification page. | Add and hash the missing official source before reviewing the field. |
 | `not_applicable_candidate_needs_sme_confirmation` | The field appears incompatible with that collection model. | Confirm that the field is truly not applicable; do not assume. |
 
 ## Publication rule
@@ -67,8 +66,9 @@ A field remains non-public unless all of the following are true:
 
 AI extraction, a successful automated test, or a completed spreadsheet formula is never sufficient evidence for clinical verification.
 
-## Current limitations
+## Current review state and limitations
 
-- Detailed PY2026 eCQM pages were not included in the frozen snapshot. Those fields remain explicitly unavailable.
-- PY2025 Medicare Part B Claims applicability remains unresolved and is not included as a verified variant.
-- The database still needs an approved collection-type dimension before detailed fields can be imported without conflating eCQM, MIPS CQM, Medicare CQM, survey, and administrative-claims specifications.
+- All five detailed PY2026 eCQM pages are frozen and hashed. Their 40 formerly missing-detail items are now source-extracted candidates, not approvals.
+- The current queue contains 275 extracted candidates, 70 manual-extraction or policy-review items, and 7 proposed not-applicable fields. All 352 decisions remain pending.
+- PY2025 Medicare Part B Claims artifacts are excluded because official APP Plus program sources identify eCQM, MIPS CQM, and Medicare CQM as the applicable clinical collection types.
+- The database now preserves collection type explicitly and stages candidate fields separately from published `SpecificationField` records. This structural separation does not replace qualified review.

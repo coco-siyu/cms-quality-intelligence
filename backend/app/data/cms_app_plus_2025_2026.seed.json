@@ -121,13 +121,13 @@
       ]
     }
   ],
-  "unresolved_variant_candidates": [
+  "excluded_variant_candidates": [
     {
       "performance_year": 2025,
       "quality_ids": ["001", "112", "134", "236"],
       "collection_type": "Medicare Part B Claims",
-      "status": "manual_policy_confirmation_required",
-      "reason": "The PY2025 APP Quality Requirements bundle lists Medicare Part B Claims, while the final-rule phase-in table and March 2026 PY2025 quality-standard roster identify eCQM, MIPS CQM, and Medicare CQM. The claims specifications are not imported until CMS program-level applicability is reconciled."
+      "status": "excluded_not_app_plus_collection_type",
+      "reason": "The bundle contains Medicare Part B Claims specifications as supporting QPP artifacts, but the CY2025 PFS final-rule APP Plus phase-in table, the PY2025 quality-performance-standard roster, the CMS program guidance page, and Methodology Version 13 explicitly identify eCQM, MIPS CQM, and Medicare CQM as the reportable clinical collection types for Shared Savings Program ACOs. The Part B Claims artifacts are therefore not imported as APP Plus variants."
     }
   ]
 }

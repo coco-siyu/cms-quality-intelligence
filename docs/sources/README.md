@@ -1,6 +1,6 @@
 # CMS source inventory
 
-This directory contains the Checkpoint C2.1 research artifacts for the Medicare Shared Savings Program (MSSP) Alternative Payment Model Performance Pathway (APP) Plus measure sets for performance years (PYs) 2025 and 2026.
+This directory contains the Checkpoint C2.1–C2.4 research and private review-preparation artifacts for the Medicare Shared Savings Program (MSSP) Alternative Payment Model Performance Pathway (APP) Plus measure sets for performance years (PYs) 2025 and 2026.
 
 These files are **review material, not production data**. Every measure row remains a candidate until a reviewer verifies the source files, locators, titles, collection types, and applicable year. Nothing in this directory authorizes publishing records through the public API.
 
@@ -30,6 +30,8 @@ These files are **review material, not production data**. Every measure row rema
 
 ## Review boundary
 
-The inventory was prepared on 2026-10-16. C2.2 retrieved and hashed all 19 inventoried sources on the same date. The mutable CMS guidance page and linked bundles must still be checked again immediately before publication. Downloaded artifacts are cached locally by source ID and must never be used to overwrite a previously registered revision when CMS publishes new bytes.
+The inventory was prepared on 2026-10-16. C2.2 retrieved and hashed the original 19 inventoried sources on the same date. C2.4 added and hashed five official PY2026 eCQM human-readable specifications, bringing the frozen manifest to 24 sources. The mutable CMS guidance page and linked bundles must still be checked again immediately before publication. Downloaded artifacts are cached locally by source ID and must never be used to overwrite a previously registered revision when CMS publishes new bytes.
 
-The field-review artifacts are private preparation material. Extracted values are not verified clinical facts until a qualified reviewer records a source-backed approval. They are not imported into public API records.
+The field-review artifacts are private preparation material. They contain 352 pending items across 32 performance-year and collection-type variants: 275 source-extracted candidates, 70 manual-review items, and 7 proposed not-applicable fields. C2.4 adds an explicit collection-type dimension and a private `specification_field_candidates` staging table; the guarded seed can load these records without exposing them through public API queries. Extracted values are not verified clinical facts until a qualified reviewer records a source-backed approval.
+
+The PY2025 Medicare Part B Claims files found in the QPP bundle are recorded as excluded supporting artifacts, not APP Plus collection variants. The exclusion is based on positive program guidance naming eCQM, MIPS CQM, and Medicare CQM as the applicable clinical collection types; it is not inferred from file absence.
