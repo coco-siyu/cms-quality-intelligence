@@ -202,8 +202,8 @@ function ReviewWorkspace({ username }: { username: string }) {
           <div className="empty-state">No private measures match this search.</div>
         )}
         <p className="admin-boundary-note">
-          <FileCheck2 aria-hidden="true" /> This checkpoint is read-only. Review decisions and
-          publishing remain deliberate follow-on actions.
+          <FileCheck2 aria-hidden="true" /> Review decisions stay private and retain their audit
+          history. Publishing remains a separate follow-on action.
         </p>
       </section>
     </div>

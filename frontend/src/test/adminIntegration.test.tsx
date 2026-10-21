@@ -111,7 +111,7 @@ describe("private admin review workspace", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("352")).toBeInTheDocument();
     expect(screen.getByText("Pending fields")).toBeInTheDocument();
-    expect(screen.getByText(/This checkpoint is read-only/i)).toBeInTheDocument();
+    expect(screen.getByText(/Review decisions stay private/i)).toBeInTheDocument();
     expect(screen.queryByText("DEMO-001")).not.toBeInTheDocument();
     await waitFor(() => {
       expect(fetchMock.mock.calls.every((call) => call[1]?.credentials === "include")).toBe(true);
@@ -119,6 +119,24 @@ describe("private admin review workspace", () => {
   });
 
   it("loads a private measure directly with source provenance", async () => {
+    const candidate = {
+      review_item_id: "CMS-001-PY2025-ECQM-definition",
+      field_name: "definition",
+      candidate_value: "Candidate definition requiring human review.",
+      extraction_status: "source_extracted",
+      evidence_locator: "Page 4",
+      review_decision: "pending",
+      reviewed_value: null,
+      reviewer_name: null,
+      reviewed_at: null,
+      reviewer_notes: null,
+      source_id: "CMS-SOURCE-001",
+      source_revision_id: "CMS-SOURCE-001-R1",
+      source_title: "Official CMS specification",
+      official_url: "https://www.cms.gov/example",
+      source_content_hash: "hash",
+      review_history: [],
+    };
     const detail = {
       measure_id: "001",
       name: "Diabetes: Glycemic Status Assessment Greater Than 9%",
@@ -144,32 +162,34 @@ describe("private admin review workspace", () => {
           verification_status: "partially_verified",
           newer_revision_detected: false,
           last_source_check_at: "2026-10-20T12:00:00Z",
-          candidates: [
-            {
-              review_item_id: "CMS-001-PY2025-ECQM-definition",
-              field_name: "definition",
-              candidate_value: "Candidate definition requiring human review.",
-              extraction_status: "source_extracted",
-              evidence_locator: "Page 4",
-              review_decision: "pending",
-              reviewed_value: null,
-              reviewer_name: null,
-              reviewed_at: null,
-              reviewer_notes: null,
-              source_id: "CMS-SOURCE-001",
-              source_revision_id: "CMS-SOURCE-001-R1",
-              source_title: "Official CMS specification",
-              official_url: "https://www.cms.gov/example",
-              source_content_hash: "hash",
-            },
-          ],
+          candidates: [candidate],
         },
       ],
     };
-    vi.stubGlobal(
-      "fetch",
-      vi.fn((input: RequestInfo | URL) => {
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
         const url = String(input);
+        if (url.includes("/api/admin/review-items/") && init?.method === "PATCH") {
+          const request = JSON.parse(String(init.body));
+          return Promise.resolve(
+            jsonResponse({
+              ...candidate,
+              review_decision: request.decision,
+              reviewed_value: request.reviewed_value,
+              reviewer_name: "reviewer",
+              reviewed_at: "2026-10-21T18:00:00Z",
+              reviewer_notes: request.reviewer_notes,
+              review_history: [
+                {
+                  decision: request.decision,
+                  reviewed_value: request.reviewed_value,
+                  reviewer_name: "reviewer",
+                  reviewed_at: "2026-10-21T18:00:00Z",
+                  reviewer_notes: request.reviewer_notes,
+                },
+              ],
+            }),
+          );
+        }
         if (url.endsWith("/api/admin/session")) {
           return Promise.resolve(
             jsonResponse({ configured: true, authenticated: true, username: "reviewer" }),
@@ -177,8 +197,8 @@ describe("private admin review workspace", () => {
         }
         if (url.endsWith("/api/admin/measures/001")) return Promise.resolve(jsonResponse(detail));
         return Promise.reject(new Error(`Unexpected request: ${url}`));
-      }),
-    );
+      });
+    vi.stubGlobal("fetch", fetchMock);
 
     await renderRoute("/admin/measures/001");
 
@@ -194,5 +214,32 @@ describe("private admin review workspace", () => {
       "href",
       "https://www.cms.gov/example",
     );
+    fireEvent.click(screen.getByRole("button", { name: "Review candidate" }));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText(/Reviewed value/), {
+      target: { value: "Reviewed definition supported by the official source." },
+    });
+    fireEvent.change(screen.getByLabelText(/Reviewer notes \(optional\)/), {
+      target: { value: "Confirmed against page 4." },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save private review" }));
+
+    expect(await screen.findByText("Approved")).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    const mutationCall = fetchMock.mock.calls.find(([input]) =>
+      String(input).includes("/api/admin/review-items/"),
+    );
+    expect(mutationCall?.[1]?.headers).toMatchObject({
+      "X-CMSQI-Admin-Action": "review-decision",
+    });
+    expect(JSON.parse(String(mutationCall?.[1]?.body))).toEqual({
+      decision: "approve",
+      reviewed_value: "Reviewed definition supported by the official source.",
+      reviewer_notes: "Confirmed against page 4.",
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Review candidate" }));
+    expect(screen.getByRole("heading", { name: "Review history" })).toBeInTheDocument();
+    expect(screen.getByText(/reviewer · Oct 21, 2026/)).toBeInTheDocument();
   });
 });

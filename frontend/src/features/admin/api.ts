@@ -59,6 +59,21 @@ export type AdminFieldCandidate = {
   source_title: string;
   official_url: string;
   source_content_hash: string;
+  review_history: AdminCandidateReview[];
+};
+
+export type AdminCandidateReview = {
+  decision: "approve" | "needs_revision" | "not_applicable";
+  reviewed_value: string | null;
+  reviewer_name: string;
+  reviewed_at: string;
+  reviewer_notes: string | null;
+};
+
+export type AdminCandidateDecision = {
+  decision: AdminCandidateReview["decision"];
+  reviewed_value: string | null;
+  reviewer_notes: string | null;
 };
 
 export type AdminMeasureDetail = {
@@ -143,6 +158,16 @@ export const adminApi = {
       { signal },
     );
   },
+  reviewCandidate(reviewItemId: string, decision: AdminCandidateDecision) {
+    return adminRequest<AdminFieldCandidate>(
+      `/api/admin/review-items/${encodeURIComponent(reviewItemId)}`,
+      {
+        method: "PATCH",
+        headers: { "X-CMSQI-Admin-Action": "review-decision" },
+        body: JSON.stringify(decision),
+      },
+    );
+  },
 };
 
 export function useAdminSession() {
@@ -197,5 +222,39 @@ export function useAdminMeasure(measureId: string, enabled: boolean) {
     queryFn: ({ signal }) => adminApi.measure(measureId, signal),
     enabled: enabled && Boolean(measureId),
     retry: false,
+  });
+}
+
+export function useAdminCandidateReview(measureId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      reviewItemId,
+      decision,
+    }: {
+      reviewItemId: string;
+      decision: AdminCandidateDecision;
+    }) => adminApi.reviewCandidate(reviewItemId, decision),
+    onSuccess: (updatedCandidate) => {
+      queryClient.setQueryData<AdminMeasureDetail>(
+        ["admin-review", "measure", measureId],
+        (detail) =>
+          detail
+            ? {
+                ...detail,
+                versions: detail.versions.map((version) => ({
+                  ...version,
+                  candidates: version.candidates.map((candidate) =>
+                    candidate.review_item_id === updatedCandidate.review_item_id
+                      ? updatedCandidate
+                      : candidate,
+                  ),
+                })),
+              }
+            : detail,
+      );
+      void queryClient.invalidateQueries({ queryKey: ["admin-review", "summary"] });
+      void queryClient.invalidateQueries({ queryKey: ["admin-review", "measures"] });
+    },
   });
 }

@@ -227,6 +227,14 @@ Description: Retry temporary network or processing errors a limited number of ti
 Goal: Let the admin correct AI-extracted records before publication.
 Description: Present one candidate at a time with old/new values, official excerpts, uncertainty flags, and Approve/Reject/Edit actions. Record edits and reviewer identity/timestamps; do not add bulk approval in MVP.
 
+Implementation status (partial, 2026-10-21): The protected admin workspace now
+presents individual source-backed field candidates with their official source,
+evidence locator, extraction state, and current decision. Reviewers can approve
+an edited value, request revision, or mark a field not applicable. Each action
+records authenticated reviewer identity and time in append-only history without
+publishing. Side-by-side old/new values and richer uncertainty flags remain to
+be implemented before this task is complete.
+
 ## 49. Implement verified-field partial publication rules
 Goal: Publish trustworthy information without hiding the whole measure.
 Description: Permit approval of individual evidenced fields while unresolved fields remain withheld and flagged internally. Test that public API responses and generated AI explanations never represent unresolved or missing values as confirmed CMS requirements.

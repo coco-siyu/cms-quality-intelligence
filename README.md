@@ -21,13 +21,15 @@ queries. Checkpoints C2.1–C2.5 add the reviewed PY2025–PY2026 source invento
 immutable retrieval manifest, exact roster evidence locators, explicit
 collection variants, and a guarded private review workflow. The database can
 hold 32 collection-specific variants, 352 source-backed field candidates, and
-append-only reviewer decisions, but all current detailed-field decisions remain
-pending and non-public.
+append-only reviewer decisions. Seeded detailed-field candidates begin pending
+and remain non-public unless a separate publication workflow is completed.
 
 The first M3 admin increment adds an environment-configured single-admin login,
-signed HttpOnly sessions, and a read-only review desk for the private roster,
-variants, field candidates, and their official source provenance. Review actions,
-ingestion controls, and publication remain intentionally unavailable.
+signed HttpOnly sessions, and a private review desk for the roster, variants,
+field candidates, and their official source provenance. An administrator can
+review one field candidate at a time, correct an approved value, request a
+revision, mark a field not applicable, and inspect append-only decision history.
+Ingestion controls and publication remain intentionally unavailable.
 
 The Measure Explorer and API-mode measure detail pages now read from FastAPI.
 The Dashboard comparison ledger uses published API records in API mode and does
