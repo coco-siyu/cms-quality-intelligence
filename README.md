@@ -41,6 +41,31 @@ incomplete, so M1 is not complete.
 See `docs/checkpoint-c1.md` for schema decisions, scope boundaries, and the
 verified local workflow.
 
+## Quick local start
+
+The repository Makefile keeps the normal workflow short. On the first run:
+
+```sh
+make setup
+make admin-credentials
+# Copy the generated CMSQI_ADMIN_* lines into .env once.
+make seed
+```
+
+After that, start PostgreSQL, apply pending migrations, and launch both FastAPI
+and Vite with one command:
+
+```sh
+make dev
+```
+
+Press `Ctrl+C` once to stop the frontend and backend. PostgreSQL intentionally
+stays running for faster restarts; stop it separately with `make stop`. Run the
+complete backend and frontend checks with `make check`. Use `make help` to see
+the available shortcuts.
+
+The commands below remain available when working on one service independently.
+
 ## Frontend
 
 ```sh

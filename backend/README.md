@@ -4,6 +4,11 @@ FastAPI and SQLAlchemy modular monolith for the public M1 Measure Explorer.
 Python dependencies and commands are managed with `uv`; schema changes are
 managed with Alembic.
 
+For the shortest whole-application workflow, run `make setup` once and then
+`make dev` from the repository root. The Makefile starts PostgreSQL, applies
+pending migrations, and runs FastAPI and Vite together. The service-specific
+commands below remain useful for backend-only work.
+
 From the repository root, copy `.env.example` to `.env` and start PostgreSQL:
 
 ```sh
