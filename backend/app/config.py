@@ -18,6 +18,11 @@ class Settings(BaseSettings):
     )
     default_from_year: int = 2025
     default_to_year: int = 2026
+    admin_username: str | None = None
+    admin_password_hash: str | None = None
+    admin_session_secret: str | None = None
+    admin_session_secure: bool = False
+    admin_session_ttl_seconds: int = 8 * 60 * 60
 
 
 @lru_cache

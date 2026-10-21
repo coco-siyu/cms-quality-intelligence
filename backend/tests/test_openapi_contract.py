@@ -26,6 +26,17 @@ def test_runtime_openapi_exposes_contract_operation_ids_and_error_models() -> No
     for path, operation_id in operations.items():
         assert schema["paths"][path]["get"]["operationId"] == operation_id
 
+    admin_operations = {
+        ("/api/admin/session", "get"): "getAdminSession",
+        ("/api/admin/session", "post"): "createAdminSession",
+        ("/api/admin/session", "delete"): "deleteAdminSession",
+        ("/api/admin/review-summary", "get"): "getAdminReviewSummary",
+        ("/api/admin/measures", "get"): "listAdminMeasures",
+        ("/api/admin/measures/{measure_id}", "get"): "getAdminMeasure",
+    }
+    for (path, method), operation_id in admin_operations.items():
+        assert schema["paths"][path][method]["operationId"] == operation_id
+
     list_responses = schema["paths"]["/api/measures"]["get"]["responses"]
     detail_responses = schema["paths"]["/api/measures/{measure_id}"]["get"]["responses"]
     assert list_responses["422"]["content"]["application/json"]["schema"]["$ref"].endswith(
