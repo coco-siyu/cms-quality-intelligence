@@ -97,7 +97,12 @@ function DashboardContent({
       </section>
 
       <div className="home-ledger-card surface-card">
-        <ChangeLedger filters={filters} measures={measures} onStatus={openStatus} />
+        <ChangeLedger
+          filters={filters}
+          measures={measures}
+          onStatus={openStatus}
+          dataMode={dataMode}
+        />
       </div>
 
       <nav className="dashboard-next" aria-label="Continue exploring">

@@ -54,7 +54,8 @@ function SidebarBody({
   path: string;
   onNavigate?: () => void;
 }) {
-  const [workspace, setWorkspace] = useState<"public" | "admin">("public");
+  const navigate = useNavigate();
+  const workspace = path.startsWith("/admin") ? "admin" : "public";
   const isActive = (to: string) => (to === "/" ? path === "/" : path.startsWith(to));
 
   return (
@@ -89,7 +90,10 @@ function SidebarBody({
               type="button"
               role="radio"
               aria-checked={workspace === "public"}
-              onClick={() => setWorkspace("public")}
+              onClick={() => {
+                void navigate({ to: "/", search: filters });
+                onNavigate?.();
+              }}
             >
               Public
             </button>
@@ -97,7 +101,10 @@ function SidebarBody({
               type="button"
               role="radio"
               aria-checked={workspace === "admin"}
-              onClick={() => setWorkspace("admin")}
+              onClick={() => {
+                void navigate({ to: "/admin", search: {} });
+                onNavigate?.();
+              }}
             >
               Admin
             </button>
@@ -107,7 +114,7 @@ function SidebarBody({
               <ShieldCheck aria-hidden="true" />
               <span>
                 <strong>Review workspace</strong>
-                <small>Real staged data and protected access arrive in the admin integration phase.</small>
+                <small>Authenticated access to private source-backed drafts.</small>
               </span>
             </div>
           )}
@@ -125,6 +132,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const filters = parseDemoFilters(rawSearch);
   const path = useRouterState({ select: (state) => state.location.pathname });
   const dataMode = getDataMode();
+  const isAdmin = path.startsWith("/admin");
 
   function updateComparison(values: Partial<DemoFilters>) {
     const nextSearch = { ...filters, ...values };
@@ -177,7 +185,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <Logo compact />
           </span>
 
-          <div className="header-comparison" aria-label="Performance-year comparison">
+          {!isAdmin && <div className="header-comparison" aria-label="Performance-year comparison">
             <span>Compare</span>
             <label>
               <span className="sr-only">Baseline year</span>
@@ -202,16 +210,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <option value="2026">PY2026</option>
               </select>
             </label>
-          </div>
-          <span className={`data-mode-pill ${dataMode}`}>
-            {dataMode === "demo" ? "Demo data" : "Published API"}
+          </div>}
+          <span className={`data-mode-pill ${isAdmin ? "private" : dataMode}`}>
+            {isAdmin ? "Private drafts" : dataMode === "demo" ? "Demo data" : "Published API"}
           </span>
         </header>
 
         <main className="site-main">{children}</main>
         <footer className="site-footer">
           <span>
-            {dataMode === "demo"
+            {isAdmin
+              ? "Protected review workspace. Draft records are excluded from public API responses."
+              : dataMode === "demo"
               ? FICTIONAL_DATA_NOTICE
               : "Independent intelligence interface. Confirm source freshness and evidence before operational use."}
           </span>
@@ -225,14 +235,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </footer>
       </div>
 
-      <nav className="mobile-bottom-navigation" aria-label="Mobile">
-        {primaryNavigation.map((item) => {
+      <nav className={`mobile-bottom-navigation ${isAdmin ? "admin-mobile-navigation" : ""}`} aria-label="Mobile">
+        {(isAdmin
+          ? [
+              { to: "/admin", label: "Review", icon: ShieldCheck },
+              { to: "/", label: "Public site", icon: Home },
+            ] as const
+          : primaryNavigation
+        ).map((item) => {
           const active = item.to === "/" ? path === "/" : path.startsWith(item.to);
           return (
             <Link
               key={item.to}
               to={item.to}
-              search={filters}
+              search={item.to === "/admin" ? {} : filters}
               aria-current={active ? "page" : undefined}
               aria-label={item.label}
               className={active ? "active" : ""}

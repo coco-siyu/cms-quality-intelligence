@@ -5,9 +5,11 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.domain import CandidateReviewDecision, PublicationState
 from app.models import (
+    EvidenceReference,
     Measure,
     MeasureVersion,
     SourceRevision,
+    SpecificationField,
     SpecificationFieldCandidate,
 )
 from app.schemas import (
@@ -31,13 +33,20 @@ def review_summary(session: Session) -> AdminReviewSummary:
         draft_versions=session.scalar(
             select(func.count())
             .select_from(MeasureVersion)
-            .where(MeasureVersion.publication_state == PublicationState.DRAFT)
+            .join(Measure)
+            .where(
+                Measure.is_public.is_(False),
+                MeasureVersion.publication_state == PublicationState.DRAFT,
+            )
         )
         or 0,
         pending_candidates=session.scalar(
             select(func.count())
             .select_from(SpecificationFieldCandidate)
+            .join(MeasureVersion)
+            .join(Measure)
             .where(
+                Measure.is_public.is_(False),
                 SpecificationFieldCandidate.review_decision
                 == CandidateReviewDecision.PENDING
             )
@@ -46,20 +55,44 @@ def review_summary(session: Session) -> AdminReviewSummary:
         decided_candidates=session.scalar(
             select(func.count())
             .select_from(SpecificationFieldCandidate)
+            .join(MeasureVersion)
+            .join(Measure)
             .where(
+                Measure.is_public.is_(False),
                 SpecificationFieldCandidate.review_decision
                 != CandidateReviewDecision.PENDING
             )
         )
         or 0,
         source_revisions=session.scalar(
-            select(func.count()).select_from(SourceRevision)
+            select(func.count())
+            .select_from(SourceRevision)
+            .where(
+                or_(
+                    SourceRevision.field_candidates.any(
+                        SpecificationFieldCandidate.measure_version.has(
+                            MeasureVersion.measure.has(Measure.is_public.is_(False))
+                        )
+                    ),
+                    SourceRevision.evidence_references.any(
+                        EvidenceReference.specification_field.has(
+                            SpecificationField.measure_version.has(
+                                MeasureVersion.measure.has(Measure.is_public.is_(False))
+                            )
+                        )
+                    ),
+                )
+            )
         )
         or 0,
         newer_revision_flags=session.scalar(
             select(func.count())
             .select_from(MeasureVersion)
-            .where(MeasureVersion.newer_revision_detected.is_(True))
+            .join(Measure)
+            .where(
+                Measure.is_public.is_(False),
+                MeasureVersion.newer_revision_detected.is_(True),
+            )
         )
         or 0,
     )

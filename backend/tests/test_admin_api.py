@@ -1,4 +1,5 @@
 from collections.abc import Generator
+from datetime import UTC, datetime
 
 import pytest
 from fastapi.testclient import TestClient
@@ -8,12 +9,34 @@ from app.auth import hash_admin_password
 from app.commands.seed_verified import seed_verified_drafts
 from app.config import Settings, get_settings
 from app.database import get_db
+from app.domain import PublicationState, PublicVerificationStatus
 from app.main import create_app
+from app.models import SourceDocument, SourceRevision
 
 
 @pytest.fixture
 def admin_client(session: Session) -> Generator[TestClient]:
     seed_verified_drafts(session)
+    unrelated_source = SourceDocument(
+        source_id="DEMO-UNRELATED",
+        title="Unrelated fictional published source",
+        official_url="https://example.invalid/unrelated",
+        mime_type="text/html",
+    )
+    unrelated_source.revisions.append(
+        SourceRevision(
+            revision_id="DEMO-UNRELATED-R1",
+            revision_number=1,
+            content_hash="unrelated-demo-hash",
+            publication_date=None,
+            effective_date=None,
+            retrieved_at=datetime(2026, 10, 21, tzinfo=UTC),
+            last_source_check_at=datetime(2026, 10, 21, tzinfo=UTC),
+            publication_state=PublicationState.PUBLISHED,
+            verification_status=PublicVerificationStatus.VERIFIED,
+        )
+    )
+    session.add(unrelated_source)
     session.commit()
     settings = Settings(
         admin_username="reviewer",

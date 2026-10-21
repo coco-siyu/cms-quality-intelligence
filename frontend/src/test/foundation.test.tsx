@@ -150,13 +150,14 @@ describe("Checkpoint B navigation routes", () => {
     ).toBeVisible();
   });
 
-  it("keeps the admin workspace honest while protected integration is pending", async () => {
-    await renderRoute("/");
+  it("opens the protected admin workspace from the workspace switch", async () => {
+    const router = await renderRoute("/");
 
     fireEvent.click(await screen.findByRole("radio", { name: "Admin" }));
 
-    expect(screen.getByRole("status")).toHaveTextContent("Review workspace");
-    expect(screen.getByRole("status")).toHaveTextContent("protected access");
-    expect(screen.queryByRole("link", { name: "Admin Workspace" })).not.toBeInTheDocument();
+    await waitFor(() => expect(router.state.location.pathname).toBe("/admin"));
+    expect(screen.getByText("Review workspace")).toBeInTheDocument();
+    expect(screen.getByText(/private source-backed drafts/)).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "Admin" })).toHaveAttribute("aria-checked", "true");
   });
 });

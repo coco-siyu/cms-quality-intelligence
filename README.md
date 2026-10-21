@@ -24,12 +24,19 @@ hold 32 collection-specific variants, 352 source-backed field candidates, and
 append-only reviewer decisions, but all current detailed-field decisions remain
 pending and non-public.
 
+The first M3 admin increment adds an environment-configured single-admin login,
+signed HttpOnly sessions, and a read-only review desk for the private roster,
+variants, field candidates, and their official source provenance. Review actions,
+ingestion controls, and publication remain intentionally unavailable.
+
 The Measure Explorer and API-mode measure detail pages now read from FastAPI.
-The Dashboard comparison ledger, What's New feed, and AI Impact prototype remain
-M2-only demo experiences and are visibly labelled fictional. The reviewed CMS
-roster may be loaded locally only as private draft data; it is intentionally
-excluded from public API responses. Detailed specification fields and formal
-publication approval remain incomplete, so M1 is not complete.
+The Dashboard comparison ledger uses published API records in API mode and does
+not label them fictional; comparison states remain unknown until the M2 backend
+is implemented. What's New shows an honest unavailable state in API mode, and AI
+Impact remains a demo-only prototype. The reviewed CMS roster may be loaded
+locally only as private draft data; it is intentionally excluded from public API
+responses. Detailed specification review and formal publication approval remain
+incomplete, so M1 is not complete.
 
 See `docs/checkpoint-c1.md` for schema decisions, scope boundaries, and the
 verified local workflow.
@@ -50,6 +57,8 @@ The current prototype routes are:
 - `/measures` — API-backed public directory by default; explicit demo mode is available
 - `/measures/:measureId` — API-backed overview, versions, evidence, and source status
 - `/whats-new` — dedicated fictional update feed
+- `/admin` — authenticated, read-only private review queue
+- `/admin/measures/:measureId` — private variants, candidates, and source provenance
 
 Frontend checks:
 
@@ -78,6 +87,20 @@ The API defaults to `http://localhost:8000`. Public routes are `GET /health`,
 `GET /api/performance-years`, `GET /api/measures`,
 `GET /api/measures/{measure_id}`, and
 `GET /api/measures/{measure_id}/versions`.
+
+Before opening the Admin workspace, generate local credentials interactively and
+copy the printed values into the repository root `.env` file. No password is
+stored in source control; only a scrypt password hash is configured.
+
+```sh
+cd backend
+uv run python -m app.commands.generate_admin_credentials
+```
+
+Restart FastAPI after updating `.env`, then choose **Admin** in the frontend
+workspace switch. Protected read endpoints live under `/api/admin/...` and use a
+signed HttpOnly session cookie. Set `CMSQI_ADMIN_SESSION_SECURE=true` in every
+HTTPS deployment.
 
 To load the two explicitly fictional records into the local database, opt in
 for that command only. It refuses database names that do not contain `demo`:

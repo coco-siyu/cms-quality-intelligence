@@ -1,4 +1,5 @@
 import base64
+import binascii
 import hashlib
 import hmac
 import json
@@ -116,7 +117,14 @@ def read_admin_session(
         if not hmac.compare_digest(str(data["username"]), settings.admin_username):
             return None
         return AdminIdentity(username=settings.admin_username)
-    except (ValueError, TypeError, KeyError, json.JSONDecodeError):
+    except (
+        ValueError,
+        TypeError,
+        KeyError,
+        UnicodeDecodeError,
+        binascii.Error,
+        json.JSONDecodeError,
+    ):
         return None
 
 

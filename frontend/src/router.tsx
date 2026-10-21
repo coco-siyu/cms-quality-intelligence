@@ -8,7 +8,10 @@ import {
 
 import { AppShell } from "./components/cms/AppShell";
 import { parseDemoFilters } from "./features/measures/demo/filters";
+import { parseAdminSearch } from "./features/admin/search";
 import { DashboardPage } from "./pages/DashboardPage";
+import { AdminMeasureDetailPage } from "./pages/AdminMeasureDetailPage";
+import { AdminWorkspacePage } from "./pages/AdminWorkspacePage";
 import { MeasureExplorerPage } from "./pages/MeasureExplorerPage";
 import { MeasureDetailPage } from "./pages/MeasureDetailPage";
 import { WhatsNewPage } from "./pages/WhatsNewPage";
@@ -55,11 +58,26 @@ const whatsNewRoute = createRoute({
   component: WhatsNewPage,
 });
 
+const adminRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/admin",
+  validateSearch: parseAdminSearch,
+  component: AdminWorkspacePage,
+});
+
+const adminMeasureDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/admin/measures/$measureId",
+  component: AdminMeasureDetailPage,
+});
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
   measureExplorerRoute,
   measureDetailRoute,
   whatsNewRoute,
+  adminRoute,
+  adminMeasureDetailRoute,
 ]);
 
 export function createAppRouter(history?: RouterHistory) {

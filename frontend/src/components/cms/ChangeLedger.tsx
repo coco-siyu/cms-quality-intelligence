@@ -8,6 +8,7 @@ import type {
   DemoMeasure,
   DemoStatus,
 } from "../../features/measures/demo/types";
+import type { DataMode } from "../../features/measures/dataMode";
 import { SectionTitle } from "./shared";
 import { statusIcons, statusLabels } from "./statusPresentation";
 
@@ -15,10 +16,12 @@ export function ChangeLedger({
   filters,
   measures,
   onStatus,
+  dataMode,
 }: {
   filters: DemoFilters;
   measures: DemoMeasure[];
   onStatus: (status: string) => void;
+  dataMode: DataMode;
 }) {
   const all = measures.filter(
     (measure) => filters.from !== filters.to || measure.years.includes(Number(filters.from)),
@@ -30,13 +33,15 @@ export function ChangeLedger({
 
   return (
     <section className="ledger-section">
-      <SectionTitle>
+      <SectionTitle demo={dataMode === "demo"}>
         What changed from PY{filters.from} to PY{filters.to}
       </SectionTitle>
       <p className="section-subtext">
         {filters.from === filters.to
-          ? "Same-year fictional comparison · No year-over-year changes."
-          : "MSSP / APP Plus · Fictional performance-year membership and specification changes"}
+          ? `Same-year ${dataMode === "demo" ? "fictional " : ""}comparison · No year-over-year changes.`
+          : dataMode === "demo"
+            ? "MSSP / APP Plus · Fictional performance-year membership and specification changes"
+            : "MSSP / APP Plus · Published performance-year comparison records"}
       </p>
       <div className="ledger-scroll">
         <div className="ledger-chart">

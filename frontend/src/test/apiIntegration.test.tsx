@@ -88,6 +88,8 @@ describe("C1 frontend API integration", () => {
 
     expect(await screen.findByRole("heading", { name: "Quality, decoded." })).toBeInTheDocument();
     expect(screen.getByText(/of 1 published measures in PY2026/i)).toBeInTheDocument();
+    expect(screen.getByText(/Published performance-year comparison records/i)).toBeInTheDocument();
+    expect(screen.queryByText("Fictional data")).not.toBeInTheDocument();
     expect(screen.queryByText("Breast Cancer Screening")).not.toBeInTheDocument();
     expect(String(fetchMock.mock.calls[0][0])).toContain("from_year=2025");
   });

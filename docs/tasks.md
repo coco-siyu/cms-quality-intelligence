@@ -1,6 +1,6 @@
 # CMS Quality Intelligence — Implementation Backlog
 
-## Checkpoint status (October 19, 2026)
+## Checkpoint status (October 21, 2026)
 
 - Tasks 1, 2, 5–12: implemented and verified through Checkpoints A, B, C1,
   and C2.1–C2.5. The official PY2025–PY2026 roster has two-source evidence,
@@ -17,7 +17,13 @@
   remain pending. Tasks 17, 20, and 22 also remain open, including
   dynamic year options, server-paginated Previous/Next, and full end-to-end M1
   validation.
-- Tasks 23 onward: not started. The dashboard change ledger, What's New feed,
+- Task 38 is partially complete: environment-managed single-admin credentials,
+  signed HttpOnly sessions, backend authorization, and authenticated read-only
+  private-review endpoints are implemented and contract-tested. Task 57 also has
+  a first read-only queue and per-measure evidence view. Review mutations,
+  ingestion controls, publishing, status workflow, and the full centralized
+  dashboard remain open.
+- Other tasks 23 onward: not started. The dashboard change ledger, What's New feed,
   comparison highlighting, and AI Impact content remain visibly fictional
   prototypes and are not production-backed.
 
