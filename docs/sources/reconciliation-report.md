@@ -1,7 +1,7 @@
 # PY2025–PY2026 CMS MSSP / APP Plus source reconciliation
 
-- Prepared: 2026-10-16; updated through C2.4 on 2026-10-18
-- Checkpoint: C2.1–C2.4 research, source verification, and private staging
+- Prepared: 2026-10-16; updated through C2.5 on 2026-10-19
+- Checkpoint: C2.1–C2.5 research, source verification, and private review staging
 - Publication state: candidate / non-public
 
 ## Scope and result
@@ -76,7 +76,7 @@ The two official PY2026 quality-standard URLs produced the same 266,777-byte PDF
 
 The prepared seed artifact at `backend/app/data/cms_app_plus_2025_2026.seed.json` contains all eight identities and their 14 verified program-year memberships. It explicitly sets `is_public=false` and `publication_state=draft`. The guarded importer was validated against the local PostgreSQL database: the first run prepared eight identities and 14 roster versions, and the second run created no duplicates. All imported C2.2 measures remained private and all memberships and versions remained draft.
 
-## C2.3–C2.4 field review and staging outcome
+## C2.3–C2.5 field review and staging outcome
 
 The review preparation covers all 32 located performance-year and collection-type variants. It creates 11 review items per variant, for 352 field-level items total:
 
@@ -89,6 +89,8 @@ Five official PY2026 eCQM human-readable specification pages were added to the f
 C2.4 adds `collection_type` and `specification_identifier` to `MeasureVersion` and introduces a separate `SpecificationFieldCandidate` table. The guarded seed imports the 32 variants and 352 review items into private staging. Every item remains `pending`, every variant remains draft, and every measure remains non-public. The public repositories and API contract are unchanged.
 
 The C2.4 migration and guarded seed were validated against the local PostgreSQL development database on 2026-10-18. The first C2.4 seed run added 32 private variants and 352 pending candidates to the existing roster; the second added zero records. Aggregate checks found 14 program-roster versions, 32 collection variants, 352 pending candidates, zero public CMS measures, and zero published CMS versions.
+
+C2.5 adds an append-only review-event table and a guarded CSV importer. It validates reviewer identity, review date, decision vocabulary, candidate text, source ID, source hash, and evidence locator before writing. Repeated imports of the same decision create no duplicate event. Current candidate state may reflect the latest imported decision, but no import creates `SpecificationField` rows or changes publication state. Because the workbook remains unreviewed, the audit table starts empty and all 352 candidate decisions remain pending.
 
 ## Recommended verification rules
 
@@ -107,7 +109,7 @@ A candidate may advance to `verified` and then `published` only when all applica
 
 ## PostgreSQL import workflow
 
-C2.2 implements the frozen roster and roster-only seed. C2.4 extends steps 2–5 to collection-specific private variants and stages the review queue described in step 6. The remaining review, evidence-promotion, and publication steps are required before detailed specification fields can become public.
+C2.2 implements the frozen roster and roster-only seed. C2.4 extends steps 2–5 to collection-specific private variants and stages the review queue described in step 6. C2.5 validates future reviewer decisions and preserves them as private audit events. The remaining expert review, evidence-promotion, and publication steps are required before detailed specification fields can become public.
 
 1. **Freeze a retrieval manifest.** Download official files, store original bytes outside public serving paths, calculate SHA-256, and record HTTP metadata and UTC retrieval time.
 2. **Register document lineages.** Upsert `SourceDocument` by stable `source_id` and official URL. Preserve alternate URLs as separately reviewed aliases until content identity is established.
@@ -129,5 +131,5 @@ C2.4 implements the approved explicit variant dimension. `MeasureVersion` now id
 
 1. Confirm whether archived source bytes belong in object storage with hashes in PostgreSQL, or in another immutable document store.
 2. Assign a qualified CMS quality-measure reviewer for the 352 pending field decisions.
-3. Define the audited promotion transaction that converts approved candidate values into `SpecificationField` and `EvidenceReference` rows without overwriting review history.
+3. Define the separate audited promotion transaction that converts approved candidate values into `SpecificationField` and `EvidenceReference` rows without overwriting review history.
 4. Recheck all mutable official URLs immediately before any publication decision.

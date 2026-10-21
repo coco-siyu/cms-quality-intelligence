@@ -45,6 +45,29 @@ Useful reviewer backgrounds include CMS quality reporting, MSSP/APP administrati
 
 The workbook is a review aid, not the authoritative database. Approved decisions must later be imported through a controlled, audited workflow.
 
+## Importing completed decisions
+
+When review is complete, export the workbook's **Field Evidence** sheet as a CSV file. Keep the evidence columns unchanged. The importer accepts the workbook's human-readable headings and ignores the introductory rows above the table.
+
+Use `YYYY-MM-DD` in **Reviewed date**, or an ISO 8601 timestamp with a UTC offset. Every non-pending row requires a reviewer name and reviewed date. `needs_revision` and `not_applicable` also require reviewer notes.
+
+First run validation only:
+
+```sh
+cd backend
+uv run python -m app.commands.import_review_decisions \
+  --input /path/to/reviewed-field-evidence.csv
+```
+
+After the validation report is clean, a technical operator can import the decisions into a local development database:
+
+```sh
+CMSQI_ALLOW_REVIEW_IMPORT=true uv run python -m app.commands.import_review_decisions \
+  --input /path/to/reviewed-field-evidence.csv --apply
+```
+
+The import is idempotent. Each new decision creates an append-only audit event, while the candidate row keeps the latest private review state. The command never creates a public specification field, marks a measure public, or publishes a version.
+
 ## Extraction statuses
 
 | Status | Meaning | Required action |
@@ -72,3 +95,4 @@ AI extraction, a successful automated test, or a completed spreadsheet formula i
 - The current queue contains 275 extracted candidates, 70 manual-extraction or policy-review items, and 7 proposed not-applicable fields. All 352 decisions remain pending.
 - PY2025 Medicare Part B Claims artifacts are excluded because official APP Plus program sources identify eCQM, MIPS CQM, and Medicare CQM as the applicable clinical collection types.
 - The database now preserves collection type explicitly and stages candidate fields separately from published `SpecificationField` records. This structural separation does not replace qualified review.
+- C2.5 can validate and import future reviewer decisions into private, append-only audit history. It does not promote approved decisions into public fields.

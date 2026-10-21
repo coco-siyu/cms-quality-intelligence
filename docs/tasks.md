@@ -1,9 +1,9 @@
 # CMS Quality Intelligence — Implementation Backlog
 
-## Checkpoint status (October 18, 2026)
+## Checkpoint status (October 19, 2026)
 
 - Tasks 1, 2, 5–12: implemented and verified through Checkpoints A, B, C1,
-  and C2.1–C2.4. The official PY2025–PY2026 roster has two-source evidence,
+  and C2.1–C2.5. The official PY2025–PY2026 roster has two-source evidence,
   exact locators, and hashed source revisions.
 - Tasks 14–16, 18, 19, and 21: C1 implementation is present against synthetic
   contract fixtures, including public/private isolation and explicit
@@ -12,8 +12,9 @@
   contains all eight identities and 14 verified program-year memberships. The
   collection-variant schema is implemented, and the guarded PostgreSQL import
   stages 32 private variants and 352 field candidates without publishing them.
-  All field-level decisions and publication approval remain pending. Tasks 17,
-  20, and 22 also remain open, including
+  A guarded, idempotent review importer now preserves future decisions in an
+  append-only audit trail, but all field-level decisions and publication approval
+  remain pending. Tasks 17, 20, and 22 also remain open, including
   dynamic year options, server-paginated Previous/Next, and full end-to-end M1
   validation.
 - Tasks 23 onward: not started. The dashboard change ledger, What's New feed,

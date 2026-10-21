@@ -144,6 +144,7 @@ def test_initial_migration_builds_and_reverts_schema(
         "program_memberships",
         "measure_versions",
         "specification_field_candidates",
+        "specification_field_candidate_reviews",
         "specification_fields",
         "source_documents",
         "source_revisions",

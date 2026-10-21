@@ -17,11 +17,12 @@ The application is being built as a small modular monolith:
 Checkpoints A and B provide the runnable application foundation and the
 Lovable-derived editorial interface. Checkpoint C1 adds PostgreSQL persistence,
 Alembic migrations, the M1 public measure endpoints, and typed frontend API
-queries. Checkpoints C2.1–C2.4 add the reviewed PY2025–PY2026 source inventory,
+queries. Checkpoints C2.1–C2.5 add the reviewed PY2025–PY2026 source inventory,
 immutable retrieval manifest, exact roster evidence locators, explicit
-collection variants, and a guarded private staging workflow. The database can
-hold 32 collection-specific variants and 352 source-backed field candidates,
-but all detailed-field decisions remain pending and non-public.
+collection variants, and a guarded private review workflow. The database can
+hold 32 collection-specific variants, 352 source-backed field candidates, and
+append-only reviewer decisions, but all current detailed-field decisions remain
+pending and non-public.
 
 The Measure Explorer and API-mode measure detail pages now read from FastAPI.
 The Dashboard comparison ledger, What's New feed, and AI Impact prototype remain

@@ -256,6 +256,42 @@ class SpecificationFieldCandidate(Base):
 
     measure_version: Mapped[MeasureVersion] = relationship(back_populates="field_candidates")
     source_revision: Mapped[SourceRevision] = relationship(back_populates="field_candidates")
+    reviews: Mapped[list["SpecificationFieldCandidateReview"]] = relationship(
+        back_populates="field_candidate", cascade="all, delete-orphan"
+    )
+
+
+class SpecificationFieldCandidateReview(Base):
+    __tablename__ = "specification_field_candidate_reviews"
+    __table_args__ = (
+        CheckConstraint(
+            "decision != 'pending'",
+            name="ck_candidate_review_event_is_decided",
+        ),
+        CheckConstraint(
+            "(decision = 'approve' AND reviewed_value IS NOT NULL) OR "
+            "(decision != 'approve' AND reviewed_value IS NULL)",
+            name="ck_candidate_review_event_value",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    event_key: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    specification_field_candidate_id: Mapped[int] = mapped_column(
+        ForeignKey("specification_field_candidates.id", ondelete="CASCADE")
+    )
+    decision: Mapped[CandidateReviewDecision] = mapped_column(
+        candidate_review_decision_enum, index=True
+    )
+    reviewed_value: Mapped[str | None] = mapped_column(Text)
+    reviewer_name: Mapped[str] = mapped_column(String(200))
+    reviewed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    reviewer_notes: Mapped[str | None] = mapped_column(Text)
+    imported_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+    field_candidate: Mapped[SpecificationFieldCandidate] = relationship(
+        back_populates="reviews"
+    )
 
 
 class SpecificationField(Base):

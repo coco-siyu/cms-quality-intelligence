@@ -62,3 +62,24 @@ The command changes no database records. The guarded seed command separately
 copies those candidates into private staging with every review decision set to
 `pending`; a qualified CMS quality-measure reviewer must approve them before a
 future publication workflow may use them.
+
+After a qualified reviewer completes the **Field Evidence** sheet, export that
+sheet as CSV and validate it before importing anything:
+
+```sh
+uv run python -m app.commands.import_review_decisions --input /path/to/reviewed-field-evidence.csv
+```
+
+The default is a dry run. To append valid decisions to the private audit trail
+and update private candidate state in a local `demo` or `dev` database, opt in
+explicitly:
+
+```sh
+CMSQI_ALLOW_REVIEW_IMPORT=true uv run python -m app.commands.import_review_decisions \
+  --input /path/to/reviewed-field-evidence.csv --apply
+```
+
+The importer rejects altered candidate evidence, unknown or duplicate review
+IDs, incomplete reviewer metadata, stale approvals, and unsupported decisions.
+It is idempotent and does not create published specification fields or change
+measure publication state.
