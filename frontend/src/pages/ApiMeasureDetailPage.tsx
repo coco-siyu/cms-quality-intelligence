@@ -84,7 +84,7 @@ export function ApiMeasureDetailPage() {
   const availableFields = [...new Set(measure.versions.flatMap((version) => version.fields.map((field) => field.field)))];
 
   return (
-    <>
+    <div className="visual-page detail-page">
       <div className="detail-navigation">
         <nav aria-label="Breadcrumb">
           <Link to="/" search={filters}>Dashboard</Link>
@@ -211,6 +211,6 @@ export function ApiMeasureDetailPage() {
           </section>
         </TabsContent>
       </Tabs>
-    </>
+    </div>
   );
 }

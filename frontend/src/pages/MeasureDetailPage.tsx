@@ -131,7 +131,7 @@ function DemoMeasureDetailPage() {
   const warning = measure.review === "Needs re-verification";
 
   return (
-    <>
+    <div className="visual-page detail-page">
       <div className="detail-navigation">
         <nav aria-label="Breadcrumb">
           <Link to="/" search={filters}>
@@ -394,7 +394,7 @@ function DemoMeasureDetailPage() {
           </section>
         </TabsContent>
       </Tabs>
-    </>
+    </div>
   );
 }
 

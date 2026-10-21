@@ -2,32 +2,131 @@ import { useState } from "react";
 import { Link, useNavigate, useRouterState, useSearch } from "@tanstack/react-router";
 import {
   ArrowRight,
-  ExternalLink,
-  LayoutDashboard,
-  ListFilter,
+  ChevronsLeft,
+  ChevronsRight,
+  Home,
+  Menu,
   Newspaper,
-  PanelLeftClose,
-  PanelLeftOpen,
   Search,
   ShieldCheck,
 } from "lucide-react";
 
-import { Button } from "../ui/button";
-import { Input } from "../ui/input";
+import { Dialog, DialogContent, DialogTitle } from "../ui/dialog";
 import { FICTIONAL_DATA_NOTICE } from "../../features/measures/demo/fixtures";
 import { parseDemoFilters } from "../../features/measures/demo/filters";
+import type { DemoFilters } from "../../features/measures/demo/types";
 import { getDataMode } from "../../features/measures/dataMode";
-import { FilterSelect } from "./shared";
+
+const primaryNavigation = [
+  { to: "/", label: "Home", icon: Home },
+  { to: "/measures", label: "Measures", icon: Search },
+  { to: "/whats-new", label: "What's New", icon: Newspaper },
+] as const;
+
+function Logo({ compact = false }: { compact?: boolean }) {
+  return (
+    <span className="site-logo">
+      <span className="site-logo-mark" aria-hidden="true">
+        <span />
+        <span />
+        <span />
+        <span />
+      </span>
+      {!compact && (
+        <span className="site-logo-name">
+          CMS Quality
+          <br />
+          Intelligence
+        </span>
+      )}
+    </span>
+  );
+}
+
+function SidebarBody({
+  collapsed,
+  filters,
+  path,
+  onNavigate,
+}: {
+  collapsed: boolean;
+  filters: DemoFilters;
+  path: string;
+  onNavigate?: () => void;
+}) {
+  const [workspace, setWorkspace] = useState<"public" | "admin">("public");
+  const isActive = (to: string) => (to === "/" ? path === "/" : path.startsWith(to));
+
+  return (
+    <>
+      <nav className="site-navigation" aria-label="Primary">
+        {primaryNavigation.map((item) => {
+          const active = isActive(item.to);
+          return (
+            <Link
+              key={item.to}
+              to={item.to}
+              search={filters}
+              onClick={onNavigate}
+              aria-current={active ? "page" : undefined}
+              aria-label={item.label}
+              title={collapsed ? item.label : undefined}
+              className={`site-nav-link ${active ? "active" : ""}`}
+            >
+              <item.icon aria-hidden="true" />
+              {!collapsed && <span>{item.label}</span>}
+            </Link>
+          );
+        })}
+      </nav>
+
+      <div className="workspace-divider" />
+      {!collapsed && (
+        <section className="workspace-switch" aria-label="Workspace">
+          <p>Workspace</p>
+          <div role="radiogroup" aria-label="Workspace selection">
+            <button
+              type="button"
+              role="radio"
+              aria-checked={workspace === "public"}
+              onClick={() => setWorkspace("public")}
+            >
+              Public
+            </button>
+            <button
+              type="button"
+              role="radio"
+              aria-checked={workspace === "admin"}
+              onClick={() => setWorkspace("admin")}
+            >
+              Admin
+            </button>
+          </div>
+          {workspace === "admin" && (
+            <div className="workspace-placeholder" role="status">
+              <ShieldCheck aria-hidden="true" />
+              <span>
+                <strong>Review workspace</strong>
+                <small>Real staged data and protected access arrive in the admin integration phase.</small>
+              </span>
+            </div>
+          )}
+        </section>
+      )}
+    </>
+  );
+}
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
-  const search = useSearch({ strict: false });
-  const filters = parseDemoFilters(search);
+  const rawSearch = useSearch({ strict: false });
+  const filters = parseDemoFilters(rawSearch);
   const path = useRouterState({ select: (state) => state.location.pathname });
   const dataMode = getDataMode();
 
-  function updateComparison(values: Partial<typeof filters>) {
+  function updateComparison(values: Partial<DemoFilters>) {
     const nextSearch = { ...filters, ...values };
 
     if (path === "/") {
@@ -46,164 +145,118 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     }
   }
 
-  function searchMeasures(q: string) {
-    void navigate({
-      to: "/measures",
-      search: { ...filters, q },
-      replace: path === "/measures",
-    });
-  }
-
-  const dashboardActive = path === "/";
-  const measuresActive = path === "/measures" || path.startsWith("/measures/");
-  const whatsNewActive = path === "/whats-new";
-
-  const years = [
-    { value: "2025", label: "PY2025" },
-    { value: "2026", label: "PY2026" },
-  ];
-
   return (
-    <div className={`app-layout ${collapsed ? "sidebar-collapsed" : ""}`}>
-      <aside className="app-sidebar">
-        <Link to="/" search={filters} className="brand" aria-label="CMS Quality Intelligence home">
-          <svg
-            className="brand-logo"
-            width="32"
-            height="32"
-            viewBox="0 0 32 32"
-            fill="none"
-            aria-hidden="true"
-          >
-            <circle cx="9" cy="6" r="3.5" className="logo-hollow" />
-            <path d="M9 10v12" className="logo-dashed" />
-            <circle cx="9" cy="26" r="3.5" className="logo-blue" />
-            <circle cx="23" cy="6" r="3.5" className="logo-ink" />
-            <path d="M23 10v12" className="logo-line" />
-            <circle cx="23" cy="26" r="3.5" className="logo-ink" />
-          </svg>
-          <span className="brand-name">
-            CMS Quality
-            <br />
-            Intelligence
-          </span>
-          <span className="brand-subtitle">Medicare Shared Savings Program</span>
+    <div className={`site-layout ${collapsed ? "site-sidebar-collapsed" : ""}`}>
+      <aside className="site-sidebar">
+        <Link to="/" search={filters} aria-label="CMS Quality Intelligence home">
+          <Logo compact={collapsed} />
         </Link>
-
-        <nav aria-label="Primary">
-          <Button
-            asChild
-            variant="ghost"
-            className={`sidebar-link ${dashboardActive ? "active" : ""}`}
-            title="Dashboard"
-          >
-            <Link to="/" search={filters} aria-current={dashboardActive ? "page" : undefined}>
-              <LayoutDashboard />
-              <span>Dashboard</span>
-            </Link>
-          </Button>
-          <Button
-            asChild
-            variant="ghost"
-            className={`sidebar-link ${measuresActive ? "active" : ""}`}
-            title="Measure Explorer"
-          >
-            <Link
-              to="/measures"
-              search={filters}
-              aria-current={measuresActive ? "page" : undefined}
-            >
-              <ListFilter />
-              <span>Measure Explorer</span>
-            </Link>
-          </Button>
-          <Button
-            asChild
-            variant="ghost"
-            className={`sidebar-link ${whatsNewActive ? "active" : ""}`}
-            title="What's new"
-          >
-            <Link
-              to="/whats-new"
-              search={filters}
-              aria-current={whatsNewActive ? "page" : undefined}
-            >
-              <Newspaper />
-              <span>What&apos;s New</span>
-            </Link>
-          </Button>
-        </nav>
-
-        <div className="sidebar-bottom">
-          <ShieldCheck size={17} />
-          <span>
-            Evidence before insight.
-            <br />
-            <small>MSSP / APP Plus</small>
-          </span>
-        </div>
+        <SidebarBody collapsed={collapsed} filters={filters} path={path} />
+        <button
+          type="button"
+          className="sidebar-collapse"
+          onClick={() => setCollapsed((value) => !value)}
+          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+        >
+          {collapsed ? <ChevronsRight /> : <ChevronsLeft />}
+          {!collapsed && <span>Collapse</span>}
+        </button>
       </aside>
 
-      <main className="app-main">
-        <div className="topbar">
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-            onClick={() => setCollapsed((value) => !value)}
+      <div className="site-content">
+        <header className="site-header">
+          <button
+            type="button"
+            className="mobile-menu-trigger"
+            onClick={() => setMobileMenuOpen(true)}
+            aria-label="Open menu"
           >
-            {collapsed ? <PanelLeftOpen /> : <PanelLeftClose />}
-          </Button>
-          <div className="global-search">
-            <Search size={16} />
-            <Input
-              type="search"
-              aria-label="Search measures by ID, name, or description"
-              placeholder={`Search ${dataMode === "demo" ? "fictional " : ""}measures or IDs`}
-              value={filters.q}
-              onChange={(event) => searchMeasures(event.target.value)}
-            />
-          </div>
-          <div className="compare-control">
-            <span>Compare</span>
-            <FilterSelect
-              label="Baseline year"
-              value={filters.from}
-              options={years}
-              onChange={(from) => updateComparison({ from })}
-            />
-            <ArrowRight size={14} />
-            <FilterSelect
-              label="Comparison year"
-              value={filters.to}
-              options={years}
-              onChange={(to) => updateComparison({ to })}
-            />
-          </div>
-          <span className="demo-mode">
-            {dataMode === "demo" ? "Prototype mode" : "API mode · M2 views demo"}
+            <Menu />
+          </button>
+          <span className="mobile-logo">
+            <Logo compact />
           </span>
-        </div>
 
-        <div className="page-sheet">
-          {children}
-          <footer className="sheet-footer">
-            <span>
-              {dataMode === "demo"
-                ? FICTIONAL_DATA_NOTICE
-                : "Public API mode. Confirm freshness and source evidence before operational use."}
-            </span>
-            <a
-              href="https://www.cms.gov/medicare/payment/fee-for-service-providers/shared-savings-program-ssp-acos"
-              target="_blank"
-              rel="noreferrer"
+          <div className="header-comparison" aria-label="Performance-year comparison">
+            <span>Compare</span>
+            <label>
+              <span className="sr-only">Baseline year</span>
+              <select
+                aria-label="Baseline year"
+                value={filters.from}
+                onChange={(event) => updateComparison({ from: event.target.value })}
+              >
+                <option value="2025">PY2025</option>
+                <option value="2026">PY2026</option>
+              </select>
+            </label>
+            <ArrowRight aria-hidden="true" />
+            <label>
+              <span className="sr-only">Comparison year</span>
+              <select
+                aria-label="Comparison year"
+                value={filters.to}
+                onChange={(event) => updateComparison({ to: event.target.value })}
+              >
+                <option value="2025">PY2025</option>
+                <option value="2026">PY2026</option>
+              </select>
+            </label>
+          </div>
+          <span className={`data-mode-pill ${dataMode}`}>
+            {dataMode === "demo" ? "Demo data" : "Published API"}
+          </span>
+        </header>
+
+        <main className="site-main">{children}</main>
+        <footer className="site-footer">
+          <span>
+            {dataMode === "demo"
+              ? FICTIONAL_DATA_NOTICE
+              : "Independent intelligence interface. Confirm source freshness and evidence before operational use."}
+          </span>
+          <a
+            href="https://www.cms.gov/medicare/payment/fee-for-service-providers/shared-savings-program-ssp-acos"
+            target="_blank"
+            rel="noreferrer"
+          >
+            CMS Shared Savings Program
+          </a>
+        </footer>
+      </div>
+
+      <nav className="mobile-bottom-navigation" aria-label="Mobile">
+        {primaryNavigation.map((item) => {
+          const active = item.to === "/" ? path === "/" : path.startsWith(item.to);
+          return (
+            <Link
+              key={item.to}
+              to={item.to}
+              search={filters}
+              aria-current={active ? "page" : undefined}
+              aria-label={item.label}
+              className={active ? "active" : ""}
             >
-              CMS Shared Savings Program <ExternalLink size={12} />
-            </a>
-          </footer>
-        </div>
-      </main>
+              <item.icon aria-hidden="true" />
+              <span>{item.label}</span>
+            </Link>
+          );
+        })}
+      </nav>
+
+      <Dialog open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+        <DialogContent className="mobile-navigation-dialog">
+          <DialogTitle className="mobile-dialog-title">
+            <Logo />
+          </DialogTitle>
+          <SidebarBody
+            collapsed={false}
+            filters={filters}
+            path={path}
+            onNavigate={() => setMobileMenuOpen(false)}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

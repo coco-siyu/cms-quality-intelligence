@@ -7,9 +7,13 @@ import { StatusMark } from "./shared";
 export function NewsFeed({ items, filters }: { items: DemoNewsItem[]; filters: DemoFilters }) {
   return (
     <section className="editorial-feed" aria-label="Fictional CMS measure updates">
-      {items.map((item) => (
-        <article key={item.id} className="editorial-update">
+      {items.map((item, index) => (
+        <article
+          key={item.id}
+          className={`editorial-update ${index === 0 ? "featured-update" : ""}`}
+        >
           <div className="update-rail">
+            {index === 0 && <span className="featured-label">Featured</span>}
             <StatusMark status={item.status} />
             {item.id === "PV-103" && (
               <span className="warning-text">

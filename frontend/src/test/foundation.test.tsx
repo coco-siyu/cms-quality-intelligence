@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createMemoryHistory, RouterProvider } from "@tanstack/react-router";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { createAppRouter } from "../router";
@@ -27,12 +27,16 @@ describe("Checkpoint B navigation routes", () => {
     await renderRoute("/");
 
     expect(
-      await screen.findByRole("heading", { name: "CMS Quality Intelligence" }),
+      await screen.findByRole("heading", { name: "Quality, decoded." }),
     ).toBeInTheDocument();
     expect(screen.getByText(/what changed from PY2025 to PY2026/i)).toBeInTheDocument();
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "What's new" })).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Dashboard" })).toHaveAttribute(
+    expect(
+      within(screen.getByRole("navigation", { name: "Primary" })).getByRole("link", {
+        name: "Home",
+      }),
+    ).toHaveAttribute(
       "aria-current",
       "page",
     );
@@ -46,7 +50,11 @@ describe("Checkpoint B navigation routes", () => {
     ).toBeInTheDocument();
     expect(screen.getByRole("table")).toBeInTheDocument();
     expect(screen.getByText(/showing 1 of 8 fictional measures/i)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Measure Explorer" })).toHaveAttribute(
+    expect(
+      within(screen.getByRole("navigation", { name: "Primary" })).getByRole("link", {
+        name: "Measures",
+      }),
+    ).toHaveAttribute(
       "aria-current",
       "page",
     );
@@ -58,7 +66,11 @@ describe("Checkpoint B navigation routes", () => {
     expect(await screen.findByRole("heading", { name: "What's new" })).toBeInTheDocument();
     expect(screen.getAllByRole("article")).toHaveLength(3);
     expect(screen.getAllByText("Fictional publication")).toHaveLength(3);
-    expect(screen.getByRole("link", { name: "What's New" })).toHaveAttribute(
+    expect(
+      within(screen.getByRole("navigation", { name: "Primary" })).getByRole("link", {
+        name: "What's New",
+      }),
+    ).toHaveAttribute(
       "aria-current",
       "page",
     );
@@ -98,7 +110,11 @@ describe("Checkpoint B navigation routes", () => {
       await screen.findByRole("heading", { name: "Breast Cancer Screening" }),
     ).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("link", { name: "Measures" }));
+    fireEvent.click(
+      within(screen.getByRole("navigation", { name: "Breadcrumb" })).getByRole("link", {
+        name: "Measures",
+      }),
+    );
     await waitFor(() => expect(router.state.location.pathname).toBe("/measures"));
     expect(router.state.location.search).toMatchObject({
       status: "modified",
@@ -115,7 +131,11 @@ describe("Checkpoint B navigation routes", () => {
       await screen.findByRole("heading", { name: "Breast Cancer Screening" }),
     ).toBeInTheDocument();
     expect(screen.getByRole("alert")).toHaveTextContent("Needs re-verification");
-    expect(screen.getByRole("link", { name: "Measure Explorer" })).toHaveAttribute(
+    expect(
+      within(screen.getByRole("navigation", { name: "Primary" })).getByRole("link", {
+        name: "Measures",
+      }),
+    ).toHaveAttribute(
       "aria-current",
       "page",
     );
@@ -128,5 +148,15 @@ describe("Checkpoint B navigation routes", () => {
     expect(
       await screen.findByText(/coordinate with clinical, reporting, and quality teams/i),
     ).toBeVisible();
+  });
+
+  it("keeps the admin workspace honest while protected integration is pending", async () => {
+    await renderRoute("/");
+
+    fireEvent.click(await screen.findByRole("radio", { name: "Admin" }));
+
+    expect(screen.getByRole("status")).toHaveTextContent("Review workspace");
+    expect(screen.getByRole("status")).toHaveTextContent("protected access");
+    expect(screen.queryByRole("link", { name: "Admin Workspace" })).not.toBeInTheDocument();
   });
 });

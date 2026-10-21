@@ -80,6 +80,29 @@ afterEach(() => {
 });
 
 describe("C1 frontend API integration", () => {
+  it("uses published API records on the redesigned dashboard", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(page));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await renderApiRoute("/?from=2025&to=2026");
+
+    expect(await screen.findByRole("heading", { name: "Quality, decoded." })).toBeInTheDocument();
+    expect(screen.getByText(/of 1 published measures in PY2026/i)).toBeInTheDocument();
+    expect(screen.queryByText("Breast Cancer Screening")).not.toBeInTheDocument();
+    expect(String(fetchMock.mock.calls[0][0])).toContain("from_year=2025");
+  });
+
+  it("does not fabricate a public What's New feed before the API exists", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    await renderApiRoute("/whats-new?from=2025&to=2026");
+
+    expect(await screen.findByText(/public update feed is being prepared/i)).toBeInTheDocument();
+    expect(screen.getByText(/No fictional CMS events have been substituted/i)).toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("loads the Measure Explorer from the public API with URL filters", async () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse(page));
     vi.stubGlobal("fetch", fetchMock);
