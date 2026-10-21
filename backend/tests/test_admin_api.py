@@ -9,9 +9,14 @@ from app.auth import hash_admin_password
 from app.commands.seed_verified import seed_verified_drafts
 from app.config import Settings, get_settings
 from app.database import get_db
-from app.domain import PublicationState, PublicVerificationStatus
+from app.domain import CandidateReviewDecision, PublicationState, PublicVerificationStatus
 from app.main import create_app
-from app.models import SourceDocument, SourceRevision
+from app.models import (
+    SourceDocument,
+    SourceRevision,
+    SpecificationFieldCandidate,
+    SpecificationFieldCandidateReview,
+)
 
 
 @pytest.fixture
@@ -58,6 +63,11 @@ def admin_client(session: Session) -> Generator[TestClient]:
 
 
 def test_admin_session_reports_missing_configuration(client: TestClient) -> None:
+    client.app.dependency_overrides[get_settings] = lambda: Settings(
+        admin_username=None,
+        admin_password_hash=None,
+        admin_session_secret=None,
+    )
     status = client.get("/api/admin/session")
     login = client.post(
         "/api/admin/session", json={"username": "admin", "password": "anything"}
@@ -146,3 +156,131 @@ def test_logout_revokes_the_browser_session(admin_client: TestClient) -> None:
 
     assert logout.json()["authenticated"] is False
     assert admin_client.get("/api/admin/review-summary").status_code == 401
+
+
+def _login_admin(admin_client: TestClient) -> None:
+    response = admin_client.post(
+        "/api/admin/session",
+        json={"username": "reviewer", "password": "correct horse battery staple"},
+    )
+    assert response.status_code == 200
+
+
+def _first_review_item(admin_client: TestClient) -> dict[str, object]:
+    detail = admin_client.get("/api/admin/measures/001")
+    assert detail.status_code == 200
+    return detail.json()["versions"][0]["candidates"][0]
+
+
+def test_admin_review_decisions_are_authenticated_audited_and_not_published(
+    admin_client: TestClient,
+    session: Session,
+) -> None:
+    _login_admin(admin_client)
+    review_item = _first_review_item(admin_client)
+    review_item_id = review_item["review_item_id"]
+
+    approved = admin_client.patch(
+        f"/api/admin/review-items/{review_item_id}",
+        headers={"X-CMSQI-Admin-Action": "review-decision"},
+        json={
+            "decision": "approve",
+            "reviewed_value": review_item["candidate_value"],
+            "reviewer_notes": "Checked against the linked official source.",
+        },
+    )
+
+    assert approved.status_code == 200
+    approved_body = approved.json()
+    assert approved_body["review_decision"] == "approve"
+    assert approved_body["reviewer_name"] == "reviewer"
+    assert approved_body["review_history"] == [
+        {
+            "decision": "approve",
+            "reviewed_value": review_item["candidate_value"],
+            "reviewer_name": "reviewer",
+            "reviewed_at": approved_body["reviewed_at"],
+            "reviewer_notes": "Checked against the linked official source.",
+        }
+    ]
+
+    revised = admin_client.patch(
+        f"/api/admin/review-items/{review_item_id}",
+        headers={"X-CMSQI-Admin-Action": "review-decision"},
+        json={
+            "decision": "needs_revision",
+            "reviewed_value": None,
+            "reviewer_notes": "The locator needs a more precise page reference.",
+        },
+    )
+
+    assert revised.status_code == 200
+    revised_body = revised.json()
+    assert revised_body["review_decision"] == "needs_revision"
+    assert revised_body["reviewed_value"] is None
+    assert len(revised_body["review_history"]) == 2
+    assert [event["decision"] for event in revised_body["review_history"]] == [
+        "approve",
+        "needs_revision",
+    ]
+
+    candidate = session.query(SpecificationFieldCandidate).filter_by(
+        review_item_id=review_item_id
+    ).one()
+    assert candidate.review_decision == CandidateReviewDecision.NEEDS_REVISION
+    assert session.query(SpecificationFieldCandidateReview).filter_by(
+        specification_field_candidate_id=candidate.id
+    ).count() == 2
+
+    public = admin_client.get("/api/measures")
+    assert public.status_code == 200
+    assert public.json()["items"] == []
+
+
+def test_admin_review_mutation_enforces_action_header_and_decision_rules(
+    admin_client: TestClient,
+) -> None:
+    _login_admin(admin_client)
+    review_item = _first_review_item(admin_client)
+    path = f"/api/admin/review-items/{review_item['review_item_id']}"
+
+    missing_header = admin_client.patch(
+        path,
+        json={"decision": "approve", "reviewed_value": review_item["candidate_value"]},
+    )
+    invalid_header = admin_client.patch(
+        path,
+        headers={"X-CMSQI-Admin-Action": "publish"},
+        json={"decision": "approve", "reviewed_value": review_item["candidate_value"]},
+    )
+    missing_value = admin_client.patch(
+        path,
+        headers={"X-CMSQI-Admin-Action": "review-decision"},
+        json={"decision": "approve"},
+    )
+    missing_notes = admin_client.patch(
+        path,
+        headers={"X-CMSQI-Admin-Action": "review-decision"},
+        json={"decision": "not_applicable"},
+    )
+
+    assert missing_header.status_code == 422
+    assert invalid_header.status_code == 403
+    assert invalid_header.json()["code"] == "invalid_admin_action_header"
+    assert missing_value.status_code == 422
+    assert missing_value.json()["code"] == "review_validation_error"
+    assert missing_notes.status_code == 422
+    assert missing_notes.json()["code"] == "review_validation_error"
+
+
+def test_review_mutation_requires_an_authenticated_admin(
+    admin_client: TestClient,
+) -> None:
+    response = admin_client.patch(
+        "/api/admin/review-items/unknown",
+        headers={"X-CMSQI-Admin-Action": "review-decision"},
+        json={"decision": "not_applicable", "reviewer_notes": "Not applicable."},
+    )
+
+    assert response.status_code == 401
+    assert response.json()["code"] == "admin_authentication_required"

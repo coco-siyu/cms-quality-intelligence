@@ -33,6 +33,9 @@ def test_runtime_openapi_exposes_contract_operation_ids_and_error_models() -> No
         ("/api/admin/review-summary", "get"): "getAdminReviewSummary",
         ("/api/admin/measures", "get"): "listAdminMeasures",
         ("/api/admin/measures/{measure_id}", "get"): "getAdminMeasure",
+        ("/api/admin/review-items/{review_item_id}", "patch"): (
+            "reviewAdminFieldCandidate"
+        ),
     }
     for (path, method), operation_id in admin_operations.items():
         assert schema["paths"][path][method]["operationId"] == operation_id

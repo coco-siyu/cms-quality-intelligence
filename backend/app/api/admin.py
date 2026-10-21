@@ -1,7 +1,7 @@
 import hmac
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, Response
+from fastapi import APIRouter, Depends, Header, HTTPException, Path, Query, Request, Response
 from sqlalchemy.orm import Session
 
 from app.auth import (
@@ -15,12 +15,17 @@ from app.auth import (
 )
 from app.config import Settings, get_settings
 from app.database import get_db
+from app.domain import CandidateReviewDecision
 from app.repositories.admin_reviews import (
+    candidate_response,
+    get_private_candidate,
     get_private_measure,
     list_private_measures,
     review_summary,
 )
 from app.schemas import (
+    AdminCandidateDecisionRequest,
+    AdminFieldCandidateResponse,
     AdminLoginRequest,
     AdminMeasureDetail,
     AdminMeasurePage,
@@ -28,6 +33,7 @@ from app.schemas import (
     AdminSessionResponse,
     ApiError,
 )
+from app.services.reviews import record_candidate_review
 
 router = APIRouter(prefix="/api/admin", tags=["Admin review"])
 DatabaseSession = Annotated[Session, Depends(get_db)]
@@ -36,6 +42,23 @@ AuthenticatedAdmin = Annotated[AdminIdentity, Depends(require_admin)]
 auth_responses = {
     401: {"model": ApiError, "description": "Administrator authentication is required."}
 }
+
+
+def require_admin_action_header(
+    action: Annotated[str, Header(alias="X-CMSQI-Admin-Action")],
+) -> None:
+    if not hmac.compare_digest(action, "review-decision"):
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "code": "invalid_admin_action_header",
+                "message": "The required administrator action header is invalid.",
+                "details": [],
+            },
+        )
+
+
+AdminActionHeader = Annotated[None, Depends(require_admin_action_header)]
 
 
 def _session_response(request: Request, settings: Settings) -> AdminSessionResponse:
@@ -170,3 +193,87 @@ def admin_measure_detail(
             },
         )
     return result
+
+
+@router.patch(
+    "/review-items/{review_item_id}",
+    response_model=AdminFieldCandidateResponse,
+    operation_id="reviewAdminFieldCandidate",
+    responses={
+        **auth_responses,
+        403: {"model": ApiError, "description": "The admin action header is invalid."},
+        404: {"model": ApiError, "description": "The private review item was not found."},
+        409: {"model": ApiError, "description": "The review item is stale."},
+        422: {"model": ApiError, "description": "The review decision is invalid."},
+    },
+)
+def review_field_candidate(
+    session: DatabaseSession,
+    admin: AuthenticatedAdmin,
+    _action: AdminActionHeader,
+    review_item_id: Annotated[str, Path(min_length=1)],
+    request: AdminCandidateDecisionRequest,
+) -> AdminFieldCandidateResponse:
+    candidate = get_private_candidate(session, review_item_id)
+    if candidate is None:
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "code": "not_found",
+                "message": f"Private review item '{review_item_id}' was not found.",
+                "details": [],
+            },
+        )
+
+    decision = CandidateReviewDecision(request.decision)
+    reviewed_value = request.reviewed_value.strip() if request.reviewed_value else None
+    reviewer_notes = request.reviewer_notes.strip() if request.reviewer_notes else None
+    if decision == CandidateReviewDecision.APPROVE and not reviewed_value:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "code": "review_validation_error",
+                "message": "An approved candidate requires a reviewed value.",
+                "details": [],
+            },
+        )
+    if decision != CandidateReviewDecision.APPROVE and not reviewer_notes:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "code": "review_validation_error",
+                "message": f"Reviewer notes are required for {decision.value}.",
+                "details": [],
+            },
+        )
+    if decision != CandidateReviewDecision.APPROVE and reviewed_value is not None:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "code": "review_validation_error",
+                "message": "Only approved candidates can contain a reviewed value.",
+                "details": [],
+            },
+        )
+    if (
+        decision == CandidateReviewDecision.APPROVE
+        and candidate.measure_version.newer_revision_detected
+    ):
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": "stale_review_item",
+                "message": "Approval is blocked because a newer source revision was detected.",
+                "details": [],
+            },
+        )
+
+    record_candidate_review(
+        candidate,
+        decision=decision,
+        reviewed_value=reviewed_value,
+        reviewer_name=admin.username,
+        reviewer_notes=reviewer_notes,
+    )
+    session.commit()
+    return candidate_response(candidate)

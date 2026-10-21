@@ -13,6 +13,7 @@ from app.models import (
     SpecificationFieldCandidate,
 )
 from app.schemas import (
+    AdminCandidateReviewResponse,
     AdminFieldCandidateResponse,
     AdminMeasureDetail,
     AdminMeasurePage,
@@ -108,8 +109,72 @@ def _private_measure_query():
             .selectinload(MeasureVersion.field_candidates)
             .selectinload(SpecificationFieldCandidate.source_revision)
             .selectinload(SourceRevision.source_document),
+            selectinload(Measure.versions)
+            .selectinload(MeasureVersion.field_candidates)
+            .selectinload(SpecificationFieldCandidate.reviews),
         )
     )
+
+
+def _candidate_response(
+    candidate: SpecificationFieldCandidate,
+) -> AdminFieldCandidateResponse:
+    revision = candidate.source_revision
+    return AdminFieldCandidateResponse(
+        review_item_id=candidate.review_item_id,
+        field_name=candidate.field_name,
+        candidate_value=candidate.candidate_value,
+        extraction_status=candidate.extraction_status,
+        evidence_locator=candidate.evidence_locator,
+        review_decision=candidate.review_decision,
+        reviewed_value=candidate.reviewed_value,
+        reviewer_name=candidate.reviewer_name,
+        reviewed_at=candidate.reviewed_at,
+        reviewer_notes=candidate.reviewer_notes,
+        source_id=revision.source_document.source_id,
+        source_revision_id=revision.revision_id,
+        source_title=revision.source_document.title,
+        official_url=revision.source_document.official_url,
+        source_content_hash=revision.content_hash,
+        review_history=[
+            AdminCandidateReviewResponse(
+                decision=review.decision,
+                reviewed_value=review.reviewed_value,
+                reviewer_name=review.reviewer_name,
+                reviewed_at=review.reviewed_at,
+                reviewer_notes=review.reviewer_notes,
+            )
+            for review in sorted(candidate.reviews, key=lambda item: item.reviewed_at)
+        ],
+    )
+
+
+def get_private_candidate(
+    session: Session, review_item_id: str
+) -> SpecificationFieldCandidate | None:
+    return session.scalar(
+        select(SpecificationFieldCandidate)
+        .join(MeasureVersion)
+        .join(Measure)
+        .where(
+            SpecificationFieldCandidate.review_item_id == review_item_id,
+            Measure.is_public.is_(False),
+            MeasureVersion.publication_state == PublicationState.DRAFT,
+        )
+        .options(
+            selectinload(SpecificationFieldCandidate.source_revision).selectinload(
+                SourceRevision.source_document
+            ),
+            selectinload(SpecificationFieldCandidate.measure_version),
+            selectinload(SpecificationFieldCandidate.reviews),
+        )
+    )
+
+
+def candidate_response(
+    candidate: SpecificationFieldCandidate,
+) -> AdminFieldCandidateResponse:
+    return _candidate_response(candidate)
 
 
 def _measure_summary(measure: Measure) -> AdminMeasureSummary:
@@ -203,26 +268,7 @@ def get_private_measure(session: Session, measure_id: str) -> AdminMeasureDetail
         for candidate in sorted(
             version.field_candidates, key=lambda item: (item.field_name, item.review_item_id)
         ):
-            revision = candidate.source_revision
-            candidates.append(
-                AdminFieldCandidateResponse(
-                    review_item_id=candidate.review_item_id,
-                    field_name=candidate.field_name,
-                    candidate_value=candidate.candidate_value,
-                    extraction_status=candidate.extraction_status,
-                    evidence_locator=candidate.evidence_locator,
-                    review_decision=candidate.review_decision,
-                    reviewed_value=candidate.reviewed_value,
-                    reviewer_name=candidate.reviewer_name,
-                    reviewed_at=candidate.reviewed_at,
-                    reviewer_notes=candidate.reviewer_notes,
-                    source_id=revision.source_document.source_id,
-                    source_revision_id=revision.revision_id,
-                    source_title=revision.source_document.title,
-                    official_url=revision.source_document.official_url,
-                    source_content_hash=revision.content_hash,
-                )
-            )
+            candidates.append(_candidate_response(candidate))
         versions.append(
             AdminMeasureVersionResponse(
                 version_id=version.version_id,

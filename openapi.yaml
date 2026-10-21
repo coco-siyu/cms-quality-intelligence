@@ -229,6 +229,62 @@ paths:
           $ref: "#/components/responses/AdminUnauthorized"
         "404":
           $ref: "#/components/responses/NotFound"
+  /api/admin/review-items/{review_item_id}:
+    patch:
+      operationId: reviewAdminFieldCandidate
+      tags: [Admin review]
+      summary: Record a review decision for one private field candidate
+      description: |
+        Updates the current private review state and appends an immutable audit event.
+        This operation never publishes a measure or exposes the candidate publicly.
+      security:
+        - AdminSessionCookie: []
+      parameters:
+        - name: review_item_id
+          in: path
+          required: true
+          description: Stable identifier for the private field candidate under review.
+          schema:
+            type: string
+            minLength: 1
+        - name: X-CMSQI-Admin-Action
+          in: header
+          required: true
+          description: Explicit acknowledgement of the private review mutation.
+          schema:
+            type: string
+            const: review-decision
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminCandidateDecisionRequest"
+      responses:
+        "200":
+          description: Updated private candidate including its append-only review history.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminFieldCandidate"
+        "401":
+          $ref: "#/components/responses/AdminUnauthorized"
+        "403":
+          description: The explicit administrator action header is invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Approval is blocked because newer source evidence was detected.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "422":
+          $ref: "#/components/responses/ValidationError"
 components:
   securitySchemes:
     AdminSessionCookie:
@@ -615,6 +671,9 @@ components:
     CandidateReviewDecision:
       type: string
       enum: [pending, approve, needs_revision, not_applicable]
+    AdminReviewDecision:
+      type: string
+      enum: [approve, needs_revision, not_applicable]
     CollectionType:
       type: string
       enum:
@@ -659,6 +718,7 @@ components:
         - source_title
         - official_url
         - source_content_hash
+        - review_history
       properties:
         review_item_id: {type: string}
         field_name: {type: string}
@@ -681,6 +741,39 @@ components:
           format: uri
           pattern: "^https://"
         source_content_hash: {type: string}
+        review_history:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminCandidateReview"
+    AdminCandidateReview:
+      type: object
+      required:
+        - decision
+        - reviewed_value
+        - reviewer_name
+        - reviewed_at
+        - reviewer_notes
+      properties:
+        decision:
+          $ref: "#/components/schemas/CandidateReviewDecision"
+        reviewed_value: {type: [string, "null"]}
+        reviewer_name: {type: string}
+        reviewed_at:
+          type: string
+          format: date-time
+        reviewer_notes: {type: [string, "null"]}
+    AdminCandidateDecisionRequest:
+      type: object
+      required: [decision]
+      properties:
+        decision:
+          $ref: "#/components/schemas/AdminReviewDecision"
+        reviewed_value:
+          type: [string, "null"]
+          maxLength: 20000
+        reviewer_notes:
+          type: [string, "null"]
+          maxLength: 4000
     AdminMeasureVersion:
       type: object
       required:

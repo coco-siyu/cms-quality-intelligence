@@ -1,7 +1,5 @@
 import argparse
 import csv
-import hashlib
-import json
 import os
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, time
@@ -18,6 +16,7 @@ from app.models import (
     SpecificationFieldCandidate,
     SpecificationFieldCandidateReview,
 )
+from app.services.reviews import record_candidate_review, review_event_key
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_INPUT = REPOSITORY_ROOT / "docs/sources/field-review-crosswalk.csv"
@@ -86,30 +85,6 @@ def _parse_reviewed_at(value: str, review_item_id: str) -> datetime:
     if reviewed_at.tzinfo is None or reviewed_at.utcoffset() is None:
         raise ValueError(f"{review_item_id}: reviewed_at must include a UTC offset.")
     return reviewed_at.astimezone(UTC)
-
-
-def _event_key(
-    review_item_id: str,
-    decision: CandidateReviewDecision,
-    reviewed_value: str | None,
-    reviewer_name: str,
-    reviewed_at: datetime,
-    reviewer_notes: str | None,
-) -> str:
-    payload = json.dumps(
-        {
-            "decision": decision.value,
-            "review_item_id": review_item_id,
-            "reviewed_at": reviewed_at.isoformat(),
-            "reviewed_value": reviewed_value,
-            "reviewer_name": reviewer_name,
-            "reviewer_notes": reviewer_notes,
-        },
-        ensure_ascii=False,
-        separators=(",", ":"),
-        sort_keys=True,
-    )
-    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
 def _read_rows(path: Path) -> list[dict[str, str]]:
@@ -237,7 +212,7 @@ def _review_plans(
                 reviewer_name=reviewer_name,
                 reviewed_at=reviewed_at,
                 reviewer_notes=reviewer_notes,
-                event_key=_event_key(
+                event_key=review_event_key(
                     review_item_id,
                     decision,
                     reviewed_value,
@@ -269,21 +244,13 @@ def import_review_decisions(
 
     if apply:
         for plan in new_plans:
-            candidate = plan.candidate
-            candidate.review_decision = plan.decision
-            candidate.reviewed_value = plan.reviewed_value
-            candidate.reviewer_name = plan.reviewer_name
-            candidate.reviewed_at = plan.reviewed_at
-            candidate.reviewer_notes = plan.reviewer_notes
-            candidate.reviews.append(
-                SpecificationFieldCandidateReview(
-                    event_key=plan.event_key,
-                    decision=plan.decision,
-                    reviewed_value=plan.reviewed_value,
-                    reviewer_name=plan.reviewer_name,
-                    reviewed_at=plan.reviewed_at,
-                    reviewer_notes=plan.reviewer_notes,
-                )
+            record_candidate_review(
+                plan.candidate,
+                decision=plan.decision,
+                reviewed_value=plan.reviewed_value,
+                reviewer_name=plan.reviewer_name,
+                reviewed_at=plan.reviewed_at,
+                reviewer_notes=plan.reviewer_notes,
             )
         session.flush()
 

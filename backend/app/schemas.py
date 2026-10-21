@@ -138,6 +138,14 @@ class AdminMembershipResponse(BaseModel):
     verified_at: datetime | None
 
 
+class AdminCandidateReviewResponse(BaseModel):
+    decision: CandidateReviewDecision
+    reviewed_value: str | None
+    reviewer_name: str
+    reviewed_at: datetime
+    reviewer_notes: str | None
+
+
 class AdminFieldCandidateResponse(BaseModel):
     review_item_id: str
     field_name: str
@@ -154,6 +162,13 @@ class AdminFieldCandidateResponse(BaseModel):
     source_title: str
     official_url: HttpUrl
     source_content_hash: str
+    review_history: list[AdminCandidateReviewResponse]
+
+
+class AdminCandidateDecisionRequest(BaseModel):
+    decision: Literal["approve", "needs_revision", "not_applicable"]
+    reviewed_value: str | None = Field(default=None, max_length=20_000)
+    reviewer_notes: str | None = Field(default=None, max_length=4_000)
 
 
 class AdminMeasureVersionResponse(BaseModel):
