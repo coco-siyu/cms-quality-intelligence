@@ -150,6 +150,7 @@ class AdminFieldCandidateResponse(BaseModel):
     review_item_id: str
     field_name: str
     candidate_value: str
+    source_excerpt: str | None
     extraction_status: str
     evidence_locator: str
     review_decision: CandidateReviewDecision

@@ -138,6 +138,8 @@ def test_admin_can_inspect_private_staged_records_without_publishing_them(
     ]
     assert candidates
     assert all(candidate["review_decision"] == "pending" for candidate in candidates)
+    assert all("source_excerpt" in candidate for candidate in candidates)
+    assert any(candidate["source_excerpt"] for candidate in candidates)
     assert candidates[0]["official_url"].startswith("https://")
 
     public = admin_client.get("/api/measures")

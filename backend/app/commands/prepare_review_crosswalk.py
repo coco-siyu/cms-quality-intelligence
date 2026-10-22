@@ -38,6 +38,7 @@ OUTPUT_FIELDS = (
     "specification_identifier",
     "field_name",
     "candidate_value",
+    "source_excerpt",
     "source_id",
     "source_sha256",
     "evidence_locator",
@@ -65,6 +66,7 @@ class Candidate:
     value: str
     locator: str
     status: str = "candidate_extracted_needs_sme_review"
+    source_excerpt: str | None = None
 
 
 def _csv_rows(filename: str) -> list[dict[str, str]]:
@@ -128,12 +130,20 @@ def _section(
         locator = f"PDF page {start_index + 1}"
         if end_index > start_index:
             locator = f"PDF pages {start_index + 1}-{end_index + 1}"
-        return Candidate(value=value, locator=f"{locator}; {label}")
+        return Candidate(
+            value=value,
+            locator=f"{locator}; {label}",
+            source_excerpt=value,
+        )
     return None
 
 
 def _literal(value: str, locator: str) -> Candidate:
     return Candidate(value=value, locator=locator)
+
+
+def _source_literal(value: str, locator: str) -> Candidate:
+    return Candidate(value=value, locator=locator, source_excerpt=value)
 
 
 def _manual(locator: str, reason: str) -> Candidate:
@@ -443,7 +453,11 @@ def _html_ecqm_candidates(
 
     base_locator = "HTML measure-information table"
     result = {
-        "measure_title": _literal(cells.get("eCQM Title", title), f"{base_locator}; eCQM Title"),
+        "measure_title": (
+            _source_literal(cells["eCQM Title"], f"{base_locator}; eCQM Title")
+            if "eCQM Title" in cells
+            else _literal(title, f"{base_locator}; eCQM Title")
+        ),
         "specification_identifier": _literal(
             variant["specification_identifier"],
             f"{base_locator}; CMS ID and eCQM Version Number",
@@ -463,7 +477,9 @@ def _html_ecqm_candidates(
     for field_name, labels in mappings.items():
         for label in labels:
             if label in cells:
-                result[field_name] = _literal(cells[label], f"{base_locator}; {label}")
+                result[field_name] = _source_literal(
+                    cells[label], f"{base_locator}; {label}"
+                )
                 break
     return result
 
@@ -513,6 +529,7 @@ def build_rows() -> list[dict[str, str]]:
                     "specification_identifier": variant["specification_identifier"],
                     "field_name": field_name,
                     "candidate_value": candidate.value,
+                    "source_excerpt": candidate.source_excerpt or "",
                     "source_id": variant["source_id"],
                     "source_sha256": revisions[variant["source_id"]]["sha256"],
                     "evidence_locator": candidate.locator,

@@ -28,8 +28,19 @@ def _count(session: Session, model: type) -> int:
 def test_verified_seed_is_idempotent_and_non_public(session: Session) -> None:
     assert seed_verified_drafts(session) == (8, 14, 32, 352)
     session.commit()
+    backfill_candidate = session.scalar(
+        select(SpecificationFieldCandidate).where(
+            SpecificationFieldCandidate.source_excerpt.is_not(None)
+        )
+    )
+    assert backfill_candidate is not None
+    expected_excerpt = backfill_candidate.source_excerpt
+    backfill_candidate.source_excerpt = None
+    session.commit()
     assert seed_verified_drafts(session) == (0, 0, 0, 0)
     session.commit()
+    session.refresh(backfill_candidate)
+    assert backfill_candidate.source_excerpt == expected_excerpt
 
     assert _count(session, Measure) == 8
     assert _count(session, ProgramMembership) == 14
@@ -73,4 +84,14 @@ def test_verified_seed_is_idempotent_and_non_public(session: Session) -> None:
         candidate.review_decision == CandidateReviewDecision.PENDING
         and candidate.reviewed_at is None
         for candidate in candidates
+    )
+    assert sum(candidate.source_excerpt is not None for candidate in candidates) == 182
+    assert all(
+        candidate.source_excerpt is None
+        for candidate in candidates
+        if candidate.extraction_status
+        in {
+            "manual_extraction_or_policy_review_required",
+            "not_applicable_candidate_needs_sme_confirmation",
+        }
     )

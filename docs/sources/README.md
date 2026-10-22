@@ -11,8 +11,8 @@ These files are **review material, not production data**. Every measure row rema
 - [`measure-membership-candidates.csv`](measure-membership-candidates.csv) records the proposed PY2025 and PY2026 membership reconciliation.
 - [`evidence-locators.csv`](evidence-locators.csv) records the exact tables and pages used to verify the complete year-specific rosters.
 - [`collection-variants.csv`](collection-variants.csv) distinguishes program membership from the year-specific eCQM, MIPS CQM, Medicare CQM, survey, and administrative-claims specifications.
-- [`field-review-crosswalk.csv`](field-review-crosswalk.csv) contains the source-backed candidate fields and unresolved review items. Every decision remains pending.
-- [`cms-field-review-crosswalk.xlsx`](cms-field-review-crosswalk.xlsx) presents the same candidates as a filtered reviewer queue with field-level decisions, source hashes, and evidence locators.
+- [`field-review-crosswalk.csv`](field-review-crosswalk.csv) contains the source-backed candidate fields, separately captured official excerpts, and unresolved review items. Every decision remains pending.
+- [`cms-field-review-crosswalk.xlsx`](cms-field-review-crosswalk.xlsx) presents the same candidates as a filtered reviewer queue with field-level decisions, source hashes, evidence locators, and a distinct source-excerpt column.
 - [`reviewer-guide.md`](reviewer-guide.md) separates project-owner checks from CMS quality-measure subject-matter review and defines the publication gate.
 - [`reconciliation-report.md`](reconciliation-report.md) explains the evidence hierarchy, findings, unresolved questions, verification rules, and proposed PostgreSQL import workflow.
 
@@ -33,5 +33,10 @@ These files are **review material, not production data**. Every measure row rema
 The inventory was prepared on 2026-10-16. C2.2 retrieved and hashed the original 19 inventoried sources on the same date. C2.4 added and hashed five official PY2026 eCQM human-readable specifications, bringing the frozen manifest to 24 sources. The mutable CMS guidance page and linked bundles must still be checked again immediately before publication. Downloaded artifacts are cached locally by source ID and must never be used to overwrite a previously registered revision when CMS publishes new bytes.
 
 The field-review artifacts are private preparation material. They contain 352 pending items across 32 performance-year and collection-type variants: 275 source-extracted candidates, 70 manual-review items, and 7 proposed not-applicable fields. C2.4 adds an explicit collection-type dimension and a private `specification_field_candidates` staging table; the guarded seed can load these records without exposing them through public API queries. C2.5 adds a guarded importer and append-only audit events for future reviewer decisions. Extracted values are not verified clinical facts until a qualified reviewer records a source-backed approval.
+
+Of the 352 candidates, 182 now include literal text captured from a frozen CMS
+source in a separate source-excerpt field. The remaining 170 deliberately keep
+that field blank. Manual guidance, normalization notes, and proposed
+not-applicable explanations are not represented as official CMS quotations.
 
 The PY2025 Medicare Part B Claims files found in the QPP bundle are recorded as excluded supporting artifacts, not APP Plus collection variants. The exclusion is based on positive program guidance naming eCQM, MIPS CQM, and Medicare CQM as the applicable clinical collection types; it is not inferred from file absence.

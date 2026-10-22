@@ -45,6 +45,16 @@ def test_review_crosswalk_remains_pending_and_source_backed() -> None:
     assert all(row["extraction_status"] in allowed_statuses for row in rows)
     assert all(row["candidate_value"] for row in rows)
     assert all(row["evidence_locator"] for row in rows)
+    assert sum(bool(row["source_excerpt"]) for row in rows) == 182
+    assert all(
+        not row["source_excerpt"]
+        for row in rows
+        if row["extraction_status"]
+        in {
+            "manual_extraction_or_policy_review_required",
+            "not_applicable_candidate_needs_sme_confirmation",
+        }
+    )
     for row in rows:
         assert row["source_id"] in revisions
         assert row["source_sha256"] == revisions[row["source_id"]]["sha256"]
@@ -66,4 +76,5 @@ def test_2026_ecqm_details_are_source_backed_and_pending_review() -> None:
         row["extraction_status"] == "candidate_extracted_needs_sme_review"
         for row in candidates
     )
+    assert all(row["source_excerpt"] for row in candidates)
     assert all(row["source_id"].startswith("CMS-ECQI-PY2026-CMS") for row in candidates)

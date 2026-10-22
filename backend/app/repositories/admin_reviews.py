@@ -124,6 +124,7 @@ def _candidate_response(
         review_item_id=candidate.review_item_id,
         field_name=candidate.field_name,
         candidate_value=candidate.candidate_value,
+        source_excerpt=candidate.source_excerpt,
         extraction_status=candidate.extraction_status,
         evidence_locator=candidate.evidence_locator,
         review_decision=candidate.review_decision,

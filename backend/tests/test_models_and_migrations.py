@@ -152,6 +152,10 @@ def test_initial_migration_builds_and_reverts_schema(
         "measure_comparisons",
         "measure_comparison_fields",
     }.issubset(inspect(engine).get_table_names())
+    assert "source_excerpt" in {
+        column["name"]
+        for column in inspect(engine).get_columns("specification_field_candidates")
+    }
 
     command.downgrade(config, "base")
     assert inspect(engine).get_table_names() == ["alembic_version"]

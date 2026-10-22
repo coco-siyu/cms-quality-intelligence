@@ -238,6 +238,7 @@ class SpecificationFieldCandidate(Base):
     )
     field_name: Mapped[str] = mapped_column(String(80))
     candidate_value: Mapped[str] = mapped_column(Text)
+    source_excerpt: Mapped[str | None] = mapped_column(Text)
     extraction_status: Mapped[str] = mapped_column(String(80))
     source_revision_id: Mapped[int] = mapped_column(
         ForeignKey("source_revisions.id", ondelete="RESTRICT")

@@ -23,6 +23,7 @@ DEFAULT_INPUT = REPOSITORY_ROOT / "docs/sources/field-review-crosswalk.csv"
 REQUIRED_COLUMNS = {
     "review_item_id",
     "candidate_value",
+    "source_excerpt",
     "source_id",
     "source_sha256",
     "evidence_locator",
@@ -40,6 +41,7 @@ HEADER_ALIASES = {
     "Specification ID": "specification_identifier",
     "Field": "field_name",
     "Candidate value": "candidate_value",
+    "Source excerpt": "source_excerpt",
     "Source ID": "source_id",
     "Source SHA-256": "source_sha256",
     "Evidence locator": "evidence_locator",
@@ -151,6 +153,7 @@ def _review_plans(
         source_revision = candidate.source_revision
         immutable_values = {
             "candidate_value": candidate.candidate_value,
+            "source_excerpt": candidate.source_excerpt or "",
             "source_id": source_revision.source_document.source_id,
             "source_sha256": source_revision.content_hash,
             "evidence_locator": candidate.evidence_locator,

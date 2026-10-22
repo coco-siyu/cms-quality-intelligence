@@ -128,6 +128,31 @@ def test_review_import_rejects_changed_source_evidence(
     ) == 0
 
 
+def test_review_import_rejects_changed_source_excerpt(
+    session: Session, tmp_path: Path
+) -> None:
+    seed_verified_drafts(session)
+    session.commit()
+    review_path = _review_csv(tmp_path)
+
+    with review_path.open(newline="", encoding="utf-8") as review_file:
+        rows = list(csv.DictReader(review_file))
+        fieldnames = list(rows[0])
+    excerpt_row = next(row for row in rows if row["source_excerpt"])
+    excerpt_row["source_excerpt"] = "Altered excerpt text"
+    with review_path.open("w", newline="", encoding="utf-8") as review_file:
+        writer = csv.DictWriter(review_file, fieldnames=fieldnames, lineterminator="\n")
+        writer.writeheader()
+        writer.writerows(rows)
+
+    with pytest.raises(ValueError, match="source_excerpt differs from private staging"):
+        import_review_decisions(session, review_path, apply=True)
+
+    assert session.scalar(
+        select(func.count()).select_from(SpecificationFieldCandidateReview)
+    ) == 0
+
+
 def test_review_import_requires_identity_timestamp_and_notes(
     session: Session, tmp_path: Path
 ) -> None:
@@ -167,6 +192,7 @@ def test_review_import_accepts_field_evidence_csv_export(
         "specification_identifier": "Specification ID",
         "field_name": "Field",
         "candidate_value": "Candidate value",
+        "source_excerpt": "Source excerpt",
         "source_id": "Source ID",
         "source_sha256": "Source SHA-256",
         "evidence_locator": "Evidence locator",

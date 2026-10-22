@@ -706,6 +706,7 @@ components:
         - review_item_id
         - field_name
         - candidate_value
+        - source_excerpt
         - extraction_status
         - evidence_locator
         - review_decision
@@ -723,6 +724,7 @@ components:
         review_item_id: {type: string}
         field_name: {type: string}
         candidate_value: {type: string}
+        source_excerpt: {type: [string, "null"]}
         extraction_status: {type: string}
         evidence_locator: {type: string}
         review_decision:

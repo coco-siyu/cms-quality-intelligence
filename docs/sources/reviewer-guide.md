@@ -38,7 +38,7 @@ Useful reviewer backgrounds include CMS quality reporting, MSSP/APP administrati
 1. Open `cms-field-review-crosswalk.xlsx` and start with **Review Queue**.
 2. Filter by performance year and collection type.
 3. Open each related row in **Field Evidence**.
-4. Compare the candidate value with the exact source section identified by the source hash and evidence locator.
+4. Compare the normalized candidate value with **Source excerpt** when present, then confirm it against the exact source section identified by the source hash and evidence locator.
 5. Set the field decision to `approve`, `needs_revision`, or `not_applicable`.
 6. Enter reviewer name, review date, and a short note when a decision is not `approve`.
 7. Set a specification variant to `approve` only after every required field has an acceptable field-level decision.
@@ -76,6 +76,12 @@ The import is idempotent. Each new decision creates an append-only audit event, 
 | `manual_extraction_or_policy_review_required` | The source format or policy question could not be normalized safely. | Review the source manually; do not approve the placeholder text. |
 | `not_applicable_candidate_needs_sme_confirmation` | The field appears incompatible with that collection model. | Confirm that the field is truly not applicable; do not assume. |
 
+A blank **Source excerpt** does not mean the candidate is unsupported or not
+applicable. It means the frozen extraction did not capture a distinct verbatim
+passage for that row. Review the linked official source at the evidence locator
+before deciding. Manual-review guidance and proposed not-applicable reasons are
+never copied into the excerpt column as if they were CMS wording.
+
 ## Publication rule
 
 A field remains non-public unless all of the following are true:
@@ -93,6 +99,8 @@ AI extraction, a successful automated test, or a completed spreadsheet formula i
 
 - All five detailed PY2026 eCQM pages are frozen and hashed. Their 40 formerly missing-detail items are now source-extracted candidates, not approvals.
 - The current queue contains 275 extracted candidates, 70 manual-extraction or policy-review items, and 7 proposed not-applicable fields. All 352 decisions remain pending.
+- The queue stores 182 literal excerpts separately from candidate values. The other 170 rows require locator-based source review and remain explicit blanks in the excerpt field.
 - PY2025 Medicare Part B Claims artifacts are excluded because official APP Plus program sources identify eCQM, MIPS CQM, and Medicare CQM as the applicable clinical collection types.
 - The database now preserves collection type explicitly and stages candidate fields separately from published `SpecificationField` records. This structural separation does not replace qualified review.
 - C2.5 can validate and import future reviewer decisions into private, append-only audit history. It does not promote approved decisions into public fields.
+- The private admin dialog presents year-over-year candidate values and official excerpts independently. It does not infer clinical meaning from wording differences.

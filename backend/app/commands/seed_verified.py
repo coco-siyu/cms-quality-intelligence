@@ -259,6 +259,12 @@ def seed_verified_drafts(session: Session) -> tuple[int, int, int, int]:
             )
 
         for candidate in candidates_by_variant[variant["variant_id"]]:
+            revision = source_revisions[candidate["source_id"]]
+            if revision.content_hash != candidate["source_sha256"]:
+                raise RuntimeError(
+                    f"Candidate source hash does not match frozen revision: "
+                    f"{candidate['review_item_id']}"
+                )
             existing = session.scalar(
                 select(SpecificationFieldCandidate).where(
                     SpecificationFieldCandidate.review_item_id
@@ -266,18 +272,34 @@ def seed_verified_drafts(session: Session) -> tuple[int, int, int, int]:
                 )
             )
             if existing is not None:
+                expected_excerpt = candidate["source_excerpt"] or None
+                immutable_values = {
+                    "field_name": candidate["field_name"],
+                    "candidate_value": candidate["candidate_value"],
+                    "extraction_status": candidate["extraction_status"],
+                    "evidence_locator": candidate["evidence_locator"],
+                    "source_revision_id": revision.id,
+                }
+                for field_name, expected in immutable_values.items():
+                    if getattr(existing, field_name) != expected:
+                        raise RuntimeError(
+                            f"Existing candidate conflicts with review artifact: "
+                            f"{candidate['review_item_id']} ({field_name})"
+                        )
+                if existing.source_excerpt is None:
+                    existing.source_excerpt = expected_excerpt
+                elif existing.source_excerpt != expected_excerpt:
+                    raise RuntimeError(
+                        f"Existing candidate conflicts with review artifact: "
+                        f"{candidate['review_item_id']} (source_excerpt)"
+                    )
                 continue
-            revision = source_revisions[candidate["source_id"]]
-            if revision.content_hash != candidate["source_sha256"]:
-                raise RuntimeError(
-                    f"Candidate source hash does not match frozen revision: "
-                    f"{candidate['review_item_id']}"
-                )
             version.field_candidates.append(
                 SpecificationFieldCandidate(
                     review_item_id=candidate["review_item_id"],
                     field_name=candidate["field_name"],
                     candidate_value=candidate["candidate_value"],
+                    source_excerpt=candidate["source_excerpt"] or None,
                     extraction_status=candidate["extraction_status"],
                     source_revision=revision,
                     evidence_locator=candidate["evidence_locator"],
