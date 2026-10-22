@@ -32,7 +32,10 @@ revision, mark a field not applicable, and inspect append-only decision history.
 The review dialog pairs the same collection-specific field across PY2025 and
 PY2026, labels exact wording matches or differences without assigning clinical
 meaning, and explains extraction states that need SME, manual, or applicability
-review. Ingestion controls and publication remain intentionally unavailable.
+review. Official source excerpts are stored and displayed separately from
+normalized candidate values; rows without a captured excerpt direct the reviewer
+to the exact locator and official source. Ingestion controls and publication
+remain intentionally unavailable.
 
 The Measure Explorer and API-mode measure detail pages now read from FastAPI.
 The Dashboard comparison ledger uses published API records in API mode and does

@@ -227,17 +227,19 @@ Description: Retry temporary network or processing errors a limited number of ti
 Goal: Let the admin correct AI-extracted records before publication.
 Description: Present one candidate at a time with old/new values, official excerpts, uncertainty flags, and Approve/Reject/Edit actions. Record edits and reviewer identity/timestamps; do not add bulk approval in MVP.
 
-Implementation status (partial, 2026-10-21): The protected admin workspace now
+Implementation status (complete for MVP, 2026-10-22): The protected admin workspace now
 presents individual source-backed field candidates with their official source,
-evidence locator, extraction state, and current decision. Reviewers can approve
-an edited value, request revision, or mark a field not applicable. Each action
+separately stored official excerpt when one was captured, evidence locator,
+extraction state, and current decision. Reviewers can approve an edited value,
+request revision, or mark a field not applicable. Each action
 records authenticated reviewer identity and time in append-only history without
 publishing. The dialog now pairs the same field and collection type across
 PY2025 and PY2026, distinguishes exact wording matches, differences, and missing
 counterparts without inferring policy meaning, and translates extraction codes
-into explicit SME, manual-review, or applicability signals. Verbatim source
-excerpts are not yet persisted separately from candidate values and exact
-locators, so this task remains partial.
+into explicit SME, manual-review, or applicability signals. Source excerpts are
+persisted separately from normalized candidate values; candidates without a
+captured excerpt explicitly require manual use of the exact locator and source
+link. `needs_revision` is the MVP rejection path, and no bulk approval exists.
 
 ## 49. Implement verified-field partial publication rules
 Goal: Publish trustworthy information without hiding the whole measure.

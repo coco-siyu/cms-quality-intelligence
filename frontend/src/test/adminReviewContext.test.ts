@@ -20,6 +20,7 @@ function candidate(
     review_item_id: reviewItemId,
     field_name: "definition",
     candidate_value: value,
+    source_excerpt: null,
     extraction_status: extractionStatus,
     evidence_locator: "PDF page 4",
     review_decision: "pending",

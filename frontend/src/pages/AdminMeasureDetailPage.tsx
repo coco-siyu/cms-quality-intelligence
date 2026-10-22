@@ -55,6 +55,22 @@ function formatReviewDate(value: string) {
   }).format(new Date(value));
 }
 
+function SourceExcerpt({ excerpt }: { excerpt: string | null }) {
+  return (
+    <div className={`source-excerpt ${excerpt ? "available" : "unavailable"}`}>
+      <span>Official source excerpt</span>
+      {excerpt ? (
+        <blockquote>{excerpt}</blockquote>
+      ) : (
+        <p>
+          No separate excerpt was captured. Use the exact locator and official source before
+          deciding.
+        </p>
+      )}
+    </div>
+  );
+}
+
 function CandidateYearPanel({
   year,
   context,
@@ -95,6 +111,7 @@ function CandidateYearPanel({
         {context.version.specification_identifier ?? "No specification identifier"}
       </p>
       <p className="candidate-year-value">{context.candidate.candidate_value}</p>
+      <SourceExcerpt excerpt={context.candidate.source_excerpt} />
       <div className={`extraction-signal ${signal.tone}`}>
         <AlertTriangle aria-hidden="true" />
         <span>{signal.label}</span>
@@ -366,6 +383,7 @@ export function AdminMeasureDetailPage() {
                     </summary>
                     <div className="candidate-body">
                       <p>{candidate.candidate_value}</p>
+                      <SourceExcerpt excerpt={candidate.source_excerpt} />
                       <dl>
                         <div><dt>Evidence locator</dt><dd>{candidate.evidence_locator}</dd></div>
                         <div><dt>Review signal</dt><dd>{extractionSignal(candidate.extraction_status).label}</dd></div>

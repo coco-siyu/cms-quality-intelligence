@@ -47,6 +47,7 @@ export type AdminFieldCandidate = {
   review_item_id: string;
   field_name: string;
   candidate_value: string;
+  source_excerpt: string | null;
   extraction_status: string;
   evidence_locator: string;
   review_decision: "pending" | "approve" | "needs_revision" | "not_applicable";

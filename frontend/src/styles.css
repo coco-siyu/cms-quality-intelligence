@@ -3192,6 +3192,47 @@ h3 {
   line-height: 1.5;
 }
 
+.source-excerpt {
+  display: grid;
+  gap: 7px;
+  max-width: 900px;
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-left: 3px solid var(--powder);
+  background: var(--powder-soft);
+}
+
+.source-excerpt > span {
+  color: var(--muted-foreground);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.source-excerpt blockquote,
+.source-excerpt p {
+  margin: 0;
+  color: var(--secondary-foreground);
+  font-size: 10px;
+  line-height: 1.55;
+}
+
+.source-excerpt blockquote {
+  max-height: 118px;
+  overflow-y: auto;
+  font-style: italic;
+}
+
+.source-excerpt.unavailable {
+  border-left-color: var(--border);
+  background: var(--muted);
+}
+
+.source-excerpt.unavailable p {
+  color: var(--muted-foreground);
+}
+
 .candidate-body dl {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -3485,6 +3526,11 @@ h3 {
   font-family: var(--font-display);
   font-size: 15px;
   line-height: 1.5;
+}
+
+.candidate-year-panel .source-excerpt {
+  margin-top: 12px;
+  padding: 10px 11px;
 }
 
 .extraction-signal {

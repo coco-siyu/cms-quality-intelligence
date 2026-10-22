@@ -123,6 +123,7 @@ describe("private admin review workspace", () => {
       review_item_id: "CMS-001-PY2025-ECQM-definition",
       field_name: "definition",
       candidate_value: "Candidate definition requiring human review.",
+      source_excerpt: "Verbatim official wording for the 2025 candidate.",
       extraction_status: "candidate_extracted_needs_sme_review",
       evidence_locator: "Page 4",
       review_decision: "pending",
@@ -141,6 +142,7 @@ describe("private admin review workspace", () => {
       ...candidate,
       review_item_id: "CMS-001-PY2026-ECQM-definition",
       candidate_value: "Updated candidate definition requiring human review.",
+      source_excerpt: null,
       extraction_status: "manual_extraction_or_policy_review_required",
       evidence_locator: "Page 5",
       source_revision_id: "CMS-SOURCE-001-R2",
@@ -240,8 +242,14 @@ describe("private admin review workspace", () => {
     const priorYear = screen.getByLabelText("PY2025 candidate, active review item");
     const nextYear = screen.getByLabelText("PY2026 candidate");
     expect(within(priorYear).getByText("CMS122v13")).toBeInTheDocument();
+    expect(
+      within(priorYear).getByText("Verbatim official wording for the 2025 candidate."),
+    ).toBeInTheDocument();
     expect(within(priorYear).getByText("SME confirmation needed")).toBeInTheDocument();
     expect(within(nextYear).getByText("CMS122v14")).toBeInTheDocument();
+    expect(
+      within(nextYear).getByText(/No separate excerpt was captured/),
+    ).toBeInTheDocument();
     expect(within(nextYear).getByText("Manual source review")).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText(/Reviewed value/), {
       target: { value: "Reviewed definition supported by the official source." },
