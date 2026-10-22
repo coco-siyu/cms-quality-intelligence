@@ -1,5 +1,32 @@
 # CMS Quality Intelligence — Implementation Backlog
 
+## Checkpoint status (October 21, 2026)
+
+- Tasks 1, 2, 5–12: implemented and verified through Checkpoints A, B, C1,
+  and C2.1–C2.5. The official PY2025–PY2026 roster has two-source evidence,
+  exact locators, and hashed source revisions.
+- Tasks 14–16, 18, 19, and 21: C1 implementation is present against synthetic
+  contract fixtures, including public/private isolation and explicit
+  unavailable/unresolved states.
+- Task 13 is partially complete: a validated, draft, non-public seed artifact now
+  contains all eight identities and 14 verified program-year memberships. The
+  collection-variant schema is implemented, and the guarded PostgreSQL import
+  stages 32 private variants and 352 field candidates without publishing them.
+  A guarded, idempotent review importer now preserves future decisions in an
+  append-only audit trail, but all field-level decisions and publication approval
+  remain pending. Tasks 17, 20, and 22 also remain open, including
+  dynamic year options, server-paginated Previous/Next, and full end-to-end M1
+  validation.
+- Task 38 is partially complete: environment-managed single-admin credentials,
+  signed HttpOnly sessions, backend authorization, and authenticated read-only
+  private-review endpoints are implemented and contract-tested. Task 57 also has
+  a first read-only queue and per-measure evidence view. Review mutations,
+  ingestion controls, publishing, status workflow, and the full centralized
+  dashboard remain open.
+- Other tasks 23 onward: not started. The dashboard change ledger, What's New feed,
+  comparison highlighting, and AI Impact content remain visibly fictional
+  prototypes and are not production-backed.
+
 This backlog implements the scoped 2025–2026 MSSP / APP Plus MVP in independent, one-session work items. Tasks are ordered for incremental delivery (M1–M4), but each description provides enough context for an assignee to begin without reading preceding tasks. Keep all official CMS facts source-backed, treat unverified extractions as drafts, and do not use patient-level data. **This document is planning only; no implementation code is included.**
 
 ## M1 — Foundation and Measure Explorer
@@ -199,6 +226,14 @@ Description: Retry temporary network or processing errors a limited number of ti
 ## 48. Build the editable change verification queue
 Goal: Let the admin correct AI-extracted records before publication.
 Description: Present one candidate at a time with old/new values, official excerpts, uncertainty flags, and Approve/Reject/Edit actions. Record edits and reviewer identity/timestamps; do not add bulk approval in MVP.
+
+Implementation status (partial, 2026-10-21): The protected admin workspace now
+presents individual source-backed field candidates with their official source,
+evidence locator, extraction state, and current decision. Reviewers can approve
+an edited value, request revision, or mark a field not applicable. Each action
+records authenticated reviewer identity and time in append-only history without
+publishing. Side-by-side old/new values and richer uncertainty flags remain to
+be implemented before this task is complete.
 
 ## 49. Implement verified-field partial publication rules
 Goal: Publish trustworthy information without hiding the whole measure.

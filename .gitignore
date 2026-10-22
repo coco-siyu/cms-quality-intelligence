@@ -21,3 +21,6 @@ backend/.coverage
 backend/htmlcov/
 __pycache__/
 *.py[cod]
+
+# Locally retrieved CMS source bytes (manifests remain tracked)
+var/cms-sources/
