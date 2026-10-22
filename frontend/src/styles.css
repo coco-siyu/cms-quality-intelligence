@@ -3243,8 +3243,8 @@ h3 {
 
 .admin-review-dialog {
   display: block;
-  width: min(760px, calc(100vw - 32px));
-  max-width: 760px;
+  width: min(920px, calc(100vw - 32px));
+  max-width: 920px;
   max-height: min(900px, calc(100vh - 32px));
   padding: 30px;
   overflow-y: auto;
@@ -3292,8 +3292,6 @@ h3 {
 
 .review-source-card span,
 .review-source-card small,
-.candidate-extraction > span,
-.candidate-extraction > small,
 .admin-textarea-field > span,
 .review-decision-fieldset legend {
   color: var(--muted-foreground);
@@ -3327,19 +3325,265 @@ h3 {
   margin-top: 22px;
 }
 
-.candidate-extraction {
+.review-revision-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 13px 16px;
+  border: 1px solid #efd5ad;
+  border-radius: 10px;
+  background: var(--warning-surface);
+  color: var(--warning);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.review-revision-alert svg {
+  width: 15px;
+  flex: none;
+}
+
+.review-revision-alert span {
+  display: grid;
+  gap: 2px;
+}
+
+.candidate-comparison {
   padding: 18px;
   border: 1px solid var(--border);
   border-radius: 12px;
   background: var(--muted);
 }
 
-.candidate-extraction p {
-  margin: 9px 0;
+.candidate-comparison > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.candidate-comparison > header > div:first-child > span {
+  color: var(--muted-foreground);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.candidate-comparison h3 {
+  margin-top: 4px;
+  color: var(--navy);
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 400;
+}
+
+.comparison-result {
+  display: flex;
+  max-width: 390px;
+  align-items: flex-start;
+  gap: 8px;
+  padding-left: 12px;
+  border-left: 2px solid var(--modified);
+}
+
+.comparison-result.same {
+  border-color: var(--added);
+}
+
+.comparison-result.missing {
+  border-color: var(--removed);
+}
+
+.comparison-result > svg {
+  width: 14px;
+  flex: none;
+  color: var(--navy);
+}
+
+.comparison-result > span {
+  display: grid;
+  gap: 2px;
+}
+
+.comparison-result strong {
+  color: var(--navy);
+  font-size: 10px;
+}
+
+.comparison-result small {
+  color: var(--muted-foreground);
+  font-size: 9px;
+  line-height: 1.4;
+}
+
+.candidate-year-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 34px minmax(0, 1fr);
+  align-items: stretch;
+  margin-top: 16px;
+}
+
+.candidate-year-panel {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  padding: 15px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--card);
+}
+
+.candidate-year-panel.active {
+  border-color: var(--navy);
+  box-shadow: inset 0 0 0 1px var(--navy);
+}
+
+.candidate-year-panel.missing {
+  border-style: dashed;
+  background: transparent;
+}
+
+.candidate-year-panel > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.candidate-year-panel > header span {
+  color: var(--navy);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.candidate-year-panel > header strong {
+  padding: 3px 6px;
+  border-radius: 999px;
+  background: var(--powder-soft);
+  color: var(--navy);
+  font-size: 8px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.candidate-year-specification {
+  margin-top: 5px;
+  color: var(--muted-foreground);
+  font-family: var(--font-mono);
+  font-size: 9px;
+}
+
+.candidate-year-value {
+  max-height: 190px;
+  margin-top: 13px;
+  padding-top: 12px;
+  overflow-y: auto;
+  border-top: 1px solid var(--border);
   color: var(--foreground);
   font-family: var(--font-display);
-  font-size: 17px;
+  font-size: 15px;
   line-height: 1.5;
+}
+
+.extraction-signal {
+  display: flex;
+  width: max-content;
+  max-width: 100%;
+  align-items: center;
+  gap: 5px;
+  margin-top: 15px;
+  padding: 4px 7px;
+  border-radius: 999px;
+  font-size: 8px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.extraction-signal svg {
+  width: 11px;
+  flex: none;
+}
+
+.extraction-signal.review {
+  background: var(--modified-surface);
+  color: var(--modified);
+}
+
+.extraction-signal.manual {
+  background: var(--removed-surface);
+  color: var(--removed);
+}
+
+.extraction-signal.applicability {
+  background: var(--powder-soft);
+  color: var(--navy);
+}
+
+.candidate-year-source {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: auto;
+  padding-top: 13px;
+  color: var(--muted-foreground);
+  font-size: 8px;
+  line-height: 1.4;
+}
+
+.candidate-year-source > span {
+  overflow-wrap: anywhere;
+}
+
+.candidate-year-source a {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  color: var(--navy);
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.candidate-year-source a svg {
+  width: 10px;
+}
+
+.candidate-year-arrow {
+  display: grid;
+  place-items: center;
+  color: var(--olive);
+}
+
+.candidate-year-arrow svg {
+  width: 15px;
+}
+
+.candidate-year-empty {
+  display: grid;
+  flex: 1;
+  place-items: center;
+  gap: 8px;
+  min-height: 130px;
+  padding: 20px;
+  color: var(--muted-foreground);
+  text-align: center;
+}
+
+.candidate-year-empty svg {
+  width: 18px;
+}
+
+.candidate-year-empty p,
+.candidate-year-panel.missing > small {
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.candidate-year-panel.missing > small {
+  color: var(--removed);
 }
 
 .review-decision-fieldset {
@@ -3371,6 +3615,11 @@ h3 {
   border-color: var(--navy);
   background: var(--powder-soft);
   box-shadow: inset 0 0 0 1px var(--navy);
+}
+
+.review-decision-fieldset button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
 }
 
 .review-decision-fieldset button > svg {
@@ -3717,6 +3966,24 @@ h3 {
   .review-source-card {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .candidate-comparison > header {
+    flex-direction: column;
+  }
+
+  .comparison-result {
+    max-width: none;
+  }
+
+  .candidate-year-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .candidate-year-arrow {
+    min-height: 22px;
+    transform: rotate(90deg);
   }
 
   .review-decision-fieldset > div {

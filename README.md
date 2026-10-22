@@ -29,7 +29,10 @@ signed HttpOnly sessions, and a private review desk for the roster, variants,
 field candidates, and their official source provenance. An administrator can
 review one field candidate at a time, correct an approved value, request a
 revision, mark a field not applicable, and inspect append-only decision history.
-Ingestion controls and publication remain intentionally unavailable.
+The review dialog pairs the same collection-specific field across PY2025 and
+PY2026, labels exact wording matches or differences without assigning clinical
+meaning, and explains extraction states that need SME, manual, or applicability
+review. Ingestion controls and publication remain intentionally unavailable.
 
 The Measure Explorer and API-mode measure detail pages now read from FastAPI.
 The Dashboard comparison ledger uses published API records in API mode and does

@@ -232,8 +232,12 @@ presents individual source-backed field candidates with their official source,
 evidence locator, extraction state, and current decision. Reviewers can approve
 an edited value, request revision, or mark a field not applicable. Each action
 records authenticated reviewer identity and time in append-only history without
-publishing. Side-by-side old/new values and richer uncertainty flags remain to
-be implemented before this task is complete.
+publishing. The dialog now pairs the same field and collection type across
+PY2025 and PY2026, distinguishes exact wording matches, differences, and missing
+counterparts without inferring policy meaning, and translates extraction codes
+into explicit SME, manual-review, or applicability signals. Verbatim source
+excerpts are not yet persisted separately from candidate values and exact
+locators, so this task remains partial.
 
 ## 49. Implement verified-field partial publication rules
 Goal: Publish trustworthy information without hiding the whole measure.

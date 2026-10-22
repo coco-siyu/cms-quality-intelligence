@@ -1,10 +1,14 @@
 import { useState, type FormEvent } from "react";
 import { Link, useParams } from "@tanstack/react-router";
 import {
+  AlertTriangle,
   ArrowLeft,
+  ArrowRight,
   Ban,
   Check,
+  CircleAlert,
   ExternalLink,
+  FileSearch,
   History,
   LockKeyhole,
   PencilLine,
@@ -18,8 +22,14 @@ import {
   useAdminMeasure,
   useAdminSession,
   type AdminCandidateDecision,
-  type AdminFieldCandidate,
 } from "../features/admin/api";
+import {
+  ADMIN_FROM_YEAR,
+  ADMIN_TO_YEAR,
+  buildCandidateReviewContext,
+  extractionSignal,
+  type AdminCandidateContext,
+} from "../features/admin/reviewContext";
 import { AdminWorkspacePage } from "./AdminWorkspacePage";
 
 const collectionLabels: Record<string, string> = {
@@ -45,19 +55,78 @@ function formatReviewDate(value: string) {
   }).format(new Date(value));
 }
 
+function CandidateYearPanel({
+  year,
+  context,
+  activeReviewItemId,
+}: {
+  year: number;
+  context?: AdminCandidateContext;
+  activeReviewItemId: string;
+}) {
+  if (!context) {
+    return (
+      <article className="candidate-year-panel missing" aria-label={`PY${year} candidate unavailable`}>
+        <header>
+          <span>PY{year}</span>
+          <strong>Not staged</strong>
+        </header>
+        <div className="candidate-year-empty">
+          <CircleAlert aria-hidden="true" />
+          <p>No matching field candidate is staged for this year and collection type.</p>
+        </div>
+        <small>Absence here is not evidence of a measure addition or removal.</small>
+      </article>
+    );
+  }
+
+  const signal = extractionSignal(context.candidate.extraction_status);
+  const isActive = context.candidate.review_item_id === activeReviewItemId;
+  return (
+    <article
+      className={`candidate-year-panel ${isActive ? "active" : ""}`}
+      aria-label={`PY${year} candidate${isActive ? ", active review item" : ""}`}
+    >
+      <header>
+        <span>PY{year}</span>
+        {isActive && <strong>Active review</strong>}
+      </header>
+      <p className="candidate-year-specification">
+        {context.version.specification_identifier ?? "No specification identifier"}
+      </p>
+      <p className="candidate-year-value">{context.candidate.candidate_value}</p>
+      <div className={`extraction-signal ${signal.tone}`}>
+        <AlertTriangle aria-hidden="true" />
+        <span>{signal.label}</span>
+      </div>
+      <div className="candidate-year-source">
+        <span>{context.candidate.evidence_locator}</span>
+        <a href={context.candidate.official_url} target="_blank" rel="noreferrer">
+          Source <ExternalLink aria-hidden="true" />
+        </a>
+      </div>
+    </article>
+  );
+}
+
 function CandidateReviewDialog({
-  candidate,
+  reviewContext,
   measureId,
   open,
   onOpenChange,
 }: {
-  candidate: AdminFieldCandidate;
+  reviewContext: NonNullable<ReturnType<typeof buildCandidateReviewContext>>;
   measureId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  const { selected, from, to, comparison } = reviewContext;
+  const { candidate, version } = selected;
+  const approvalBlocked = version.newer_revision_detected;
   const currentDecision = candidate.review_decision === "pending"
-    ? "approve"
+    ? approvalBlocked
+      ? "needs_revision"
+      : "approve"
     : candidate.review_decision;
   const [decision, setDecision] = useState<AdminCandidateDecision["decision"]>(currentDecision);
   const [reviewedValue, setReviewedValue] = useState(
@@ -105,11 +174,41 @@ function CandidateReviewDialog({
           </a>
         </div>
 
+        {approvalBlocked && (
+          <div className="review-revision-alert" role="alert">
+            <AlertTriangle aria-hidden="true" />
+            <span>
+              <strong>Newer source revision detected.</strong>
+              Approval is unavailable until this candidate is refreshed against the latest source.
+            </span>
+          </div>
+        )}
+
         <form className="candidate-review-form" onSubmit={submit}>
-          <section className="candidate-extraction">
-            <span>Extracted candidate</span>
-            <p>{candidate.candidate_value}</p>
-            <small>{candidate.extraction_status.replaceAll("_", " ")}</small>
+          <section className="candidate-comparison" aria-labelledby="candidate-comparison-title">
+            <header>
+              <div>
+                <span>Candidate comparison</span>
+                <h3 id="candidate-comparison-title">Same field, year over year</h3>
+              </div>
+              <div className={`comparison-result ${comparison.state}`}>
+                <FileSearch aria-hidden="true" />
+                <span><strong>{comparison.label}</strong><small>{comparison.description}</small></span>
+              </div>
+            </header>
+            <div className="candidate-year-grid">
+              <CandidateYearPanel
+                year={ADMIN_FROM_YEAR}
+                context={from}
+                activeReviewItemId={candidate.review_item_id}
+              />
+              <div className="candidate-year-arrow" aria-hidden="true"><ArrowRight /></div>
+              <CandidateYearPanel
+                year={ADMIN_TO_YEAR}
+                context={to}
+                activeReviewItemId={candidate.review_item_id}
+              />
+            </div>
           </section>
 
           <fieldset className="review-decision-fieldset">
@@ -119,6 +218,7 @@ function CandidateReviewDialog({
                 type="button"
                 role="radio"
                 aria-checked={decision === "approve"}
+                disabled={approvalBlocked}
                 onClick={() => setDecision("approve")}
               >
                 <Check aria-hidden="true" /><span><strong>Approve</strong><small>Accept a reviewed value</small></span>
@@ -209,9 +309,9 @@ export function AdminMeasureDetailPage() {
   if (detail.isPending) return <LoadingState label="Loading source-backed review candidates…" />;
   if (detail.isError) return <ErrorState message={detail.error.message} onRetry={() => void detail.refetch()} />;
 
-  const selectedCandidate = detail.data.versions
-    .flatMap((version) => version.candidates)
-    .find((candidate) => candidate.review_item_id === selectedReviewItemId);
+  const selectedReviewContext = selectedReviewItemId
+    ? buildCandidateReviewContext(detail.data, selectedReviewItemId)
+    : undefined;
 
   return (
     <div className="visual-page admin-detail-page">
@@ -268,7 +368,7 @@ export function AdminMeasureDetailPage() {
                       <p>{candidate.candidate_value}</p>
                       <dl>
                         <div><dt>Evidence locator</dt><dd>{candidate.evidence_locator}</dd></div>
-                        <div><dt>Extraction status</dt><dd>{candidate.extraction_status}</dd></div>
+                        <div><dt>Review signal</dt><dd>{extractionSignal(candidate.extraction_status).label}</dd></div>
                         <div><dt>Source revision</dt><dd>{candidate.source_revision_id}</dd></div>
                       </dl>
                       <a href={candidate.official_url} target="_blank" rel="noreferrer">
@@ -291,10 +391,10 @@ export function AdminMeasureDetailPage() {
           </article>
         ))}
       </section>
-      {selectedCandidate && (
+      {selectedReviewContext && (
         <CandidateReviewDialog
-          key={`${selectedCandidate.review_item_id}-${selectedCandidate.reviewed_at ?? "pending"}`}
-          candidate={selectedCandidate}
+          key={`${selectedReviewContext.selected.candidate.review_item_id}-${selectedReviewContext.selected.candidate.reviewed_at ?? "pending"}`}
+          reviewContext={selectedReviewContext}
           measureId={measureId}
           open
           onOpenChange={(open) => {

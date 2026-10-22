@@ -76,6 +76,19 @@ export type AdminCandidateDecision = {
   reviewer_notes: string | null;
 };
 
+export type AdminMeasureVersion = {
+  version_id: string;
+  performance_year: number;
+  program: string;
+  collection_type: string;
+  specification_identifier: string | null;
+  publication_state: "draft" | "published" | "withdrawn";
+  verification_status: string;
+  newer_revision_detected: boolean;
+  last_source_check_at: string;
+  candidates: AdminFieldCandidate[];
+};
+
 export type AdminMeasureDetail = {
   measure_id: string;
   name: string;
@@ -88,18 +101,7 @@ export type AdminMeasureDetail = {
     publication_state: "draft" | "published" | "withdrawn";
     verified_at: string | null;
   }[];
-  versions: {
-    version_id: string;
-    performance_year: number;
-    program: string;
-    collection_type: string;
-    specification_identifier: string | null;
-    publication_state: "draft" | "published" | "withdrawn";
-    verification_status: string;
-    newer_revision_detected: boolean;
-    last_source_check_at: string;
-    candidates: AdminFieldCandidate[];
-  }[];
+  versions: AdminMeasureVersion[];
 };
 
 async function adminRequest<T>(path: string, init?: RequestInit): Promise<T> {

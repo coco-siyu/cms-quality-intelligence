@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createMemoryHistory, RouterProvider } from "@tanstack/react-router";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createAppRouter } from "../router";
@@ -123,7 +123,7 @@ describe("private admin review workspace", () => {
       review_item_id: "CMS-001-PY2025-ECQM-definition",
       field_name: "definition",
       candidate_value: "Candidate definition requiring human review.",
-      extraction_status: "source_extracted",
+      extraction_status: "candidate_extracted_needs_sme_review",
       evidence_locator: "Page 4",
       review_decision: "pending",
       reviewed_value: null,
@@ -136,6 +136,14 @@ describe("private admin review workspace", () => {
       official_url: "https://www.cms.gov/example",
       source_content_hash: "hash",
       review_history: [],
+    };
+    const nextYearCandidate = {
+      ...candidate,
+      review_item_id: "CMS-001-PY2026-ECQM-definition",
+      candidate_value: "Updated candidate definition requiring human review.",
+      extraction_status: "manual_extraction_or_policy_review_required",
+      evidence_locator: "Page 5",
+      source_revision_id: "CMS-SOURCE-001-R2",
     };
     const detail = {
       measure_id: "001",
@@ -163,6 +171,18 @@ describe("private admin review workspace", () => {
           newer_revision_detected: false,
           last_source_check_at: "2026-10-20T12:00:00Z",
           candidates: [candidate],
+        },
+        {
+          version_id: "CMS-001-PY2026-ECQM",
+          performance_year: 2026,
+          program: "Medicare Shared Savings Program — APP Plus",
+          collection_type: "ecqm",
+          specification_identifier: "CMS122v14",
+          publication_state: "draft",
+          verification_status: "partially_verified",
+          newer_revision_detected: false,
+          last_source_check_at: "2026-10-20T12:00:00Z",
+          candidates: [nextYearCandidate],
         },
       ],
     };
@@ -208,14 +228,21 @@ describe("private admin review workspace", () => {
       }),
     ).toBeInTheDocument();
     expect(screen.getByText("Private draft")).toBeInTheDocument();
-    fireEvent.click(screen.getByText("definition"));
+    fireEvent.click(screen.getAllByText("definition")[0]);
     expect(screen.getByText("Candidate definition requiring human review.")).toBeVisible();
-    expect(screen.getByRole("link", { name: /Official CMS specification/ })).toHaveAttribute(
+    expect(screen.getAllByRole("link", { name: /Official CMS specification/ })[0]).toHaveAttribute(
       "href",
       "https://www.cms.gov/example",
     );
-    fireEvent.click(screen.getByRole("button", { name: "Review candidate" }));
+    fireEvent.click(screen.getAllByRole("button", { name: "Review candidate" })[0]);
     expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByText("Extracted wording differs")).toBeInTheDocument();
+    const priorYear = screen.getByLabelText("PY2025 candidate, active review item");
+    const nextYear = screen.getByLabelText("PY2026 candidate");
+    expect(within(priorYear).getByText("CMS122v13")).toBeInTheDocument();
+    expect(within(priorYear).getByText("SME confirmation needed")).toBeInTheDocument();
+    expect(within(nextYear).getByText("CMS122v14")).toBeInTheDocument();
+    expect(within(nextYear).getByText("Manual source review")).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText(/Reviewed value/), {
       target: { value: "Reviewed definition supported by the official source." },
     });
@@ -238,7 +265,7 @@ describe("private admin review workspace", () => {
       reviewer_notes: "Confirmed against page 4.",
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "Review candidate" }));
+    fireEvent.click(screen.getAllByRole("button", { name: "Review candidate" })[0]);
     expect(screen.getByRole("heading", { name: "Review history" })).toBeInTheDocument();
     expect(screen.getByText(/reviewer · Oct 21, 2026/)).toBeInTheDocument();
   });
