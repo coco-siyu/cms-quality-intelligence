@@ -1,5 +1,40 @@
 # CMS Quality Intelligence — Implementation Backlog
 
+## Checkpoint status (October 26, 2026)
+
+- Tasks 1, 2, 5–12: implemented and verified through Checkpoints A, B, C1,
+  and C2.1–C2.5. The official PY2025–PY2026 roster has two-source evidence,
+  exact locators, and hashed source revisions.
+- Tasks 14–16, 18, 19, and 21: C1 implementation is present against synthetic
+  contract fixtures, including public/private isolation and explicit
+  unavailable/unresolved states.
+- Task 13 is partially complete: a validated, draft seed artifact now
+  contains all eight identities and 14 verified program-year memberships. The
+  collection-variant schema is implemented, and the guarded PostgreSQL import
+  stages 32 private variants and 352 field candidates without publishing them.
+  A guarded, idempotent review importer now preserves future decisions in an
+  append-only audit trail. Task 49 now supports separately authorized publication
+  of an individually approved, excerpt-backed field, but the real queue still has
+  no expert decisions and therefore no production field has been approved for
+  release. Tasks 17, 20, and 22 also remain open, including
+  dynamic year options, server-paginated Previous/Next, and full end-to-end M1
+  validation.
+- Task 38 is partially complete: environment-managed single-admin credentials,
+  signed HttpOnly sessions, backend authorization, and authenticated read-only
+  private-review endpoints are implemented and contract-tested. Task 57 also has
+  a first read-only queue and per-measure evidence view. Review mutations,
+  ingestion controls, publishing, status workflow, and the full centralized
+  dashboard remain open.
+- Tasks 39–42 are implemented: authenticated administrators can manage an
+  allowlisted cms.gov source registry, retrieve bounded HTML/PDF content,
+  inspect locator-preserving text extraction, and retain hash-addressed source,
+  check, and forced-reprocessing history. These operations remain private and
+  do not create measure-field candidates or publish records. Tasks 23–37 and
+  43–47 remain unimplemented. Tasks 48–49 provide the manual
+  review and safe partial-publication slice ahead of automated ingestion. The
+  dashboard change ledger, What's New feed, comparison highlighting, and AI
+  Impact content remain visibly fictional prototypes and are not production-backed.
+
 This backlog implements the scoped 2025–2026 MSSP / APP Plus MVP in independent, one-session work items. Tasks are ordered for incremental delivery (M1–M4), but each description provides enough context for an assignee to begin without reading preceding tasks. Keep all official CMS facts source-backed, treat unverified extractions as drafts, and do not use patient-level data. **This document is planning only; no implementation code is included.**
 
 ## M1 — Foundation and Measure Explorer
@@ -164,17 +199,40 @@ Description: Configure one secure admin login using environment-managed credenti
 Goal: Let an admin maintain the list of approved official source URLs.
 Description: Implement create, list, update, and deactivate operations for CMS source entries, with validation of allowed official CMS domains and relevant metadata. Reject unsafe or nonofficial URLs and test protections against using the ingestion service to fetch arbitrary internal addresses.
 
+Implementation status (complete, 2026-10-26): Protected list/create/update
+endpoints and a responsive admin registry page are available. Registration
+requires HTTPS on `cms.gov` or a subdomain, rejects userinfo, IP literals,
+non-default ports, fragments, duplicates, and off-domain redirects, and uses
+deactivation rather than deleting historical evidence.
+
 ## 40. Implement CMS HTML fetch and text extraction
 Goal: Turn official CMS webpages into traceable text sources.
 Description: Fetch a registered public CMS webpage, preserve retrieval metadata and content hash, and extract relevant readable text with section references where possible. Handle access failures and unexpected page formats without corrupting stored verified records.
+
+Implementation status (complete, 2026-10-26): Bounded, timeout-controlled HTML
+retrieval validates every redirect and verifies the response content. Readable
+blocks are stored as ordered segments with heading-based locators. Empty or
+unexpected pages enter explicit manual-review or failed states, and every failed
+attempt is retained as an audit event.
 
 ## 41. Implement CMS PDF fetch and text extraction
 Goal: Turn official CMS PDFs into traceable text sources.
 Description: Download a registered CMS PDF, record content hash and source metadata, and extract text with page references when available. Route unreadable/scanned or malformed PDFs to an explicit error/manual-review state instead of fabricating content.
 
+Implementation status (complete, 2026-10-26): PDF bytes and retrieval metadata
+are retained with the immutable source revision. Machine-readable text is stored
+with page locators; scanned/blank PDFs require manual review, while malformed
+documents are recorded as failed extraction attempts without fabricated text.
+
 ## 42. Persist source revisions and unchanged-file detection
 Goal: Avoid repeated extraction for sources whose content has not changed.
 Description: Store separate immutable source revisions using reliable content hashes and retrieval timestamps. On repeat admin checks, skip identical content but allow a forced reprocessing run without deleting historical revisions.
+
+Implementation status (complete, 2026-10-26): SHA-256 uniqueness is enforced per
+source. Identical bytes append an `unchanged` check without another extraction;
+changed bytes create a new numbered revision; and force reprocessing appends a
+new extraction to the existing revision. Prior revisions, extractions, segments,
+and check events are never overwritten.
 
 ## 43. Implement normalized extraction candidates
 Goal: Convert CMS document text into reviewable measure fields.
@@ -200,9 +258,36 @@ Description: Retry temporary network or processing errors a limited number of ti
 Goal: Let the admin correct AI-extracted records before publication.
 Description: Present one candidate at a time with old/new values, official excerpts, uncertainty flags, and Approve/Reject/Edit actions. Record edits and reviewer identity/timestamps; do not add bulk approval in MVP.
 
+Implementation status (complete for MVP, 2026-10-22): The protected admin workspace now
+presents individual source-backed field candidates with their official source,
+separately stored official excerpt when one was captured, evidence locator,
+extraction state, and current decision. Reviewers can approve an edited value,
+request revision, or mark a field not applicable. Each action
+records authenticated reviewer identity and time in append-only history without
+publishing. The dialog now pairs the same field and collection type across
+PY2025 and PY2026, distinguishes exact wording matches, differences, and missing
+counterparts without inferring policy meaning, and translates extraction codes
+into explicit SME, manual-review, or applicability signals. Source excerpts are
+persisted separately from normalized candidate values; candidates without a
+captured excerpt explicitly require manual use of the exact locator and source
+link. `needs_revision` is the MVP rejection path, and no bulk approval exists.
+
 ## 49. Implement verified-field partial publication rules
 Goal: Publish trustworthy information without hiding the whole measure.
 Description: Permit approval of individual evidenced fields while unresolved fields remain withheld and flagged internally. Test that public API responses and generated AI explanations never represent unresolved or missing values as confirmed CMS requirements.
+
+Implementation status (complete for MVP, 2026-10-26): Approval and publication
+are separate authenticated actions. The publication transaction accepts only a
+reviewer-approved candidate with a frozen verified source, literal excerpt,
+locator, verified program-year membership, a supported public-field mapping, and
+no newer-source flag. It materializes one `SpecificationField` and
+`EvidenceReference`, records publisher/time, and leaves every sibling candidate
+private. Repeated publication is idempotent; published reviews are locked against
+in-place changes. Current safe mappings cover definition, numerator, denominator,
+and exclusions. Other candidate categories remain private until the public
+contract has a semantically exact mapping. A publication-safe explanation-context
+builder excludes drafts, null/unresolved values, and fields without published
+evidence; no AI explanation generation is implemented yet.
 
 ## 50. Mark reviews and explanations stale on source changes
 Goal: Prevent older verification decisions from appearing current after revisions.
