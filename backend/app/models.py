@@ -21,12 +21,20 @@ from app.domain import (
     AffectedField,
     CandidateReviewDecision,
     ChangeStatus,
+    ClarificationEvidenceRelation,
+    ClarificationOutcome,
     CollectionType,
     FieldAvailability,
+    IngestionItemStage,
+    IngestionRunStatus,
+    NormalizedFieldStatus,
+    NormalizedIdentityStatus,
+    NormalizedStagingStatus,
     PublicationState,
     PublicVerificationStatus,
     SourceCheckOutcome,
     SourceExtractionStatus,
+    SourceNormalizationStatus,
 )
 
 
@@ -93,6 +101,62 @@ source_check_outcome_enum = Enum(
 source_extraction_status_enum = Enum(
     SourceExtractionStatus,
     name="source_extraction_status",
+    native_enum=False,
+    create_constraint=True,
+    values_callable=lambda values: [value.value for value in values],
+)
+source_normalization_status_enum = Enum(
+    SourceNormalizationStatus,
+    name="source_normalization_status",
+    native_enum=False,
+    create_constraint=True,
+    values_callable=lambda values: [value.value for value in values],
+)
+normalized_identity_status_enum = Enum(
+    NormalizedIdentityStatus,
+    name="normalized_identity_status",
+    native_enum=False,
+    create_constraint=True,
+    values_callable=lambda values: [value.value for value in values],
+)
+normalized_field_status_enum = Enum(
+    NormalizedFieldStatus,
+    name="normalized_field_status",
+    native_enum=False,
+    create_constraint=True,
+    values_callable=lambda values: [value.value for value in values],
+)
+normalized_staging_status_enum = Enum(
+    NormalizedStagingStatus,
+    name="normalized_staging_status",
+    native_enum=False,
+    create_constraint=True,
+    values_callable=lambda values: [value.value for value in values],
+)
+clarification_outcome_enum = Enum(
+    ClarificationOutcome,
+    name="clarification_outcome",
+    native_enum=False,
+    create_constraint=True,
+    values_callable=lambda values: [value.value for value in values],
+)
+clarification_evidence_relation_enum = Enum(
+    ClarificationEvidenceRelation,
+    name="clarification_evidence_relation",
+    native_enum=False,
+    create_constraint=True,
+    values_callable=lambda values: [value.value for value in values],
+)
+ingestion_run_status_enum = Enum(
+    IngestionRunStatus,
+    name="ingestion_run_status",
+    native_enum=False,
+    create_constraint=True,
+    values_callable=lambda values: [value.value for value in values],
+)
+ingestion_item_stage_enum = Enum(
+    IngestionItemStage,
+    name="ingestion_item_stage",
     native_enum=False,
     create_constraint=True,
     values_callable=lambda values: [value.value for value in values],
@@ -165,6 +229,9 @@ class SourceDocument(Base):
     )
     checks: Mapped[list["SourceCheck"]] = relationship(
         back_populates="source_document", cascade="all, delete-orphan"
+    )
+    ingestion_items: Mapped[list["IngestionRunItem"]] = relationship(
+        back_populates="source_document"
     )
 
 
@@ -241,6 +308,9 @@ class SourceExtraction(Base):
         back_populates="extraction", cascade="all, delete-orphan"
     )
     checks: Mapped[list["SourceCheck"]] = relationship(back_populates="extraction")
+    normalizations: Mapped[list["SourceNormalization"]] = relationship(
+        back_populates="source_extraction", cascade="all, delete-orphan"
+    )
 
 
 class SourceTextSegment(Base):
@@ -256,6 +326,200 @@ class SourceTextSegment(Base):
     text: Mapped[str] = mapped_column(Text)
 
     extraction: Mapped[SourceExtraction] = relationship(back_populates="segments")
+    normalized_fields: Mapped[list["NormalizedFieldCandidate"]] = relationship(
+        back_populates="source_text_segment"
+    )
+    clarification_evidence: Mapped[list["AIClarificationEvidence"]] = relationship(
+        back_populates="source_text_segment"
+    )
+
+
+class SourceNormalization(Base):
+    __tablename__ = "source_normalizations"
+    __table_args__ = (UniqueConstraint("source_extraction_id", "parser_version"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    normalization_id: Mapped[str] = mapped_column(String(120), unique=True, index=True)
+    source_extraction_id: Mapped[int] = mapped_column(
+        ForeignKey("source_extractions.id", ondelete="RESTRICT")
+    )
+    parser_version: Mapped[str] = mapped_column(String(120))
+    status: Mapped[SourceNormalizationStatus] = mapped_column(
+        source_normalization_status_enum, index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    created_by: Mapped[str] = mapped_column(String(200))
+
+    source_extraction: Mapped[SourceExtraction] = relationship(
+        back_populates="normalizations"
+    )
+    measure_candidates: Mapped[list["NormalizedMeasureCandidate"]] = relationship(
+        back_populates="normalization", cascade="all, delete-orphan"
+    )
+
+
+class NormalizedMeasureCandidate(Base):
+    __tablename__ = "normalized_measure_candidates"
+    __table_args__ = (
+        UniqueConstraint("source_normalization_id", "sequence"),
+        CheckConstraint("sequence >= 1"),
+        CheckConstraint(
+            "performance_year_candidate IS NULL OR "
+            "(performance_year_candidate >= 2000 AND performance_year_candidate <= 2100)"
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    candidate_id: Mapped[str] = mapped_column(String(120), unique=True, index=True)
+    source_normalization_id: Mapped[int] = mapped_column(
+        ForeignKey("source_normalizations.id", ondelete="CASCADE")
+    )
+    sequence: Mapped[int] = mapped_column(Integer)
+    identity_status: Mapped[NormalizedIdentityStatus] = mapped_column(
+        normalized_identity_status_enum, index=True
+    )
+    measure_id_candidate: Mapped[str | None] = mapped_column(String(80))
+    performance_year_candidate: Mapped[int | None] = mapped_column(Integer)
+    collection_type_candidate: Mapped[str | None] = mapped_column(String(80))
+    specification_identifier_candidate: Mapped[str | None] = mapped_column(String(120))
+    matched_measure_version_id: Mapped[int | None] = mapped_column(
+        ForeignKey("measure_versions.id", ondelete="RESTRICT")
+    )
+    issues: Mapped[str | None] = mapped_column(Text)
+
+    normalization: Mapped[SourceNormalization] = relationship(
+        back_populates="measure_candidates"
+    )
+    matched_measure_version: Mapped["MeasureVersion | None"] = relationship(
+        back_populates="normalized_candidates"
+    )
+    fields: Mapped[list["NormalizedFieldCandidate"]] = relationship(
+        back_populates="measure_candidate", cascade="all, delete-orphan"
+    )
+
+
+class NormalizedFieldCandidate(Base):
+    __tablename__ = "normalized_field_candidates"
+    __table_args__ = (
+        UniqueConstraint("normalized_measure_candidate_id", "field_name"),
+        CheckConstraint(
+            "(status = 'extracted' AND candidate_value IS NOT NULL "
+            "AND source_text_segment_id IS NOT NULL AND evidence_locator IS NOT NULL "
+            "AND source_excerpt IS NOT NULL) OR "
+            "(status = 'unresolved' AND candidate_value IS NULL)",
+            name="ck_normalized_field_evidence",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    field_candidate_id: Mapped[str] = mapped_column(String(120), unique=True, index=True)
+    normalized_measure_candidate_id: Mapped[int] = mapped_column(
+        ForeignKey("normalized_measure_candidates.id", ondelete="CASCADE")
+    )
+    field_name: Mapped[str] = mapped_column(String(80))
+    candidate_value: Mapped[str | None] = mapped_column(Text)
+    status: Mapped[NormalizedFieldStatus] = mapped_column(
+        normalized_field_status_enum, index=True
+    )
+    source_text_segment_id: Mapped[int | None] = mapped_column(
+        ForeignKey("source_text_segments.id", ondelete="RESTRICT")
+    )
+    evidence_locator: Mapped[str | None] = mapped_column(String(1000))
+    source_excerpt: Mapped[str | None] = mapped_column(Text)
+    staging_status: Mapped[NormalizedStagingStatus] = mapped_column(
+        normalized_staging_status_enum, index=True
+    )
+    staged_field_candidate_id: Mapped[int | None] = mapped_column(
+        ForeignKey("specification_field_candidates.id", ondelete="RESTRICT")
+    )
+
+    measure_candidate: Mapped[NormalizedMeasureCandidate] = relationship(
+        back_populates="fields"
+    )
+    source_text_segment: Mapped[SourceTextSegment | None] = relationship(
+        back_populates="normalized_fields"
+    )
+    staged_field_candidate: Mapped["SpecificationFieldCandidate | None"] = relationship(
+        back_populates="normalized_fields"
+    )
+    clarifications: Mapped[list["AIClarificationProposal"]] = relationship(
+        back_populates="normalized_field_candidate", cascade="all, delete-orphan"
+    )
+
+
+class AIClarificationProposal(Base):
+    __tablename__ = "ai_clarification_proposals"
+    __table_args__ = (
+        UniqueConstraint(
+            "normalized_field_candidate_id",
+            "provider",
+            "model",
+            "prompt_version",
+            "input_digest",
+            name="uq_ai_clarification_input",
+        ),
+        CheckConstraint(
+            "(outcome = 'proposed' AND proposed_value IS NOT NULL) OR "
+            "(outcome IN ('unresolved', 'conflict') AND proposed_value IS NULL)",
+            name="ck_ai_clarification_proposed_value",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    clarification_id: Mapped[str] = mapped_column(String(120), unique=True, index=True)
+    normalized_field_candidate_id: Mapped[int] = mapped_column(
+        ForeignKey("normalized_field_candidates.id", ondelete="RESTRICT")
+    )
+    provider: Mapped[str] = mapped_column(String(80))
+    model: Mapped[str] = mapped_column(String(160))
+    prompt_version: Mapped[str] = mapped_column(String(120))
+    input_digest: Mapped[str] = mapped_column(String(128))
+    outcome: Mapped[ClarificationOutcome] = mapped_column(
+        clarification_outcome_enum, index=True
+    )
+    proposed_value: Mapped[str | None] = mapped_column(Text)
+    summary: Mapped[str] = mapped_column(Text)
+    provider_response_id: Mapped[str | None] = mapped_column(String(200))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    created_by: Mapped[str] = mapped_column(String(200))
+
+    normalized_field_candidate: Mapped[NormalizedFieldCandidate] = relationship(
+        back_populates="clarifications"
+    )
+    evidence: Mapped[list["AIClarificationEvidence"]] = relationship(
+        back_populates="clarification", cascade="all, delete-orphan"
+    )
+
+
+class AIClarificationEvidence(Base):
+    __tablename__ = "ai_clarification_evidence"
+    __table_args__ = (UniqueConstraint("ai_clarification_proposal_id", "evidence_key"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    evidence_key: Mapped[str] = mapped_column(String(120), index=True)
+    ai_clarification_proposal_id: Mapped[int] = mapped_column(
+        ForeignKey("ai_clarification_proposals.id", ondelete="CASCADE")
+    )
+    source_text_segment_id: Mapped[int] = mapped_column(
+        ForeignKey("source_text_segments.id", ondelete="RESTRICT")
+    )
+    source_revision_id: Mapped[int] = mapped_column(
+        ForeignKey("source_revisions.id", ondelete="RESTRICT")
+    )
+    locator: Mapped[str] = mapped_column(String(1000))
+    excerpt: Mapped[str] = mapped_column(Text)
+    relation: Mapped[ClarificationEvidenceRelation] = mapped_column(
+        clarification_evidence_relation_enum
+    )
+    explanation: Mapped[str] = mapped_column(Text)
+
+    clarification: Mapped[AIClarificationProposal] = relationship(
+        back_populates="evidence"
+    )
+    source_text_segment: Mapped[SourceTextSegment] = relationship(
+        back_populates="clarification_evidence"
+    )
+    source_revision: Mapped[SourceRevision] = relationship()
 
 
 class SourceCheck(Base):
@@ -287,6 +551,81 @@ class SourceCheck(Base):
     source_document: Mapped[SourceDocument] = relationship(back_populates="checks")
     source_revision: Mapped[SourceRevision | None] = relationship(back_populates="checks")
     extraction: Mapped[SourceExtraction | None] = relationship(back_populates="checks")
+    ingestion_items: Mapped[list["IngestionRunItem"]] = relationship(
+        back_populates="source_check"
+    )
+
+
+class IngestionRun(Base):
+    __tablename__ = "ingestion_runs"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    run_id: Mapped[str] = mapped_column(String(120), unique=True, index=True)
+    status: Mapped[IngestionRunStatus] = mapped_column(
+        ingestion_run_status_enum, default=IngestionRunStatus.RUNNING, index=True
+    )
+    source_count: Mapped[int] = mapped_column(Integer)
+    completed_count: Mapped[int] = mapped_column(Integer, default=0)
+    failed_count: Mapped[int] = mapped_column(Integer, default=0)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_by: Mapped[str] = mapped_column(String(200))
+
+    items: Mapped[list["IngestionRunItem"]] = relationship(
+        back_populates="run", cascade="all, delete-orphan"
+    )
+
+
+class IngestionRunItem(Base):
+    __tablename__ = "ingestion_run_items"
+    __table_args__ = (
+        UniqueConstraint("ingestion_run_id", "sequence"),
+        UniqueConstraint("ingestion_run_id", "source_document_id"),
+        CheckConstraint("sequence >= 1"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    item_id: Mapped[str] = mapped_column(String(160), unique=True, index=True)
+    ingestion_run_id: Mapped[int] = mapped_column(
+        ForeignKey("ingestion_runs.id", ondelete="CASCADE")
+    )
+    source_document_id: Mapped[int] = mapped_column(
+        ForeignKey("source_documents.id", ondelete="RESTRICT")
+    )
+    source_check_id: Mapped[int | None] = mapped_column(
+        ForeignKey("source_checks.id", ondelete="RESTRICT")
+    )
+    sequence: Mapped[int] = mapped_column(Integer)
+    stage: Mapped[IngestionItemStage] = mapped_column(
+        ingestion_item_stage_enum, default=IngestionItemStage.PENDING, index=True
+    )
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    error: Mapped[str | None] = mapped_column(Text)
+
+    run: Mapped[IngestionRun] = relationship(back_populates="items")
+    source_document: Mapped[SourceDocument] = relationship(back_populates="ingestion_items")
+    source_check: Mapped[SourceCheck | None] = relationship(back_populates="ingestion_items")
+    events: Mapped[list["IngestionRunEvent"]] = relationship(
+        back_populates="item", cascade="all, delete-orphan"
+    )
+
+
+class IngestionRunEvent(Base):
+    __tablename__ = "ingestion_run_events"
+    __table_args__ = (UniqueConstraint("ingestion_run_item_id", "sequence"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    event_id: Mapped[str] = mapped_column(String(180), unique=True, index=True)
+    ingestion_run_item_id: Mapped[int] = mapped_column(
+        ForeignKey("ingestion_run_items.id", ondelete="CASCADE")
+    )
+    sequence: Mapped[int] = mapped_column(Integer)
+    stage: Mapped[IngestionItemStage] = mapped_column(ingestion_item_stage_enum)
+    occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    detail: Mapped[str | None] = mapped_column(Text)
+
+    item: Mapped[IngestionRunItem] = relationship(back_populates="events")
 
 
 class MeasureVersion(Base):
@@ -331,6 +670,9 @@ class MeasureVersion(Base):
     )
     field_candidates: Mapped[list["SpecificationFieldCandidate"]] = relationship(
         back_populates="measure_version", cascade="all, delete-orphan"
+    )
+    normalized_candidates: Mapped[list["NormalizedMeasureCandidate"]] = relationship(
+        back_populates="matched_measure_version"
     )
 
 
@@ -392,6 +734,9 @@ class SpecificationFieldCandidate(Base):
     )
     published_field: Mapped["SpecificationField | None"] = relationship(
         foreign_keys=[published_field_id]
+    )
+    normalized_fields: Mapped[list["NormalizedFieldCandidate"]] = relationship(
+        back_populates="staged_field_candidate"
     )
 
 

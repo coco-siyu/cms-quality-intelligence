@@ -7,13 +7,21 @@ from app.domain import (
     AffectedField,
     CandidateReviewDecision,
     ChangeStatus,
+    ClarificationEvidenceRelation,
+    ClarificationOutcome,
     CollectionType,
     FieldAvailability,
     FieldPublicationEligibility,
+    IngestionItemStage,
+    IngestionRunStatus,
+    NormalizedFieldStatus,
+    NormalizedIdentityStatus,
+    NormalizedStagingStatus,
     PublicationState,
     PublicVerificationStatus,
     SourceCheckOutcome,
     SourceExtractionStatus,
+    SourceNormalizationStatus,
 )
 
 
@@ -219,6 +227,78 @@ class AdminSourceUpdateRequest(BaseModel):
     is_active: bool | None = None
 
 
+class AdminSourceNormalizationSummaryResponse(BaseModel):
+    normalization_id: str
+    status: SourceNormalizationStatus
+    parser_version: str
+    measure_candidate_count: int
+    staged_field_count: int
+    created_at: datetime
+    created_by: str
+
+
+class AdminClarificationEvidenceResponse(BaseModel):
+    evidence_id: str
+    source_id: str
+    source_revision_id: str
+    source_title: str
+    official_url: HttpUrl
+    locator: str
+    excerpt: str
+    relation: ClarificationEvidenceRelation
+    explanation: str
+
+
+class AdminClarificationProposalResponse(BaseModel):
+    clarification_id: str
+    field_candidate_id: str
+    outcome: ClarificationOutcome
+    proposed_value: str | None
+    summary: str
+    provider: str
+    model: str
+    prompt_version: str
+    provider_response_id: str | None
+    created_at: datetime
+    created_by: str
+    evidence: list[AdminClarificationEvidenceResponse]
+
+
+class AdminNormalizedFieldResponse(BaseModel):
+    field_candidate_id: str
+    field_name: str
+    candidate_value: str | None
+    status: NormalizedFieldStatus
+    segment_sequence: int | None
+    evidence_locator: str | None
+    source_excerpt: str | None
+    staging_status: NormalizedStagingStatus
+    staged_review_item_id: str | None
+    clarifications: list[AdminClarificationProposalResponse]
+
+
+class AdminNormalizedMeasureCandidateResponse(BaseModel):
+    candidate_id: str
+    sequence: int
+    identity_status: NormalizedIdentityStatus
+    measure_id_candidate: str | None
+    performance_year_candidate: int | None
+    collection_type_candidate: CollectionType | None
+    specification_identifier_candidate: str | None
+    matched_version_id: str | None
+    issues: list[str]
+    fields: list[AdminNormalizedFieldResponse]
+
+
+class AdminSourceNormalizationDetailResponse(
+    AdminSourceNormalizationSummaryResponse
+):
+    extraction_id: str
+    source_id: str
+    revision_id: str
+    candidates: list[AdminNormalizedMeasureCandidateResponse]
+
+
 class AdminSourceExtractionResponse(BaseModel):
     extraction_id: str
     sequence: int
@@ -230,6 +310,7 @@ class AdminSourceExtractionResponse(BaseModel):
     forced: bool
     extracted_at: datetime
     created_by: str
+    normalization: AdminSourceNormalizationSummaryResponse | None
 
 
 class AdminSourceRevisionResponse(BaseModel):
@@ -303,6 +384,43 @@ class AdminSourceExtractionDetailResponse(AdminSourceExtractionResponse):
     source_id: str
     revision_id: str
     segments: list[AdminSourceSegmentResponse]
+
+
+class AdminIngestionEventResponse(BaseModel):
+    event_id: str
+    stage: IngestionItemStage
+    occurred_at: datetime
+    detail: str | None
+
+
+class AdminIngestionItemResponse(BaseModel):
+    item_id: str
+    sequence: int
+    source_id: str
+    source_title: str
+    stage: IngestionItemStage
+    source_check_id: str | None
+    source_check_outcome: SourceCheckOutcome | None
+    started_at: datetime | None
+    completed_at: datetime | None
+    error: str | None
+    events: list[AdminIngestionEventResponse]
+
+
+class AdminIngestionRunResponse(BaseModel):
+    run_id: str
+    status: IngestionRunStatus
+    source_count: int
+    completed_count: int
+    failed_count: int
+    started_at: datetime
+    completed_at: datetime | None
+    created_by: str
+    items: list[AdminIngestionItemResponse]
+
+
+class AdminIngestionRunListResponse(BaseModel):
+    items: list[AdminIngestionRunResponse]
 
 
 class ORMModel(BaseModel):

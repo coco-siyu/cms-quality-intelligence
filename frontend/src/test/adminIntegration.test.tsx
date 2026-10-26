@@ -362,6 +362,7 @@ describe("private admin review workspace", () => {
           forced: false,
           extracted_at: "2026-10-26T12:00:00Z",
           created_by: "reviewer",
+          normalization: null,
         },
       },
       latest_check: {
@@ -381,6 +382,44 @@ describe("private admin review workspace", () => {
         extraction_id: "CMS-PY2026-APP-REQ-R1-abcdef123456-X1",
       },
     };
+    const ingestionRun = {
+      run_id: "CMS-INGEST-1",
+      status: "completed",
+      source_count: 1,
+      completed_count: 1,
+      failed_count: 0,
+      started_at: "2026-10-26T12:10:00Z",
+      completed_at: "2026-10-26T12:10:02Z",
+      created_by: "reviewer",
+      items: [
+        {
+          item_id: "CMS-INGEST-ITEM-1",
+          sequence: 1,
+          source_id: source.source_id,
+          source_title: source.title,
+          stage: "awaiting_verification",
+          source_check_id: "CMS-CHECK-2",
+          source_check_outcome: "new_revision",
+          started_at: "2026-10-26T12:10:00Z",
+          completed_at: "2026-10-26T12:10:02Z",
+          error: null,
+          events: [
+            {
+              event_id: "CMS-EVENT-1",
+              stage: "downloading",
+              occurred_at: "2026-10-26T12:10:00Z",
+              detail: "Retrieving official CMS source.",
+            },
+            {
+              event_id: "CMS-EVENT-2",
+              stage: "awaiting_verification",
+              occurred_at: "2026-10-26T12:10:02Z",
+              detail: "Private normalized candidates are ready for verification.",
+            },
+          ],
+        },
+      ],
+    };
     const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
       if (url.endsWith("/api/admin/session")) {
@@ -391,8 +430,31 @@ describe("private admin review workspace", () => {
       if (url.endsWith("/api/admin/sources") && !init?.method) {
         return Promise.resolve(jsonResponse({ items: [source] }));
       }
+      if (url.endsWith("/api/admin/ingestion-runs") && init?.method === "POST") {
+        return Promise.resolve(jsonResponse(ingestionRun, 201));
+      }
+      if (url.endsWith("/api/admin/ingestion-runs")) {
+        return Promise.resolve(jsonResponse({ items: [] }));
+      }
       if (url.endsWith("/api/admin/sources/CMS-PY2026-APP-REQ/check")) {
         return Promise.resolve(jsonResponse({ ...source, revisions: [], checks: [] }));
+      }
+      if (url.endsWith("/CMS-PY2026-APP-REQ-R1-abcdef123456-X1/normalize")) {
+        return Promise.resolve(
+          jsonResponse({
+            normalization_id: "CMS-NORM-1",
+            status: "normalized",
+            parser_version: "cms-labeled-fields-v1",
+            measure_candidate_count: 1,
+            staged_field_count: 2,
+            created_at: "2026-10-26T12:01:00Z",
+            created_by: "reviewer",
+            extraction_id: "CMS-PY2026-APP-REQ-R1-abcdef123456-X1",
+            source_id: "CMS-PY2026-APP-REQ",
+            revision_id: "CMS-PY2026-APP-REQ-R1-abcdef123456",
+            candidates: [],
+          }),
+        );
       }
       return Promise.reject(new Error(`Unexpected request: ${url}`));
     });
@@ -402,6 +464,17 @@ describe("private admin review workspace", () => {
 
     expect(await screen.findByText("PY 2026 APP Quality Requirements")).toBeInTheDocument();
     expect(screen.getByText(/12 text segments/)).toBeInTheDocument();
+    expect(screen.queryByText("Loading candidates…")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Check for updates" }));
+    expect(await screen.findByText("Latest registry check")).toBeInTheDocument();
+    expect(screen.getByText("awaiting verification")).toBeInTheDocument();
+    const runCall = fetchMock.mock.calls.find(
+      ([input, init]) =>
+        String(input).endsWith("/api/admin/ingestion-runs") && init?.method === "POST",
+    );
+    expect(runCall?.[1]?.headers).toMatchObject({
+      "X-CMSQI-Admin-Action": "check-for-updates",
+    });
     fireEvent.click(screen.getByRole("button", { name: "Check source" }));
     await waitFor(() => {
       const checkCall = fetchMock.mock.calls.find(([input]) =>
@@ -411,6 +484,165 @@ describe("private admin review workspace", () => {
         "X-CMSQI-Admin-Action": "source-check",
       });
       expect(JSON.parse(String(checkCall?.[1]?.body))).toEqual({ force: false });
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Normalize candidates" }));
+    await waitFor(() => {
+      const normalizationCall = fetchMock.mock.calls.find(([input]) =>
+        String(input).endsWith("/CMS-PY2026-APP-REQ-R1-abcdef123456-X1/normalize"),
+      );
+      expect(normalizationCall?.[1]?.headers).toMatchObject({
+        "X-CMSQI-Admin-Action": "normalize-source",
+      });
+    });
+  });
+
+  it("inspects unresolved normalized fields and requests private clarification", async () => {
+    const normalizationSummary = {
+      normalization_id: "CMS-NORM-44",
+      status: "needs_review",
+      parser_version: "cms-labeled-fields-v1",
+      measure_candidate_count: 1,
+      staged_field_count: 0,
+      created_at: "2026-10-26T12:01:00Z",
+      created_by: "reviewer",
+    };
+    const source = {
+      source_id: "CMS-PY2026-APP-REQ",
+      title: "PY 2026 APP Quality Requirements",
+      official_url: "https://www.cms.gov/example/py2026-app.pdf",
+      source_format: "pdf",
+      is_active: true,
+      notes: null,
+      created_by: "reviewer",
+      created_at: "2026-10-26T12:00:00Z",
+      updated_at: "2026-10-26T12:00:00Z",
+      deactivated_at: null,
+      revision_count: 1,
+      latest_revision: {
+        revision_id: "CMS-PY2026-APP-REQ-R1",
+        revision_number: 1,
+        content_hash: "abcdef1234567890",
+        source_url: "https://www.cms.gov/example/py2026-app.pdf",
+        final_url: "https://www.cms.gov/example/py2026-app.pdf",
+        http_status: 200,
+        mime_type: "application/pdf",
+        byte_length: 2048,
+        publication_date: null,
+        retrieved_at: "2026-10-26T12:00:00Z",
+        last_source_check_at: "2026-10-26T12:00:00Z",
+        extraction: {
+          extraction_id: "CMS-PY2026-APP-REQ-R1-X1",
+          sequence: 1,
+          status: "extracted",
+          page_count: 4,
+          segment_count: 12,
+          error: null,
+          extractor_version: "pypdf-v1",
+          forced: false,
+          extracted_at: "2026-10-26T12:00:00Z",
+          created_by: "reviewer",
+          normalization: normalizationSummary,
+        },
+      },
+      latest_check: null,
+    };
+    const clarification = {
+      clarification_id: "CMS-CLARIFY-1",
+      field_candidate_id: "CMS-NFIELD-EXCLUSIONS",
+      outcome: "proposed",
+      proposed_value: "Patients receiving hospice care are excluded.",
+      summary: "One additional official source supports this wording.",
+      provider: "openai",
+      model: "configured-model",
+      prompt_version: "cms-clarification-v1",
+      provider_response_id: "response-1",
+      created_at: "2026-10-26T12:02:00Z",
+      created_by: "reviewer",
+      evidence: [
+        {
+          evidence_id: "CMS-AI-EVID-1",
+          source_id: "CMS-CORROBORATING",
+          source_revision_id: "CMS-CORROBORATING-R1",
+          source_title: "Additional official CMS source",
+          official_url: "https://www.cms.gov/example/corroborating.html",
+          locator: "HTML section: Exclusions",
+          excerpt: "Patients receiving hospice care are excluded.",
+          relation: "supports",
+          explanation: "The excerpt directly labels the exclusion.",
+        },
+      ],
+    };
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith("/api/admin/session")) {
+        return Promise.resolve(
+          jsonResponse({ configured: true, authenticated: true, username: "reviewer" }),
+        );
+      }
+      if (url.endsWith("/api/admin/sources")) {
+        return Promise.resolve(jsonResponse({ items: [source] }));
+      }
+      if (url.endsWith("/api/admin/ingestion-runs")) {
+        return Promise.resolve(jsonResponse({ items: [] }));
+      }
+      if (url.endsWith("/api/admin/source-normalizations/CMS-NORM-44")) {
+        return Promise.resolve(
+          jsonResponse({
+            ...normalizationSummary,
+            extraction_id: "CMS-PY2026-APP-REQ-R1-X1",
+            source_id: source.source_id,
+            revision_id: source.latest_revision.revision_id,
+            candidates: [
+              {
+                candidate_id: "CMS-NCANDIDATE-1",
+                sequence: 1,
+                identity_status: "matched",
+                measure_id_candidate: "001",
+                performance_year_candidate: 2026,
+                collection_type_candidate: "ecqm",
+                specification_identifier_candidate: "CMS122v14",
+                matched_version_id: "CMS-001-PY2026-ECQM",
+                issues: ["Unresolved fields: exclusions"],
+                fields: [
+                  {
+                    field_candidate_id: "CMS-NFIELD-EXCLUSIONS",
+                    field_name: "exclusions",
+                    candidate_value: null,
+                    status: "unresolved",
+                    segment_sequence: null,
+                    evidence_locator: null,
+                    source_excerpt: null,
+                    staging_status: "unmatched",
+                    staged_review_item_id: null,
+                    clarifications: [],
+                  },
+                ],
+              },
+            ],
+          }),
+        );
+      }
+      if (url.endsWith("/CMS-NFIELD-EXCLUSIONS/clarifications") && init?.method === "POST") {
+        return Promise.resolve(jsonResponse(clarification));
+      }
+      return Promise.reject(new Error(`Unexpected request: ${url}`));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await renderRoute("/admin/sources");
+    fireEvent.click(await screen.findByRole("button", { name: "Inspect candidates" }));
+    expect(await screen.findByText("exclusions")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Clarify with AI" }));
+
+    expect(
+      await screen.findByText("Patients receiving hospice care are excluded."),
+    ).toBeInTheDocument();
+    const call = fetchMock.mock.calls.find(([input]) =>
+      String(input).endsWith("/CMS-NFIELD-EXCLUSIONS/clarifications"),
+    );
+    expect(call?.[1]?.headers).toMatchObject({
+      "X-CMSQI-Admin-Action": "clarify-source",
     });
   });
 });

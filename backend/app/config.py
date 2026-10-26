@@ -26,6 +26,12 @@ class Settings(BaseSettings):
     source_fetch_timeout_seconds: float = 30.0
     source_fetch_max_bytes: int = 25 * 1024 * 1024
     source_fetch_max_redirects: int = 5
+    ingestion_run_max_sources: int = 25
+    openai_api_key: str | None = None
+    ai_clarification_model: str | None = None
+    ai_clarification_timeout_seconds: float = 45.0
+    ai_clarification_max_excerpts: int = 6
+    ai_clarification_max_input_chars: int = 12_000
 
 
 @lru_cache

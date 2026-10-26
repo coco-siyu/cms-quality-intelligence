@@ -380,6 +380,73 @@ paths:
           $ref: "#/components/responses/Conflict"
         "422":
           $ref: "#/components/responses/ValidationError"
+  /api/admin/ingestion-runs:
+    get:
+      tags: [Admin sources]
+      operationId: listAdminIngestionRuns
+      summary: List recent private source ingestion runs.
+      security:
+        - AdminSessionCookie: []
+      responses:
+        "200":
+          description: Recent persisted ingestion runs.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminIngestionRunList"
+        "401":
+          $ref: "#/components/responses/AdminUnauthorized"
+    post:
+      tags: [Admin sources]
+      operationId: createAdminIngestionRun
+      summary: Check every active registered CMS source for updates.
+      description: |
+        Creates a durable private run before retrieval begins. Each source moves through
+        bounded download, extraction, content comparison, and verification staging. This
+        operation never publishes measure records.
+      security:
+        - AdminSessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/IngestionRunAction"
+      responses:
+        "201":
+          description: The bounded ingestion run and its persisted outcomes.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminIngestionRun"
+        "401":
+          $ref: "#/components/responses/AdminUnauthorized"
+        "403":
+          $ref: "#/components/responses/AdminActionForbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /api/admin/ingestion-runs/{run_id}:
+    get:
+      tags: [Admin sources]
+      operationId: getAdminIngestionRun
+      summary: Read one persisted private ingestion run.
+      security:
+        - AdminSessionCookie: []
+      parameters:
+        - name: run_id
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 120
+      responses:
+        "200":
+          description: The ingestion run and source-level event trails.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminIngestionRun"
+        "401":
+          $ref: "#/components/responses/AdminUnauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
   /api/admin/sources/{source_id}:
     get:
       operationId: getAdminSource
@@ -500,6 +567,114 @@ paths:
           $ref: "#/components/responses/AdminUnauthorized"
         "404":
           $ref: "#/components/responses/NotFound"
+  /api/admin/source-extractions/{extraction_id}/normalize:
+    post:
+      operationId: normalizeAdminSourceExtraction
+      tags: [Admin sources]
+      summary: Produce private normalized measure-field candidates
+      description: |
+        Uses deterministic labeled-field rules and exact stored identity matching.
+        Ambiguous or incomplete results remain private unresolved candidates; this
+        operation never verifies or publishes a value.
+      security:
+        - AdminSessionCookie: []
+      parameters:
+        - name: extraction_id
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 200
+        - $ref: "#/components/parameters/SourceNormalizationAction"
+      responses:
+        "200":
+          description: Idempotent normalization result and private staging state.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminSourceNormalizationDetail"
+        "401":
+          $ref: "#/components/responses/AdminUnauthorized"
+        "403":
+          $ref: "#/components/responses/AdminActionForbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /api/admin/source-normalizations/{normalization_id}:
+    get:
+      operationId: getAdminSourceNormalization
+      tags: [Admin sources]
+      summary: Inspect normalized identities, fields, and evidence pointers
+      security:
+        - AdminSessionCookie: []
+      parameters:
+        - name: normalization_id
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 120
+      responses:
+        "200":
+          description: Private typed candidates and their review-queue staging state.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminSourceNormalizationDetail"
+        "401":
+          $ref: "#/components/responses/AdminUnauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /api/admin/normalized-fields/{field_candidate_id}/clarifications:
+    post:
+      operationId: clarifyAdminNormalizedField
+      tags: [Admin sources]
+      summary: Request a private evidence-bounded clarification proposal
+      description: |
+        Retrieves bounded excerpts from additional registered official CMS sources
+        and requests a schema-validated proposal for one unresolved normalized field.
+        The result remains private and cannot approve, verify, or publish a value.
+      security:
+        - AdminSessionCookie: []
+      parameters:
+        - name: field_candidate_id
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 120
+        - $ref: "#/components/parameters/SourceClarificationAction"
+      responses:
+        "200":
+          description: Private clarification proposal with validated official evidence.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminClarificationProposal"
+        "401":
+          $ref: "#/components/responses/AdminUnauthorized"
+        "403":
+          $ref: "#/components/responses/AdminActionForbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "502":
+          description: The configured model provider failed or returned invalid evidence.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "503":
+          description: Optional AI clarification has not been configured.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
 components:
   securitySchemes:
     AdminSessionCookie:
@@ -529,6 +704,27 @@ components:
       schema:
         type: string
         const: source-check
+    SourceNormalizationAction:
+      name: X-CMSQI-Admin-Action
+      in: header
+      required: true
+      schema:
+        type: string
+        const: normalize-source
+    SourceClarificationAction:
+      name: X-CMSQI-Admin-Action
+      in: header
+      required: true
+      schema:
+        type: string
+        const: clarify-source
+    IngestionRunAction:
+      name: X-CMSQI-Admin-Action
+      in: header
+      required: true
+      schema:
+        type: string
+        const: check-for-updates
     MeasureId:
       name: measure_id
       in: path
@@ -1159,6 +1355,173 @@ components:
     SourceExtractionStatus:
       type: string
       enum: [extracted, manual_review, failed]
+    SourceNormalizationStatus:
+      type: string
+      enum: [normalized, needs_review, no_candidates]
+    NormalizedIdentityStatus:
+      type: string
+      enum: [matched, unresolved, ambiguous]
+    NormalizedFieldStatus:
+      type: string
+      enum: [extracted, unresolved]
+    NormalizedStagingStatus:
+      type: string
+      enum: [staged, existing, blocked_newer_revision, unmatched]
+    ClarificationOutcome:
+      type: string
+      enum: [proposed, unresolved, conflict]
+    ClarificationEvidenceRelation:
+      type: string
+      enum: [supports, conflicts, context]
+    AdminClarificationEvidence:
+      type: object
+      required:
+        - evidence_id
+        - source_id
+        - source_revision_id
+        - source_title
+        - official_url
+        - locator
+        - excerpt
+        - relation
+        - explanation
+      properties:
+        evidence_id: {type: string}
+        source_id: {type: string}
+        source_revision_id: {type: string}
+        source_title: {type: string}
+        official_url: {type: string, format: uri}
+        locator: {type: string}
+        excerpt: {type: string}
+        relation:
+          $ref: "#/components/schemas/ClarificationEvidenceRelation"
+        explanation: {type: string}
+    AdminClarificationProposal:
+      type: object
+      required:
+        - clarification_id
+        - field_candidate_id
+        - outcome
+        - proposed_value
+        - summary
+        - provider
+        - model
+        - prompt_version
+        - provider_response_id
+        - created_at
+        - created_by
+        - evidence
+      properties:
+        clarification_id: {type: string}
+        field_candidate_id: {type: string}
+        outcome:
+          $ref: "#/components/schemas/ClarificationOutcome"
+        proposed_value: {type: [string, "null"]}
+        summary: {type: string}
+        provider: {type: string}
+        model: {type: string}
+        prompt_version: {type: string}
+        provider_response_id: {type: [string, "null"]}
+        created_at: {type: string, format: date-time}
+        created_by: {type: string}
+        evidence:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminClarificationEvidence"
+    AdminSourceNormalizationSummary:
+      type: object
+      required:
+        - normalization_id
+        - status
+        - parser_version
+        - measure_candidate_count
+        - staged_field_count
+        - created_at
+        - created_by
+      properties:
+        normalization_id: {type: string}
+        status:
+          $ref: "#/components/schemas/SourceNormalizationStatus"
+        parser_version: {type: string}
+        measure_candidate_count: {type: integer, minimum: 0}
+        staged_field_count: {type: integer, minimum: 0}
+        created_at: {type: string, format: date-time}
+        created_by: {type: string}
+    AdminNormalizedField:
+      type: object
+      required:
+        - field_candidate_id
+        - field_name
+        - candidate_value
+        - status
+        - segment_sequence
+        - evidence_locator
+        - source_excerpt
+        - staging_status
+        - staged_review_item_id
+        - clarifications
+      properties:
+        field_candidate_id: {type: string}
+        field_name: {type: string}
+        candidate_value: {type: [string, "null"]}
+        status:
+          $ref: "#/components/schemas/NormalizedFieldStatus"
+        segment_sequence: {type: [integer, "null"], minimum: 1}
+        evidence_locator: {type: [string, "null"]}
+        source_excerpt: {type: [string, "null"]}
+        staging_status:
+          $ref: "#/components/schemas/NormalizedStagingStatus"
+        staged_review_item_id: {type: [string, "null"]}
+        clarifications:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminClarificationProposal"
+    AdminNormalizedMeasureCandidate:
+      type: object
+      required:
+        - candidate_id
+        - sequence
+        - identity_status
+        - measure_id_candidate
+        - performance_year_candidate
+        - collection_type_candidate
+        - specification_identifier_candidate
+        - matched_version_id
+        - issues
+        - fields
+      properties:
+        candidate_id: {type: string}
+        sequence: {type: integer, minimum: 1}
+        identity_status:
+          $ref: "#/components/schemas/NormalizedIdentityStatus"
+        measure_id_candidate: {type: [string, "null"]}
+        performance_year_candidate: {type: [integer, "null"]}
+        collection_type_candidate:
+          oneOf:
+            - $ref: "#/components/schemas/CollectionType"
+            - type: "null"
+        specification_identifier_candidate: {type: [string, "null"]}
+        matched_version_id: {type: [string, "null"]}
+        issues:
+          type: array
+          items: {type: string}
+        fields:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminNormalizedField"
+    AdminSourceNormalizationDetail:
+      allOf:
+        - $ref: "#/components/schemas/AdminSourceNormalizationSummary"
+        - type: object
+          required: [extraction_id, source_id, revision_id, candidates]
+          properties:
+            extraction_id: {type: string}
+            source_id: {type: string}
+            revision_id: {type: string}
+            candidates:
+              type: array
+              items:
+                $ref: "#/components/schemas/AdminNormalizedMeasureCandidate"
     AdminSourceExtraction:
       type: object
       required:
@@ -1172,6 +1535,7 @@ components:
         - forced
         - extracted_at
         - created_by
+        - normalization
       properties:
         extraction_id: {type: string}
         sequence: {type: integer, minimum: 1}
@@ -1184,6 +1548,10 @@ components:
         forced: {type: boolean}
         extracted_at: {type: string, format: date-time}
         created_by: {type: string}
+        normalization:
+          oneOf:
+            - $ref: "#/components/schemas/AdminSourceNormalizationSummary"
+            - type: "null"
     AdminSourceRevision:
       type: object
       required:
@@ -1325,6 +1693,88 @@ components:
               type: array
               items:
                 $ref: "#/components/schemas/AdminSourceSegment"
+    IngestionRunStatus:
+      type: string
+      enum: [running, completed, completed_with_errors, interrupted]
+    IngestionItemStage:
+      type: string
+      enum: [pending, downloading, extracting, comparing, awaiting_verification, unchanged, failed]
+    AdminIngestionEvent:
+      type: object
+      required: [event_id, stage, occurred_at, detail]
+      properties:
+        event_id: {type: string}
+        stage:
+          $ref: "#/components/schemas/IngestionItemStage"
+        occurred_at: {type: string, format: date-time}
+        detail: {type: [string, "null"]}
+    AdminIngestionItem:
+      type: object
+      required:
+        - item_id
+        - sequence
+        - source_id
+        - source_title
+        - stage
+        - source_check_id
+        - source_check_outcome
+        - started_at
+        - completed_at
+        - error
+        - events
+      properties:
+        item_id: {type: string}
+        sequence: {type: integer, minimum: 1}
+        source_id: {type: string}
+        source_title: {type: string}
+        stage:
+          $ref: "#/components/schemas/IngestionItemStage"
+        source_check_id: {type: [string, "null"]}
+        source_check_outcome:
+          oneOf:
+            - $ref: "#/components/schemas/SourceCheckOutcome"
+            - type: "null"
+        started_at: {type: [string, "null"], format: date-time}
+        completed_at: {type: [string, "null"], format: date-time}
+        error: {type: [string, "null"]}
+        events:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminIngestionEvent"
+    AdminIngestionRun:
+      type: object
+      required:
+        - run_id
+        - status
+        - source_count
+        - completed_count
+        - failed_count
+        - started_at
+        - completed_at
+        - created_by
+        - items
+      properties:
+        run_id: {type: string}
+        status:
+          $ref: "#/components/schemas/IngestionRunStatus"
+        source_count: {type: integer, minimum: 0}
+        completed_count: {type: integer, minimum: 0}
+        failed_count: {type: integer, minimum: 0}
+        started_at: {type: string, format: date-time}
+        completed_at: {type: [string, "null"], format: date-time}
+        created_by: {type: string}
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminIngestionItem"
+    AdminIngestionRunList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminIngestionRun"
     ApiError:
       type: object
       required: [code, message]

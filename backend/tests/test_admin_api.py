@@ -10,16 +10,32 @@ from app.auth import hash_admin_password
 from app.commands.seed_verified import seed_verified_drafts
 from app.config import Settings, get_settings
 from app.database import get_db
-from app.domain import CandidateReviewDecision, PublicationState, PublicVerificationStatus
+from app.domain import (
+    CandidateReviewDecision,
+    ClarificationOutcome,
+    IngestionItemStage,
+    IngestionRunStatus,
+    PublicationState,
+    PublicVerificationStatus,
+    SourceExtractionStatus,
+)
 from app.main import create_app
 from app.models import (
+    AIClarificationProposal,
     EvidenceReference,
     MeasureVersion,
     SourceDocument,
+    SourceExtraction,
     SourceRevision,
+    SourceTextSegment,
     SpecificationField,
     SpecificationFieldCandidate,
     SpecificationFieldCandidateReview,
+)
+from app.services.ai_clarification import (
+    ClarificationOutput,
+    EvidenceAssessment,
+    ProviderResult,
 )
 from app.services.publication import build_public_explanation_context
 
@@ -243,6 +259,239 @@ def test_admin_source_registry_is_private_validated_and_reversible(
     assert reactivated.status_code == 200
     assert reactivated.json()["is_active"] is True
     assert reactivated.json()["deactivated_at"] is None
+
+
+def test_admin_ingestion_run_requires_explicit_action_and_stays_private(
+    admin_client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def complete_without_network(session: Session, run, **_kwargs):
+        completed_at = datetime.now(UTC)
+        for item in run.items:
+            item.stage = IngestionItemStage.UNCHANGED
+            item.started_at = completed_at
+            item.completed_at = completed_at
+        run.completed_count = run.source_count
+        run.status = IngestionRunStatus.COMPLETED
+        run.completed_at = completed_at
+        session.commit()
+        return run
+
+    monkeypatch.setattr(
+        "app.api.sources.execute_ingestion_run", complete_without_network
+    )
+    assert admin_client.get("/api/admin/ingestion-runs").status_code == 401
+    _login_admin(admin_client)
+
+    missing_action = admin_client.post("/api/admin/ingestion-runs")
+    invalid_action = admin_client.post(
+        "/api/admin/ingestion-runs",
+        headers={"X-CMSQI-Admin-Action": "source-check"},
+    )
+    created = admin_client.post(
+        "/api/admin/ingestion-runs",
+        headers={"X-CMSQI-Admin-Action": "check-for-updates"},
+    )
+
+    assert missing_action.status_code == 422
+    assert invalid_action.status_code == 403
+    assert created.status_code == 201
+    assert created.json()["status"] == "completed"
+    assert created.json()["completed_count"] == created.json()["source_count"]
+    listed = admin_client.get("/api/admin/ingestion-runs")
+    assert listed.status_code == 200
+    assert listed.json()["items"][0]["run_id"] == created.json()["run_id"]
+    assert admin_client.get("/api/measures").json()["items"] == []
+
+
+def test_admin_can_normalize_an_extraction_without_publishing_candidates(
+    admin_client: TestClient,
+    session: Session,
+) -> None:
+    revision = session.scalar(
+        select(SourceRevision)
+        .join(SourceDocument)
+        .where(SourceDocument.source_id == "CMS-ECQI-PY2026-CMS122V14")
+    )
+    assert revision is not None
+    extraction = SourceExtraction(
+        extraction_id="CMS-ECQI-PY2026-CMS122V14-TEST-X1",
+        source_revision=revision,
+        sequence=1,
+        status=SourceExtractionStatus.EXTRACTED,
+        page_count=None,
+        extractor_version="stdlib-html-v1",
+        forced=False,
+        created_by="reviewer",
+        segments=[
+            SourceTextSegment(
+                sequence=1,
+                locator="HTML section: Document body",
+                text="CMS eCQM ID CMS122v14. Performance Year 2026. eCQM.",
+            ),
+            SourceTextSegment(
+                sequence=2,
+                locator="HTML heading: Description",
+                text="Description",
+            ),
+            SourceTextSegment(
+                sequence=3,
+                locator="HTML section: Description",
+                text="Source-derived wording requiring human review.",
+            ),
+        ],
+    )
+    session.add(extraction)
+    session.commit()
+    _login_admin(admin_client)
+    path = f"/api/admin/source-extractions/{extraction.extraction_id}/normalize"
+
+    missing_header = admin_client.post(path)
+    normalized = admin_client.post(
+        path, headers={"X-CMSQI-Admin-Action": "normalize-source"}
+    )
+
+    assert missing_header.status_code == 422
+    assert normalized.status_code == 200
+    body = normalized.json()
+    assert body["status"] == "normalized"
+    assert body["candidates"][0]["identity_status"] == "matched"
+    assert body["candidates"][0]["matched_version_id"] == "CMS-001-PY2026-ECQM"
+    description = next(
+        field
+        for field in body["candidates"][0]["fields"]
+        if field["field_name"] == "description"
+    )
+    assert description["staging_status"] == "existing"
+    assert description["source_excerpt"] == (
+        "Source-derived wording requiring human review."
+    )
+    assert admin_client.get("/api/measures").json()["items"] == []
+
+
+def test_ai_clarification_requires_configuration_and_never_publishes(
+    admin_client: TestClient,
+    session: Session,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    revision = session.scalar(
+        select(SourceRevision)
+        .join(SourceDocument)
+        .where(SourceDocument.source_id == "CMS-ECQI-PY2026-CMS122V14")
+    )
+    assert revision is not None
+    extraction = SourceExtraction(
+        extraction_id="CMS-CLARIFICATION-PRIMARY-X1",
+        source_revision=revision,
+        sequence=1,
+        status=SourceExtractionStatus.EXTRACTED,
+        page_count=None,
+        extractor_version="stdlib-html-v1",
+        forced=False,
+        created_by="reviewer",
+        segments=[
+            SourceTextSegment(
+                sequence=1,
+                locator="HTML section: Document body",
+                text="CMS eCQM ID CMS122v14. Performance Year 2026. eCQM.",
+            )
+        ],
+    )
+    corroborating = SourceDocument(
+        source_id="CMS-CLARIFICATION-CORROBORATION",
+        title="Additional official CMS exclusions source",
+        official_url="https://www.cms.gov/test/clarification-corroboration.html",
+        mime_type="text/html",
+    )
+    corroborating_revision = SourceRevision(
+        revision_id="CMS-CLARIFICATION-CORROBORATION-R1",
+        revision_number=1,
+        content_hash="clarification-corroboration-hash",
+        retrieved_at=datetime(2026, 10, 26, tzinfo=UTC),
+        last_source_check_at=datetime(2026, 10, 26, tzinfo=UTC),
+    )
+    corroborating_revision.extractions.append(
+        SourceExtraction(
+            extraction_id="CMS-CLARIFICATION-CORROBORATION-X1",
+            sequence=1,
+            status=SourceExtractionStatus.EXTRACTED,
+            page_count=None,
+            extractor_version="stdlib-html-v1",
+            forced=False,
+            created_by="reviewer",
+            segments=[
+                SourceTextSegment(
+                    sequence=1,
+                    locator="HTML section: Exclusions",
+                    text=(
+                        "CMS122v14 Exclusions: Patients receiving hospice care are excluded."
+                    ),
+                )
+            ],
+        )
+    )
+    corroborating.revisions.append(corroborating_revision)
+    session.add_all([extraction, corroborating])
+    session.commit()
+    _login_admin(admin_client)
+    normalized = admin_client.post(
+        f"/api/admin/source-extractions/{extraction.extraction_id}/normalize",
+        headers={"X-CMSQI-Admin-Action": "normalize-source"},
+    )
+    assert normalized.status_code == 200
+    unresolved = next(
+        field
+        for field in normalized.json()["candidates"][0]["fields"]
+        if field["field_name"] == "exclusions"
+    )
+    path = (
+        f"/api/admin/normalized-fields/{unresolved['field_candidate_id']}/clarifications"
+    )
+
+    missing_action = admin_client.post(path)
+    unconfigured = admin_client.post(
+        path, headers={"X-CMSQI-Admin-Action": "clarify-source"}
+    )
+    assert missing_action.status_code == 422
+    assert unconfigured.status_code == 503
+    assert unconfigured.json()["code"] == "clarification_provider_not_configured"
+
+    class ApiFakeProvider:
+        provider_name = "test-provider"
+        model_name = "test-model"
+
+        def propose(self, *, field_name, identity_context, evidence):
+            return ProviderResult(
+                output=ClarificationOutput(
+                    outcome="proposed",
+                    proposed_value="Patients receiving hospice care are excluded.",
+                    summary="One additional official source supports this wording.",
+                    evidence_assessments=[
+                        EvidenceAssessment(
+                            evidence_id=item.evidence_id,
+                            relation="supports",
+                            explanation="The excerpt directly labels the exclusion.",
+                        )
+                        for item in evidence
+                    ],
+                ),
+                response_id="test-response-id",
+            )
+
+    monkeypatch.setattr(
+        "app.api.sources.provider_from_settings", lambda _settings: ApiFakeProvider()
+    )
+    clarified = admin_client.post(
+        path, headers={"X-CMSQI-Admin-Action": "clarify-source"}
+    )
+
+    assert clarified.status_code == 200
+    body = clarified.json()
+    assert body["outcome"] == ClarificationOutcome.PROPOSED
+    assert body["proposed_value"] == "Patients receiving hospice care are excluded."
+    assert body["evidence"][0]["source_id"] == "CMS-CLARIFICATION-CORROBORATION"
+    assert body["evidence"][0]["official_url"].startswith("https://www.cms.gov/")
+    assert session.query(AIClarificationProposal).count() == 1
+    assert admin_client.get("/api/measures").json()["items"] == []
 
 
 def _first_review_item(admin_client: TestClient) -> dict[str, object]:
