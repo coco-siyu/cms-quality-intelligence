@@ -8,13 +8,15 @@
 - Tasks 14–16, 18, 19, and 21: C1 implementation is present against synthetic
   contract fixtures, including public/private isolation and explicit
   unavailable/unresolved states.
-- Task 13 is partially complete: a validated, draft, non-public seed artifact now
+- Task 13 is partially complete: a validated, draft seed artifact now
   contains all eight identities and 14 verified program-year memberships. The
   collection-variant schema is implemented, and the guarded PostgreSQL import
   stages 32 private variants and 352 field candidates without publishing them.
   A guarded, idempotent review importer now preserves future decisions in an
-  append-only audit trail, but all field-level decisions and publication approval
-  remain pending. Tasks 17, 20, and 22 also remain open, including
+  append-only audit trail. Task 49 now supports separately authorized publication
+  of an individually approved, excerpt-backed field, but the real queue still has
+  no expert decisions and therefore no production field has been approved for
+  release. Tasks 17, 20, and 22 also remain open, including
   dynamic year options, server-paginated Previous/Next, and full end-to-end M1
   validation.
 - Task 38 is partially complete: environment-managed single-admin credentials,
@@ -23,9 +25,10 @@
   a first read-only queue and per-measure evidence view. Review mutations,
   ingestion controls, publishing, status workflow, and the full centralized
   dashboard remain open.
-- Other tasks 23 onward: not started. The dashboard change ledger, What's New feed,
-  comparison highlighting, and AI Impact content remain visibly fictional
-  prototypes and are not production-backed.
+- Tasks 23–37 and 39–47 remain unimplemented. Tasks 48–49 provide the manual
+  review and safe partial-publication slice ahead of automated ingestion. The
+  dashboard change ledger, What's New feed, comparison highlighting, and AI
+  Impact content remain visibly fictional prototypes and are not production-backed.
 
 This backlog implements the scoped 2025–2026 MSSP / APP Plus MVP in independent, one-session work items. Tasks are ordered for incremental delivery (M1–M4), but each description provides enough context for an assignee to begin without reading preceding tasks. Keep all official CMS facts source-backed, treat unverified extractions as drafts, and do not use patient-level data. **This document is planning only; no implementation code is included.**
 
@@ -244,6 +247,19 @@ link. `needs_revision` is the MVP rejection path, and no bulk approval exists.
 ## 49. Implement verified-field partial publication rules
 Goal: Publish trustworthy information without hiding the whole measure.
 Description: Permit approval of individual evidenced fields while unresolved fields remain withheld and flagged internally. Test that public API responses and generated AI explanations never represent unresolved or missing values as confirmed CMS requirements.
+
+Implementation status (complete for MVP, 2026-10-26): Approval and publication
+are separate authenticated actions. The publication transaction accepts only a
+reviewer-approved candidate with a frozen verified source, literal excerpt,
+locator, verified program-year membership, a supported public-field mapping, and
+no newer-source flag. It materializes one `SpecificationField` and
+`EvidenceReference`, records publisher/time, and leaves every sibling candidate
+private. Repeated publication is idempotent; published reviews are locked against
+in-place changes. Current safe mappings cover definition, numerator, denominator,
+and exclusions. Other candidate categories remain private until the public
+contract has a semantically exact mapping. A publication-safe explanation-context
+builder excludes drafts, null/unresolved values, and fields without published
+evidence; no AI explanation generation is implemented yet.
 
 ## 50. Mark reviews and explanations stale on source changes
 Goal: Prevent older verification decisions from appearing current after revisions.

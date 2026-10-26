@@ -117,7 +117,7 @@ C2.2 implements the frozen roster and roster-only seed. C2.4 extends steps 2–5
 4. **Stage candidates.** Insert or update `Measure` identities by CMS Quality ID with `is_public=false`. Create draft `ProgramMembership` rows only from the reviewed membership matrix.
 5. **Create year-specific variants.** Insert draft `MeasureVersion` rows for each program year and collection type. Keep the separate `program_roster` version for membership evidence.
 6. **Extract fields to private staging.** Populate `SpecificationFieldCandidate` with the frozen value, extraction status, source revision, and locator. Keep the review decision `pending`; never fabricate a value to satisfy a UI field.
-7. **Promote reviewed evidence.** After qualified approval, create or update public-model `SpecificationField` and `EvidenceReference` rows from the reviewed value and immutable source revision. Candidate rows do not become public merely because they exist.
+7. **Promote reviewed evidence.** After qualified approval, use the separate authenticated field-publication action to create one public-model `SpecificationField` and `EvidenceReference` from the reviewed value and immutable source revision. Candidate rows do not become public merely because they exist or have an approval decision.
 8. **Run reconciliation checks.** Assert PY2025 count 6, PY2026 count 8, additions `{113, 484}`, unchanged `{001, 112, 134, 236, 321, 479}`, and no unsupported removal rows.
 9. **Review conflicts and variants.** A human reviewer resolves titles, version IDs, collection types, and any source conflict. Unresolved rows stay draft and non-public.
 10. **Publish transactionally.** Only after approval, set verification timestamps/statuses and publication states in one transaction. Public API queries continue to return only published records.
@@ -131,5 +131,5 @@ C2.4 implements the approved explicit variant dimension. `MeasureVersion` now id
 
 1. Confirm whether archived source bytes belong in object storage with hashes in PostgreSQL, or in another immutable document store.
 2. Assign a qualified CMS quality-measure reviewer for the 352 pending field decisions.
-3. Define the separate audited promotion transaction that converts approved candidate values into `SpecificationField` and `EvidenceReference` rows without overwriting review history.
+3. Review the implemented Task 49 promotion transaction and approve any future additions to its exact candidate-to-public-field mapping; ambiguous mappings remain deliberately blocked.
 4. Recheck all mutable official URLs immediately before any publication decision.

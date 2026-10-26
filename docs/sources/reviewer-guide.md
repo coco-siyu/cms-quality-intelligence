@@ -95,6 +95,27 @@ A field remains non-public unless all of the following are true:
 
 AI extraction, a successful automated test, or a completed spreadsheet formula is never sufficient evidence for clinical verification.
 
+After a database review decision is saved, the admin interface reports the
+field's publication eligibility. **Publish verified field** remains disabled when
+the candidate is pending, lacks a captured literal excerpt, has stale/unverified
+evidence, lacks verified program membership, conflicts with an existing public
+field, or does not map exactly to the public contract. Publishing one eligible
+field does not publish other candidates in the same version.
+
+The current exact mappings are:
+
+| Review candidate | Public field |
+| --- | --- |
+| `description` | `definition` |
+| `population_or_denominator` | `denominator` |
+| `numerator_or_outcome` | `numerator` |
+| `exclusions` | `exclusions` |
+
+Identity and additional implementation fields remain private until their public
+semantics are defined explicitly. Do not force `data_collection`, measure type,
+scoring direction, denominator exceptions, or risk adjustment into a loosely
+related public field.
+
 ## Current review state and limitations
 
 - All five detailed PY2026 eCQM pages are frozen and hashed. Their 40 formerly missing-detail items are now source-extracted candidates, not approvals.
@@ -102,5 +123,5 @@ AI extraction, a successful automated test, or a completed spreadsheet formula i
 - The queue stores 182 literal excerpts separately from candidate values. The other 170 rows require locator-based source review and remain explicit blanks in the excerpt field.
 - PY2025 Medicare Part B Claims artifacts are excluded because official APP Plus program sources identify eCQM, MIPS CQM, and Medicare CQM as the applicable clinical collection types.
 - The database now preserves collection type explicitly and stages candidate fields separately from published `SpecificationField` records. This structural separation does not replace qualified review.
-- C2.5 can validate and import future reviewer decisions into private, append-only audit history. It does not promote approved decisions into public fields.
+- C2.5 can validate and import future reviewer decisions into private, append-only audit history. Task 49 adds a separate authenticated transaction for publishing one eligible field after that review; imports still never publish automatically.
 - The private admin dialog presents year-over-year candidate values and official excerpts independently. It does not infer clinical meaning from wording differences.

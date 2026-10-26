@@ -9,6 +9,7 @@ import {
   CircleAlert,
   ExternalLink,
   FileSearch,
+  Globe2,
   History,
   LockKeyhole,
   PencilLine,
@@ -19,6 +20,7 @@ import { Button } from "../components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "../components/ui/dialog";
 import {
   useAdminCandidateReview,
+  useAdminFieldPublication,
   useAdminMeasure,
   useAdminSession,
   type AdminCandidateDecision,
@@ -319,6 +321,7 @@ export function AdminMeasureDetailPage() {
   const [selectedReviewItemId, setSelectedReviewItemId] = useState<string | null>(null);
   const session = useAdminSession();
   const detail = useAdminMeasure(measureId, Boolean(session.data?.authenticated));
+  const publication = useAdminFieldPublication(measureId);
 
   if (session.isPending) return <LoadingState label="Checking administrator access…" />;
   if (session.isError) return <ErrorState message={session.error.message} onRetry={() => void session.refetch()} />;
@@ -339,7 +342,10 @@ export function AdminMeasureDetailPage() {
           <h1>{detail.data.name}</h1>
           <p>{detail.data.description}</p>
         </div>
-        <span className="private-state"><LockKeyhole aria-hidden="true" /> Private draft</span>
+        <span className="private-state">
+          {detail.data.is_public ? <Globe2 aria-hidden="true" /> : <LockKeyhole aria-hidden="true" />}
+          {detail.data.is_public ? "Partially published" : "Private draft"}
+        </span>
       </header>
 
       <section className="admin-membership-strip" aria-label="Program membership">
@@ -399,6 +405,46 @@ export function AdminMeasureDetailPage() {
                       >
                         Review candidate
                       </Button>
+                      {candidate.publication_state === "published" ? (
+                        <div className="candidate-publication-state published">
+                          <Globe2 aria-hidden="true" />
+                          <span>
+                            <strong>Published as {candidate.published_field?.replaceAll("_", " ")}</strong>
+                            <small>
+                              {candidate.published_by} · {candidate.published_at
+                                ? formatReviewDate(candidate.published_at)
+                                : "publication time unavailable"}
+                            </small>
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="candidate-publication-state">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            disabled={
+                              candidate.publication_eligibility !== "eligible"
+                              || publication.isPending
+                            }
+                            onClick={() => publication.mutate(candidate.review_item_id)}
+                          >
+                            <Globe2 aria-hidden="true" />
+                            {publication.isPending
+                              && publication.variables === candidate.review_item_id
+                              ? "Publishing field…"
+                              : "Publish verified field"}
+                          </Button>
+                          {candidate.publication_blocker && (
+                            <small>{candidate.publication_blocker}</small>
+                          )}
+                          {publication.isError
+                            && publication.variables === candidate.review_item_id && (
+                            <small className="admin-form-error" role="alert">
+                              {publication.error.message}
+                            </small>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </details>
                 ))}

@@ -85,7 +85,7 @@ function ReviewWorkspace({ username }: { username: string }) {
   const logout = useAdminLogout();
 
   if (summary.isPending || measures.isPending) {
-    return <LoadingState label="Opening the private review workspace…" />;
+    return <LoadingState label="Opening the protected review workspace…" />;
   }
   if (summary.isError) {
     return <ErrorState message={summary.error.message} onRetry={() => void summary.refetch()} />;
@@ -95,7 +95,7 @@ function ReviewWorkspace({ username }: { username: string }) {
   }
 
   const metrics = [
-    ["Private measures", summary.data.private_measures],
+    ["Measures in review", summary.data.private_measures],
     ["Draft variants", summary.data.draft_versions],
     ["Pending fields", summary.data.pending_candidates],
     ["Reviewed fields", summary.data.decided_candidates],
@@ -106,11 +106,11 @@ function ReviewWorkspace({ username }: { username: string }) {
     <div className="visual-page admin-page">
       <header className="admin-page-header">
         <div>
-          <p className="page-eyebrow">Private CMS evidence workspace</p>
+          <p className="page-eyebrow">Protected CMS evidence workspace</p>
           <h1>Review desk</h1>
           <p>
-            Source-derived records remain draft and non-public until review and a separate
-            publishing step are complete.
+            Each source-derived field remains private until its own review and publication
+            steps are complete.
           </p>
         </div>
         <div className="admin-identity">
@@ -199,7 +199,7 @@ function ReviewWorkspace({ username }: { username: string }) {
           </table>
         </div>
         {measures.data.items.length === 0 && (
-          <div className="empty-state">No private measures match this search.</div>
+          <div className="empty-state">No measures in review match this search.</div>
         )}
         <p className="admin-boundary-note">
           <FileCheck2 aria-hidden="true" /> Review decisions stay private and retain their audit

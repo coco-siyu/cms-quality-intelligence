@@ -55,6 +55,21 @@ export type AdminFieldCandidate = {
   reviewer_name: string | null;
   reviewed_at: string | null;
   reviewer_notes: string | null;
+  publication_state: "draft" | "published" | "withdrawn";
+  publication_eligibility:
+    | "eligible"
+    | "published"
+    | "not_approved"
+    | "missing_source_excerpt"
+    | "unsupported_field"
+    | "stale_source"
+    | "unverified_source"
+    | "unverified_membership"
+    | "field_conflict";
+  publication_blocker: string | null;
+  published_field: string | null;
+  published_at: string | null;
+  published_by: string | null;
   source_id: string;
   source_revision_id: string;
   source_title: string;
@@ -94,7 +109,7 @@ export type AdminMeasureDetail = {
   measure_id: string;
   name: string;
   description: string;
-  is_public: false;
+  is_public: boolean;
   memberships: {
     performance_year: number;
     program: string;
@@ -168,6 +183,15 @@ export const adminApi = {
         method: "PATCH",
         headers: { "X-CMSQI-Admin-Action": "review-decision" },
         body: JSON.stringify(decision),
+      },
+    );
+  },
+  publishCandidate(reviewItemId: string) {
+    return adminRequest<AdminFieldCandidate>(
+      `/api/admin/review-items/${encodeURIComponent(reviewItemId)}/publish`,
+      {
+        method: "POST",
+        headers: { "X-CMSQI-Admin-Action": "publish-field" },
       },
     );
   },
@@ -258,6 +282,41 @@ export function useAdminCandidateReview(measureId: string) {
       );
       void queryClient.invalidateQueries({ queryKey: ["admin-review", "summary"] });
       void queryClient.invalidateQueries({ queryKey: ["admin-review", "measures"] });
+    },
+  });
+}
+
+export function useAdminFieldPublication(measureId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (reviewItemId: string) => adminApi.publishCandidate(reviewItemId),
+    onSuccess: (updatedCandidate) => {
+      queryClient.setQueryData<AdminMeasureDetail>(
+        ["admin-review", "measure", measureId],
+        (detail) =>
+          detail
+            ? {
+                ...detail,
+                is_public: true,
+                versions: detail.versions.map((version) => ({
+                  ...version,
+                  publication_state: version.candidates.some(
+                    (candidate) => candidate.review_item_id === updatedCandidate.review_item_id,
+                  )
+                    ? "published"
+                    : version.publication_state,
+                  candidates: version.candidates.map((candidate) =>
+                    candidate.review_item_id === updatedCandidate.review_item_id
+                      ? updatedCandidate
+                      : candidate,
+                  ),
+                })),
+              }
+            : detail,
+      );
+      void queryClient.invalidateQueries({ queryKey: ["admin-review", "summary"] });
+      void queryClient.invalidateQueries({ queryKey: ["admin-review", "measures"] });
+      void queryClient.invalidateQueries({ queryKey: ["measures"] });
     },
   });
 }

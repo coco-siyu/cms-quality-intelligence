@@ -131,6 +131,12 @@ describe("private admin review workspace", () => {
       reviewer_name: null,
       reviewed_at: null,
       reviewer_notes: null,
+      publication_state: "draft",
+      publication_eligibility: "not_approved",
+      publication_blocker: "A qualified reviewer must approve this candidate before publication.",
+      published_field: null,
+      published_at: null,
+      published_by: null,
       source_id: "CMS-SOURCE-001",
       source_revision_id: "CMS-SOURCE-001-R1",
       source_title: "Official CMS specification",
@@ -200,6 +206,8 @@ describe("private admin review workspace", () => {
               reviewer_name: "reviewer",
               reviewed_at: "2026-10-21T18:00:00Z",
               reviewer_notes: request.reviewer_notes,
+              publication_eligibility: "eligible",
+              publication_blocker: null,
               review_history: [
                 {
                   decision: request.decision,
@@ -207,6 +215,32 @@ describe("private admin review workspace", () => {
                   reviewer_name: "reviewer",
                   reviewed_at: "2026-10-21T18:00:00Z",
                   reviewer_notes: request.reviewer_notes,
+                },
+              ],
+            }),
+          );
+        }
+        if (url.endsWith("/publish") && init?.method === "POST") {
+          return Promise.resolve(
+            jsonResponse({
+              ...candidate,
+              review_decision: "approve",
+              reviewed_value: "Reviewed definition supported by the official source.",
+              reviewer_name: "reviewer",
+              reviewed_at: "2026-10-21T18:00:00Z",
+              publication_state: "published",
+              publication_eligibility: "published",
+              publication_blocker: null,
+              published_field: "definition",
+              published_at: "2026-10-22T14:00:00Z",
+              published_by: "reviewer",
+              review_history: [
+                {
+                  decision: "approve",
+                  reviewed_value: "Reviewed definition supported by the official source.",
+                  reviewer_name: "reviewer",
+                  reviewed_at: "2026-10-21T18:00:00Z",
+                  reviewer_notes: "Confirmed against page 4.",
                 },
               ],
             }),
@@ -271,6 +305,20 @@ describe("private admin review workspace", () => {
       decision: "approve",
       reviewed_value: "Reviewed definition supported by the official source.",
       reviewer_notes: "Confirmed against page 4.",
+    });
+
+    const publishButton = screen
+      .getAllByRole("button", { name: "Publish verified field" })
+      .find((button) => !(button as HTMLButtonElement).disabled);
+    expect(publishButton).toBeDefined();
+    fireEvent.click(publishButton!);
+    expect(await screen.findByText(/Published as definition/)).toBeInTheDocument();
+    const publicationCall = fetchMock.mock.calls.find(([input]) =>
+      String(input).endsWith("/publish"),
+    );
+    expect(publicationCall?.[1]?.method).toBe("POST");
+    expect(publicationCall?.[1]?.headers).toMatchObject({
+      "X-CMSQI-Admin-Action": "publish-field",
     });
 
     fireEvent.click(screen.getAllByRole("button", { name: "Review candidate" })[0]);

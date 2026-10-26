@@ -3270,6 +3270,43 @@ h3 {
   margin-left: 14px;
 }
 
+.candidate-publication-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: 12px;
+  vertical-align: middle;
+}
+
+.candidate-publication-state > small {
+  max-width: 360px;
+  color: var(--muted-foreground);
+  font-size: 9px;
+  line-height: 1.4;
+}
+
+.candidate-publication-state.published {
+  padding: 8px 12px;
+  border: 1px solid color-mix(in srgb, var(--unchanged) 30%, var(--border));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--unchanged) 8%, var(--card));
+  color: var(--navy);
+}
+
+.candidate-publication-state.published > svg {
+  width: 15px;
+}
+
+.candidate-publication-state.published span {
+  display: grid;
+  gap: 2px;
+}
+
+.candidate-publication-state.published strong,
+.candidate-publication-state.published small {
+  font-size: 9px;
+}
+
 .candidate-status.approve {
   color: var(--unchanged);
 }
@@ -4000,6 +4037,16 @@ h3 {
     display: flex;
     width: 100%;
     margin: 16px 0 0;
+  }
+
+  .candidate-publication-state {
+    display: grid;
+    width: 100%;
+    margin: 10px 0 0;
+  }
+
+  .candidate-publication-state button {
+    width: 100%;
   }
 
   .admin-review-dialog {
