@@ -1,4 +1,9 @@
 from fastapi.testclient import TestClient
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from app.domain import AffectedField, FieldAvailability
+from app.models import MeasureVersion, SpecificationField
 
 
 def test_list_measures_returns_only_public_published_records(client: TestClient) -> None:
@@ -89,3 +94,31 @@ def test_performance_years_are_derived_from_published_memberships(client: TestCl
         "default_from_year": 2025,
         "default_to_year": 2026,
     }
+
+
+def test_public_projection_withholds_available_values_without_published_evidence(
+    client: TestClient,
+    seeded_session: Session,
+) -> None:
+    version = seeded_session.scalar(
+        select(MeasureVersion).where(MeasureVersion.version_id == "DEMO-VERSION-DEMO-001-2026")
+    )
+    assert version is not None
+    version.fields.append(
+        SpecificationField(
+            field=AffectedField.NUMERATOR,
+            availability=FieldAvailability.AVAILABLE,
+            value="Unbacked value that must not cross the public API boundary.",
+        )
+    )
+    seeded_session.commit()
+
+    response = client.get("/api/measures/DEMO-001")
+
+    assert response.status_code == 200
+    assert "Unbacked value" not in response.text
+    assert all(
+        field["field"] != "numerator"
+        for version_payload in response.json()["versions"]
+        for field in version_payload["fields"]
+    )

@@ -3,9 +3,9 @@ info:
   title: CMS Quality Intelligence API
   version: 0.1.0
   description: |
-    Public measure browsing and protected, read-only review of staged CMS
-    evidence. Public endpoints return only source-backed records approved for
-    release; private drafts remain confined to authenticated admin endpoints.
+    Public measure browsing and protected review/publication of staged CMS
+    evidence. Public endpoints return only individually approved, evidenced
+    fields; sibling drafts remain confined to authenticated admin endpoints.
 servers:
   - url: http://localhost:8000
     description: Local development
@@ -191,7 +191,7 @@ paths:
     get:
       operationId: listAdminMeasures
       tags: [Admin review]
-      summary: List non-public measures staged for review
+      summary: List measures with private fields staged for review
       security:
         - AdminSessionCookie: []
       parameters:
@@ -200,7 +200,7 @@ paths:
         - $ref: "#/components/parameters/PageSize"
       responses:
         "200":
-          description: Paginated private review records.
+          description: Paginated review records, including partially published measures.
           content:
             application/json:
               schema:
@@ -213,14 +213,14 @@ paths:
     get:
       operationId: getAdminMeasure
       tags: [Admin review]
-      summary: Inspect a private measure and its source-backed field candidates
+      summary: Inspect a measure's private source-backed field candidates
       security:
         - AdminSessionCookie: []
       parameters:
         - $ref: "#/components/parameters/MeasureId"
       responses:
         "200":
-          description: Private draft memberships, variants, and review candidates.
+          description: Private candidates plus their independent publication states.
           content:
             application/json:
               schema:
@@ -285,6 +285,55 @@ paths:
                 $ref: "#/components/schemas/ApiError"
         "422":
           $ref: "#/components/responses/ValidationError"
+  /api/admin/review-items/{review_item_id}/publish:
+    post:
+      operationId: publishAdminFieldCandidate
+      tags: [Admin review]
+      summary: Publish one independently approved and evidenced field
+      description: |
+        Materializes only the selected reviewed value and its immutable evidence.
+        Pending, rejected, unsupported, excerpt-free, or stale sibling candidates
+        remain private. Repeating a successful request is idempotent.
+      security:
+        - AdminSessionCookie: []
+      parameters:
+        - name: review_item_id
+          in: path
+          required: true
+          description: Stable identifier for the approved private field candidate.
+          schema:
+            type: string
+            minLength: 1
+        - name: X-CMSQI-Admin-Action
+          in: header
+          required: true
+          description: Explicit acknowledgement of the field publication transaction.
+          schema:
+            type: string
+            const: publish-field
+      responses:
+        "200":
+          description: Candidate linked to its public field and immutable evidence.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminFieldCandidate"
+        "401":
+          $ref: "#/components/responses/AdminUnauthorized"
+        "403":
+          description: The explicit administrator action header is invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: The field is not eligible for safe partial publication.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
 components:
   securitySchemes:
     AdminSessionCookie:
@@ -620,7 +669,10 @@ components:
         - source_revisions
         - newer_revision_flags
       properties:
-        private_measures: {type: integer, minimum: 0}
+        private_measures:
+          type: integer
+          minimum: 0
+          description: Measures that still have private review candidates; may be partially published.
         draft_versions: {type: integer, minimum: 0}
         pending_candidates: {type: integer, minimum: 0}
         decided_candidates: {type: integer, minimum: 0}
@@ -671,6 +723,18 @@ components:
     CandidateReviewDecision:
       type: string
       enum: [pending, approve, needs_revision, not_applicable]
+    FieldPublicationEligibility:
+      type: string
+      enum:
+        - eligible
+        - published
+        - not_approved
+        - missing_source_excerpt
+        - unsupported_field
+        - stale_source
+        - unverified_source
+        - unverified_membership
+        - field_conflict
     AdminReviewDecision:
       type: string
       enum: [approve, needs_revision, not_applicable]
@@ -714,6 +778,12 @@ components:
         - reviewer_name
         - reviewed_at
         - reviewer_notes
+        - publication_state
+        - publication_eligibility
+        - publication_blocker
+        - published_field
+        - published_at
+        - published_by
         - source_id
         - source_revision_id
         - source_title
@@ -735,6 +805,19 @@ components:
           type: [string, "null"]
           format: date-time
         reviewer_notes: {type: [string, "null"]}
+        publication_state:
+          $ref: "#/components/schemas/PublicationState"
+        publication_eligibility:
+          $ref: "#/components/schemas/FieldPublicationEligibility"
+        publication_blocker: {type: [string, "null"]}
+        published_field:
+          oneOf:
+            - $ref: "#/components/schemas/AffectedField"
+            - type: "null"
+        published_at:
+          type: [string, "null"]
+          format: date-time
+        published_by: {type: [string, "null"]}
         source_id: {type: string}
         source_revision_id: {type: string}
         source_title: {type: string}
@@ -815,7 +898,7 @@ components:
         measure_id: {type: string}
         name: {type: string}
         description: {type: string}
-        is_public: {type: boolean, const: false}
+        is_public: {type: boolean}
         memberships:
           type: array
           items:

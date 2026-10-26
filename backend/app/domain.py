@@ -35,6 +35,18 @@ class CandidateReviewDecision(StrEnum):
     NOT_APPLICABLE = "not_applicable"
 
 
+class FieldPublicationEligibility(StrEnum):
+    ELIGIBLE = "eligible"
+    PUBLISHED = "published"
+    NOT_APPROVED = "not_approved"
+    MISSING_SOURCE_EXCERPT = "missing_source_excerpt"
+    UNSUPPORTED_FIELD = "unsupported_field"
+    STALE_SOURCE = "stale_source"
+    UNVERIFIED_SOURCE = "unverified_source"
+    UNVERIFIED_MEMBERSHIP = "unverified_membership"
+    FIELD_CONFLICT = "field_conflict"
+
+
 class ChangeStatus(StrEnum):
     ADDED = "added"
     REMOVED = "removed"

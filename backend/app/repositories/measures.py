@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session, selectinload
 from app.domain import (
     AffectedField,
     ChangeStatus,
+    FieldAvailability,
     PublicationState,
     PublicVerificationStatus,
 )
@@ -114,7 +115,7 @@ def _freshness(versions: list[MeasureVersion]) -> FreshnessResponse:
     )
 
 
-def _field_response(field: SpecificationField) -> SpecificationFieldResponse:
+def _field_response(field: SpecificationField) -> SpecificationFieldResponse | None:
     evidence = []
     for reference in field.evidence:
         revision = reference.source_revision
@@ -130,6 +131,8 @@ def _field_response(field: SpecificationField) -> SpecificationFieldResponse:
                 excerpt=reference.excerpt,
             )
         )
+    if field.availability == FieldAvailability.AVAILABLE and not evidence:
+        return None
     return SpecificationFieldResponse(
         field=field.field,
         availability=field.availability,
@@ -139,16 +142,35 @@ def _field_response(field: SpecificationField) -> SpecificationFieldResponse:
 
 
 def _version_response(version: MeasureVersion) -> MeasureVersionResponse:
+    fields = [
+        response
+        for field in sorted(version.fields, key=lambda item: item.field.value)
+        if (response := _field_response(field)) is not None
+    ]
     return MeasureVersionResponse(
         version_id=version.version_id,
         performance_year=version.performance_year,
         program=version.program,
         is_program_member=version.is_program_member,
-        fields=[
-            _field_response(field)
-            for field in sorted(version.fields, key=lambda item: item.field.value)
-        ],
+        fields=fields,
     )
+
+
+def _public_description(versions: list[MeasureVersion]) -> str:
+    for version in reversed(versions):
+        for field in version.fields:
+            if (
+                field.field == AffectedField.DEFINITION
+                and field.availability == FieldAvailability.AVAILABLE
+                and field.value
+                and any(
+                    evidence.source_revision.publication_state
+                    == PublicationState.PUBLISHED
+                    for evidence in field.evidence
+                )
+            ):
+                return field.value
+    return "Verified specification fields are partially available; unresolved fields are withheld."
 
 
 def _summary(
@@ -162,7 +184,7 @@ def _summary(
     return PublicMeasureSummary(
         measure_id=measure.measure_id,
         name=measure.name,
-        description=measure.description,
+        description=_public_description(versions),
         performance_years=sorted(
             {version.performance_year for version in versions if version.is_program_member}
         ),
@@ -202,7 +224,13 @@ def list_measures(session: Session, filters: MeasureFilters) -> PublicMeasurePag
             or_(
                 Measure.measure_id.ilike(pattern),
                 Measure.name.ilike(pattern),
-                Measure.description.ilike(pattern),
+                Measure.versions.any(
+                    (MeasureVersion.publication_state == PublicationState.PUBLISHED)
+                    & MeasureVersion.fields.any(
+                        (SpecificationField.availability == FieldAvailability.AVAILABLE)
+                        & SpecificationField.value.ilike(pattern)
+                    )
+                ),
             )
         )
     if filters.performance_year is not None:

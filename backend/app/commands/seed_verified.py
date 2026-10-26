@@ -156,7 +156,7 @@ def seed_verified_drafts(session: Session) -> tuple[int, int, int, int]:
             session.add(measure)
             session.flush()
             created_measures += 1
-        elif measure.is_public or measure.name != record["name"]:
+        elif measure.name != record["name"]:
             raise RuntimeError(
                 f"Existing measure conflicts with verified draft seed: {record['measure_id']}"
             )
@@ -250,8 +250,6 @@ def seed_verified_drafts(session: Session) -> tuple[int, int, int, int]:
         elif (
             version.collection_type != collection_type
             or version.specification_identifier != variant["specification_identifier"]
-            or version.publication_state != PublicationState.DRAFT
-            or measure.is_public
         ):
             raise RuntimeError(
                 f"Existing specification variant conflicts with private staging: "

@@ -23,12 +23,17 @@ from app.schemas import (
     AdminReviewSummary,
     PaginationMeta,
 )
+from app.services.publication import field_publication_eligibility, publication_blocker
+
+
+def _has_review_candidates():
+    return Measure.versions.any(MeasureVersion.field_candidates.any())
 
 
 def review_summary(session: Session) -> AdminReviewSummary:
     return AdminReviewSummary(
         private_measures=session.scalar(
-            select(func.count()).select_from(Measure).where(Measure.is_public.is_(False))
+            select(func.count()).select_from(Measure).where(_has_review_candidates())
         )
         or 0,
         draft_versions=session.scalar(
@@ -36,7 +41,7 @@ def review_summary(session: Session) -> AdminReviewSummary:
             .select_from(MeasureVersion)
             .join(Measure)
             .where(
-                Measure.is_public.is_(False),
+                _has_review_candidates(),
                 MeasureVersion.publication_state == PublicationState.DRAFT,
             )
         )
@@ -47,7 +52,6 @@ def review_summary(session: Session) -> AdminReviewSummary:
             .join(MeasureVersion)
             .join(Measure)
             .where(
-                Measure.is_public.is_(False),
                 SpecificationFieldCandidate.review_decision
                 == CandidateReviewDecision.PENDING
             )
@@ -59,7 +63,6 @@ def review_summary(session: Session) -> AdminReviewSummary:
             .join(MeasureVersion)
             .join(Measure)
             .where(
-                Measure.is_public.is_(False),
                 SpecificationFieldCandidate.review_decision
                 != CandidateReviewDecision.PENDING
             )
@@ -72,13 +75,13 @@ def review_summary(session: Session) -> AdminReviewSummary:
                 or_(
                     SourceRevision.field_candidates.any(
                         SpecificationFieldCandidate.measure_version.has(
-                            MeasureVersion.measure.has(Measure.is_public.is_(False))
+                            MeasureVersion.measure.has(_has_review_candidates())
                         )
                     ),
                     SourceRevision.evidence_references.any(
                         EvidenceReference.specification_field.has(
                             SpecificationField.measure_version.has(
-                                MeasureVersion.measure.has(Measure.is_public.is_(False))
+                                MeasureVersion.measure.has(_has_review_candidates())
                             )
                         )
                     ),
@@ -91,7 +94,7 @@ def review_summary(session: Session) -> AdminReviewSummary:
             .select_from(MeasureVersion)
             .join(Measure)
             .where(
-                Measure.is_public.is_(False),
+                _has_review_candidates(),
                 MeasureVersion.newer_revision_detected.is_(True),
             )
         )
@@ -102,7 +105,7 @@ def review_summary(session: Session) -> AdminReviewSummary:
 def _private_measure_query():
     return (
         select(Measure)
-        .where(Measure.is_public.is_(False))
+        .where(_has_review_candidates())
         .options(
             selectinload(Measure.memberships),
             selectinload(Measure.versions)
@@ -112,6 +115,9 @@ def _private_measure_query():
             selectinload(Measure.versions)
             .selectinload(MeasureVersion.field_candidates)
             .selectinload(SpecificationFieldCandidate.reviews),
+            selectinload(Measure.versions)
+            .selectinload(MeasureVersion.field_candidates)
+            .selectinload(SpecificationFieldCandidate.published_field),
         )
     )
 
@@ -120,6 +126,7 @@ def _candidate_response(
     candidate: SpecificationFieldCandidate,
 ) -> AdminFieldCandidateResponse:
     revision = candidate.source_revision
+    eligibility = field_publication_eligibility(candidate)
     return AdminFieldCandidateResponse(
         review_item_id=candidate.review_item_id,
         field_name=candidate.field_name,
@@ -132,6 +139,14 @@ def _candidate_response(
         reviewer_name=candidate.reviewer_name,
         reviewed_at=candidate.reviewed_at,
         reviewer_notes=candidate.reviewer_notes,
+        publication_state=candidate.publication_state,
+        publication_eligibility=eligibility,
+        publication_blocker=publication_blocker(eligibility),
+        published_field=(
+            candidate.published_field.field if candidate.published_field is not None else None
+        ),
+        published_at=candidate.published_at,
+        published_by=candidate.published_by,
         source_id=revision.source_document.source_id,
         source_revision_id=revision.revision_id,
         source_title=revision.source_document.title,
@@ -159,8 +174,6 @@ def get_private_candidate(
         .join(Measure)
         .where(
             SpecificationFieldCandidate.review_item_id == review_item_id,
-            Measure.is_public.is_(False),
-            MeasureVersion.publication_state == PublicationState.DRAFT,
         )
         .options(
             selectinload(SpecificationFieldCandidate.source_revision).selectinload(
@@ -168,6 +181,7 @@ def get_private_candidate(
             ),
             selectinload(SpecificationFieldCandidate.measure_version),
             selectinload(SpecificationFieldCandidate.reviews),
+            selectinload(SpecificationFieldCandidate.published_field),
         )
     )
 

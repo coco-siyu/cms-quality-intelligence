@@ -15,7 +15,7 @@ from app.auth import (
 )
 from app.config import Settings, get_settings
 from app.database import get_db
-from app.domain import CandidateReviewDecision
+from app.domain import CandidateReviewDecision, PublicationState
 from app.repositories.admin_reviews import (
     candidate_response,
     get_private_candidate,
@@ -33,6 +33,7 @@ from app.schemas import (
     AdminSessionResponse,
     ApiError,
 )
+from app.services.publication import FieldPublicationError, publish_approved_field
 from app.services.reviews import record_candidate_review
 
 router = APIRouter(prefix="/api/admin", tags=["Admin review"])
@@ -59,6 +60,23 @@ def require_admin_action_header(
 
 
 AdminActionHeader = Annotated[None, Depends(require_admin_action_header)]
+
+
+def require_field_publication_header(
+    action: Annotated[str, Header(alias="X-CMSQI-Admin-Action")],
+) -> None:
+    if not hmac.compare_digest(action, "publish-field"):
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "code": "invalid_admin_action_header",
+                "message": "The required administrator action header is invalid.",
+                "details": [],
+            },
+        )
+
+
+FieldPublicationHeader = Annotated[None, Depends(require_field_publication_header)]
 
 
 def _session_response(request: Request, settings: Settings) -> AdminSessionResponse:
@@ -174,7 +192,7 @@ def admin_measures(
     operation_id="getAdminMeasure",
     responses={
         **auth_responses,
-        404: {"model": ApiError, "description": "The private measure was not found."},
+        404: {"model": ApiError, "description": "The review measure was not found."},
     },
 )
 def admin_measure_detail(
@@ -188,7 +206,7 @@ def admin_measure_detail(
             status_code=404,
             detail={
                 "code": "not_found",
-                "message": f"Private measure '{measure_id}' was not found.",
+                "message": f"Review measure '{measure_id}' was not found.",
                 "details": [],
             },
         )
@@ -221,6 +239,19 @@ def review_field_candidate(
             detail={
                 "code": "not_found",
                 "message": f"Private review item '{review_item_id}' was not found.",
+                "details": [],
+            },
+        )
+
+    if candidate.publication_state == PublicationState.PUBLISHED:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": "published_review_locked",
+                "message": (
+                    "A published field cannot be changed through the private review action. "
+                    "Create a new source-backed revision instead."
+                ),
                 "details": [],
             },
         )
@@ -275,5 +306,44 @@ def review_field_candidate(
         reviewer_name=admin.username,
         reviewer_notes=reviewer_notes,
     )
+    session.commit()
+    return candidate_response(candidate)
+
+
+@router.post(
+    "/review-items/{review_item_id}/publish",
+    response_model=AdminFieldCandidateResponse,
+    operation_id="publishAdminFieldCandidate",
+    responses={
+        **auth_responses,
+        403: {"model": ApiError, "description": "The admin action header is invalid."},
+        404: {"model": ApiError, "description": "The private review item was not found."},
+        409: {"model": ApiError, "description": "The field is not publication eligible."},
+    },
+)
+def publish_field_candidate(
+    session: DatabaseSession,
+    admin: AuthenticatedAdmin,
+    _action: FieldPublicationHeader,
+    review_item_id: Annotated[str, Path(min_length=1)],
+) -> AdminFieldCandidateResponse:
+    candidate = get_private_candidate(session, review_item_id)
+    if candidate is None:
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "code": "not_found",
+                "message": f"Private review item '{review_item_id}' was not found.",
+                "details": [],
+            },
+        )
+    try:
+        publish_approved_field(session, candidate, publisher_name=admin.username)
+    except FieldPublicationError as error:
+        session.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail={"code": error.code, "message": error.message, "details": []},
+        ) from error
     session.commit()
     return candidate_response(candidate)

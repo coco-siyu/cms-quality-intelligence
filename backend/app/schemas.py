@@ -9,6 +9,7 @@ from app.domain import (
     ChangeStatus,
     CollectionType,
     FieldAvailability,
+    FieldPublicationEligibility,
     PublicationState,
     PublicVerificationStatus,
 )
@@ -158,6 +159,12 @@ class AdminFieldCandidateResponse(BaseModel):
     reviewer_name: str | None
     reviewed_at: datetime | None
     reviewer_notes: str | None
+    publication_state: PublicationState
+    publication_eligibility: FieldPublicationEligibility
+    publication_blocker: str | None
+    published_field: AffectedField | None
+    published_at: datetime | None
+    published_by: str | None
     source_id: str
     source_revision_id: str
     source_title: str

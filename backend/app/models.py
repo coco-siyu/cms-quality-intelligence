@@ -229,6 +229,14 @@ class SpecificationFieldCandidate(Base):
             "(review_decision != 'pending' AND reviewed_at IS NOT NULL)",
             name="ck_candidate_review_timestamp",
         ),
+        CheckConstraint(
+            "(publication_state = 'draft' AND published_field_id IS NULL "
+            "AND published_at IS NULL AND published_by IS NULL) OR "
+            "(publication_state IN ('published', 'withdrawn') "
+            "AND published_field_id IS NOT NULL AND published_at IS NOT NULL "
+            "AND published_by IS NOT NULL AND review_decision = 'approve')",
+            name="ck_candidate_publication_state",
+        ),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -253,12 +261,23 @@ class SpecificationFieldCandidate(Base):
     reviewer_name: Mapped[str | None] = mapped_column(String(200))
     reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     reviewer_notes: Mapped[str | None] = mapped_column(Text)
+    publication_state: Mapped[PublicationState] = mapped_column(
+        publication_state_enum, default=PublicationState.DRAFT, index=True
+    )
+    published_field_id: Mapped[int | None] = mapped_column(
+        ForeignKey("specification_fields.id", ondelete="RESTRICT"), unique=True
+    )
+    published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    published_by: Mapped[str | None] = mapped_column(String(200))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
     measure_version: Mapped[MeasureVersion] = relationship(back_populates="field_candidates")
     source_revision: Mapped[SourceRevision] = relationship(back_populates="field_candidates")
     reviews: Mapped[list["SpecificationFieldCandidateReview"]] = relationship(
         back_populates="field_candidate", cascade="all, delete-orphan"
+    )
+    published_field: Mapped["SpecificationField | None"] = relationship(
+        foreign_keys=[published_field_id]
     )
 
 
