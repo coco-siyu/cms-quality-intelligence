@@ -9,6 +9,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    LargeBinary,
     String,
     Text,
     UniqueConstraint,
@@ -24,6 +25,8 @@ from app.domain import (
     FieldAvailability,
     PublicationState,
     PublicVerificationStatus,
+    SourceCheckOutcome,
+    SourceExtractionStatus,
 )
 
 
@@ -76,6 +79,20 @@ collection_type_enum = Enum(
 candidate_review_decision_enum = Enum(
     CandidateReviewDecision,
     name="candidate_review_decision",
+    native_enum=False,
+    create_constraint=True,
+    values_callable=lambda values: [value.value for value in values],
+)
+source_check_outcome_enum = Enum(
+    SourceCheckOutcome,
+    name="source_check_outcome",
+    native_enum=False,
+    create_constraint=True,
+    values_callable=lambda values: [value.value for value in values],
+)
+source_extraction_status_enum = Enum(
+    SourceExtractionStatus,
+    name="source_extraction_status",
     native_enum=False,
     create_constraint=True,
     values_callable=lambda values: [value.value for value in values],
@@ -134,9 +151,19 @@ class SourceDocument(Base):
     title: Mapped[str] = mapped_column(String(500))
     official_url: Mapped[str] = mapped_column(Text, unique=True)
     mime_type: Mapped[str] = mapped_column(String(120))
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
+    notes: Mapped[str | None] = mapped_column(Text)
+    created_by: Mapped[str | None] = mapped_column(String(200))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, onupdate=utc_now
+    )
+    deactivated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     revisions: Mapped[list["SourceRevision"]] = relationship(
+        back_populates="source_document", cascade="all, delete-orphan"
+    )
+    checks: Mapped[list["SourceCheck"]] = relationship(
         back_populates="source_document", cascade="all, delete-orphan"
     )
 
@@ -149,7 +176,7 @@ class SourceRevision(Base):
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    revision_id: Mapped[str] = mapped_column(String(120), unique=True, index=True)
+    revision_id: Mapped[str] = mapped_column(String(180), unique=True, index=True)
     source_document_id: Mapped[int] = mapped_column(
         ForeignKey("source_documents.id", ondelete="RESTRICT")
     )
@@ -159,6 +186,12 @@ class SourceRevision(Base):
     effective_date: Mapped[date | None] = mapped_column(Date)
     retrieved_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     last_source_check_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    source_url: Mapped[str | None] = mapped_column(Text)
+    final_url: Mapped[str | None] = mapped_column(Text)
+    http_status: Mapped[int | None] = mapped_column(Integer)
+    retrieved_mime_type: Mapped[str | None] = mapped_column(String(120))
+    byte_length: Mapped[int | None] = mapped_column(Integer)
+    content_blob: Mapped[bytes | None] = mapped_column(LargeBinary)
     publication_state: Mapped[PublicationState] = mapped_column(
         publication_state_enum, default=PublicationState.DRAFT, index=True
     )
@@ -173,6 +206,87 @@ class SourceRevision(Base):
     field_candidates: Mapped[list["SpecificationFieldCandidate"]] = relationship(
         back_populates="source_revision"
     )
+    extractions: Mapped[list["SourceExtraction"]] = relationship(
+        back_populates="source_revision", cascade="all, delete-orphan"
+    )
+    checks: Mapped[list["SourceCheck"]] = relationship(back_populates="source_revision")
+
+
+class SourceExtraction(Base):
+    __tablename__ = "source_extractions"
+    __table_args__ = (
+        UniqueConstraint("source_revision_id", "sequence"),
+        CheckConstraint("sequence >= 1"),
+        CheckConstraint("page_count IS NULL OR page_count >= 0"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    extraction_id: Mapped[str] = mapped_column(String(200), unique=True, index=True)
+    source_revision_id: Mapped[int] = mapped_column(
+        ForeignKey("source_revisions.id", ondelete="RESTRICT")
+    )
+    sequence: Mapped[int] = mapped_column(Integer)
+    status: Mapped[SourceExtractionStatus] = mapped_column(
+        source_extraction_status_enum, index=True
+    )
+    page_count: Mapped[int | None] = mapped_column(Integer)
+    error: Mapped[str | None] = mapped_column(Text)
+    extractor_version: Mapped[str] = mapped_column(String(120))
+    forced: Mapped[bool] = mapped_column(Boolean, default=False)
+    extracted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    created_by: Mapped[str] = mapped_column(String(200))
+
+    source_revision: Mapped[SourceRevision] = relationship(back_populates="extractions")
+    segments: Mapped[list["SourceTextSegment"]] = relationship(
+        back_populates="extraction", cascade="all, delete-orphan"
+    )
+    checks: Mapped[list["SourceCheck"]] = relationship(back_populates="extraction")
+
+
+class SourceTextSegment(Base):
+    __tablename__ = "source_text_segments"
+    __table_args__ = (UniqueConstraint("source_extraction_id", "sequence"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    source_extraction_id: Mapped[int] = mapped_column(
+        ForeignKey("source_extractions.id", ondelete="CASCADE")
+    )
+    sequence: Mapped[int] = mapped_column(Integer)
+    locator: Mapped[str] = mapped_column(String(500))
+    text: Mapped[str] = mapped_column(Text)
+
+    extraction: Mapped[SourceExtraction] = relationship(back_populates="segments")
+
+
+class SourceCheck(Base):
+    __tablename__ = "source_checks"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    check_id: Mapped[str] = mapped_column(String(120), unique=True, index=True)
+    source_document_id: Mapped[int] = mapped_column(
+        ForeignKey("source_documents.id", ondelete="CASCADE")
+    )
+    source_revision_id: Mapped[int | None] = mapped_column(
+        ForeignKey("source_revisions.id", ondelete="RESTRICT")
+    )
+    extraction_id: Mapped[int | None] = mapped_column(
+        ForeignKey("source_extractions.id", ondelete="RESTRICT")
+    )
+    checked_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    outcome: Mapped[SourceCheckOutcome] = mapped_column(source_check_outcome_enum, index=True)
+    requested_url: Mapped[str] = mapped_column(Text)
+    final_url: Mapped[str | None] = mapped_column(Text)
+    http_status: Mapped[int | None] = mapped_column(Integer)
+    mime_type: Mapped[str | None] = mapped_column(String(120))
+    byte_length: Mapped[int | None] = mapped_column(Integer)
+    content_hash: Mapped[str | None] = mapped_column(String(128))
+    error: Mapped[str | None] = mapped_column(Text)
+    forced: Mapped[bool] = mapped_column(Boolean, default=False)
+    checked_by: Mapped[str] = mapped_column(String(200))
+
+    source_document: Mapped[SourceDocument] = relationship(back_populates="checks")
+    source_revision: Mapped[SourceRevision | None] = relationship(back_populates="checks")
+    extraction: Mapped[SourceExtraction | None] = relationship(back_populates="checks")
 
 
 class MeasureVersion(Base):

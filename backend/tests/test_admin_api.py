@@ -173,6 +173,78 @@ def _login_admin(admin_client: TestClient) -> None:
     assert response.status_code == 200
 
 
+def test_admin_source_registry_is_private_validated_and_reversible(
+    admin_client: TestClient,
+) -> None:
+    assert admin_client.get("/api/admin/sources").status_code == 401
+    _login_admin(admin_client)
+
+    rejected = admin_client.post(
+        "/api/admin/sources",
+        headers={"X-CMSQI-Admin-Action": "source-registry"},
+        json={
+            "source_id": "CMS-UNSAFE",
+            "title": "Unsafe source must be rejected",
+            "official_url": "https://example.com/source",
+            "source_format": "html",
+        },
+    )
+    missing_action = admin_client.post(
+        "/api/admin/sources",
+        json={
+            "source_id": "CMS-MISSING-ACTION",
+            "title": "Missing action header",
+            "official_url": "https://www.cms.gov/source",
+            "source_format": "html",
+        },
+    )
+    created = admin_client.post(
+        "/api/admin/sources",
+        headers={"X-CMSQI-Admin-Action": "source-registry"},
+        json={
+            "source_id": "CMS-TEST-REGISTRY",
+            "title": "Official CMS registry test source",
+            "official_url": "https://www.cms.gov/quality/source",
+            "source_format": "html",
+            "notes": "Private registry test only.",
+        },
+    )
+
+    assert rejected.status_code == 422
+    assert rejected.json()["code"] == "source_url_domain_forbidden"
+    assert missing_action.status_code == 422
+    assert created.status_code == 201
+    assert created.json()["created_by"] == "reviewer"
+    assert created.json()["revision_count"] == 0
+
+    deactivated = admin_client.patch(
+        "/api/admin/sources/CMS-TEST-REGISTRY",
+        headers={"X-CMSQI-Admin-Action": "source-registry"},
+        json={"is_active": False, "notes": None},
+    )
+    assert deactivated.status_code == 200
+    assert deactivated.json()["is_active"] is False
+    assert deactivated.json()["deactivated_at"] is not None
+    assert deactivated.json()["notes"] is None
+
+    blocked_check = admin_client.post(
+        "/api/admin/sources/CMS-TEST-REGISTRY/check",
+        headers={"X-CMSQI-Admin-Action": "source-check"},
+        json={"force": False},
+    )
+    assert blocked_check.status_code == 409
+    assert blocked_check.json()["code"] == "source_inactive"
+
+    reactivated = admin_client.patch(
+        "/api/admin/sources/CMS-TEST-REGISTRY",
+        headers={"X-CMSQI-Admin-Action": "source-registry"},
+        json={"is_active": True},
+    )
+    assert reactivated.status_code == 200
+    assert reactivated.json()["is_active"] is True
+    assert reactivated.json()["deactivated_at"] is None
+
+
 def _first_review_item(admin_client: TestClient) -> dict[str, object]:
     detail = admin_client.get("/api/admin/measures/001")
     assert detail.status_code == 200

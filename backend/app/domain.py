@@ -47,6 +47,19 @@ class FieldPublicationEligibility(StrEnum):
     FIELD_CONFLICT = "field_conflict"
 
 
+class SourceCheckOutcome(StrEnum):
+    NEW_REVISION = "new_revision"
+    UNCHANGED = "unchanged"
+    REPROCESSED = "reprocessed"
+    FAILED = "failed"
+
+
+class SourceExtractionStatus(StrEnum):
+    EXTRACTED = "extracted"
+    MANUAL_REVIEW = "manual_review"
+    FAILED = "failed"
+
+
 class ChangeStatus(StrEnum):
     ADDED = "added"
     REMOVED = "removed"

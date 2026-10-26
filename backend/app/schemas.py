@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl
@@ -12,6 +12,8 @@ from app.domain import (
     FieldPublicationEligibility,
     PublicationState,
     PublicVerificationStatus,
+    SourceCheckOutcome,
+    SourceExtractionStatus,
 )
 
 
@@ -199,6 +201,108 @@ class AdminMeasureDetail(BaseModel):
     is_public: bool
     memberships: list[AdminMembershipResponse]
     versions: list[AdminMeasureVersionResponse]
+
+
+class AdminSourceCreateRequest(BaseModel):
+    source_id: str = Field(pattern=r"^[A-Z0-9][A-Z0-9_-]{2,99}$")
+    title: str = Field(min_length=3, max_length=500)
+    official_url: HttpUrl
+    source_format: Literal["html", "pdf"]
+    notes: str | None = Field(default=None, max_length=4_000)
+
+
+class AdminSourceUpdateRequest(BaseModel):
+    title: str | None = Field(default=None, min_length=3, max_length=500)
+    official_url: HttpUrl | None = None
+    source_format: Literal["html", "pdf"] | None = None
+    notes: str | None = Field(default=None, max_length=4_000)
+    is_active: bool | None = None
+
+
+class AdminSourceExtractionResponse(BaseModel):
+    extraction_id: str
+    sequence: int
+    status: SourceExtractionStatus
+    page_count: int | None
+    segment_count: int
+    error: str | None
+    extractor_version: str
+    forced: bool
+    extracted_at: datetime
+    created_by: str
+
+
+class AdminSourceRevisionResponse(BaseModel):
+    revision_id: str
+    revision_number: int
+    content_hash: str
+    source_url: HttpUrl | None
+    final_url: HttpUrl | None
+    http_status: int | None
+    mime_type: str | None
+    byte_length: int | None
+    publication_date: date | None
+    retrieved_at: datetime
+    last_source_check_at: datetime
+    extraction: AdminSourceExtractionResponse | None
+
+
+class AdminSourceCheckResponse(BaseModel):
+    check_id: str
+    outcome: SourceCheckOutcome
+    checked_at: datetime
+    requested_url: HttpUrl
+    final_url: HttpUrl | None
+    http_status: int | None
+    mime_type: str | None
+    byte_length: int | None
+    content_hash: str | None
+    error: str | None
+    forced: bool
+    checked_by: str
+    revision_id: str | None
+    extraction_id: str | None
+
+
+class AdminSourceSummaryResponse(BaseModel):
+    source_id: str
+    title: str
+    official_url: HttpUrl
+    source_format: Literal["html", "pdf"]
+    is_active: bool
+    notes: str | None
+    created_by: str | None
+    created_at: datetime
+    updated_at: datetime
+    deactivated_at: datetime | None
+    revision_count: int
+    latest_revision: AdminSourceRevisionResponse | None
+    latest_check: AdminSourceCheckResponse | None
+
+
+class AdminSourceListResponse(BaseModel):
+    items: list[AdminSourceSummaryResponse]
+
+
+class AdminSourceDetailResponse(AdminSourceSummaryResponse):
+    revisions: list[AdminSourceRevisionResponse]
+    checks: list[AdminSourceCheckResponse]
+
+
+class AdminSourceCheckRequest(BaseModel):
+    force: bool = False
+
+
+class AdminSourceSegmentResponse(BaseModel):
+    sequence: int
+    locator: str
+    text: str
+
+
+class AdminSourceExtractionDetailResponse(AdminSourceExtractionResponse):
+    source_id: str
+    revision_id: str
+    segments: list[AdminSourceSegmentResponse]
 
 
 class ORMModel(BaseModel):

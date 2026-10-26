@@ -13,6 +13,7 @@ tags:
   - name: System
   - name: Public measures
   - name: Admin review
+  - name: Admin sources
 paths:
   /health:
     get:
@@ -334,6 +335,171 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiError"
+  /api/admin/sources:
+    get:
+      operationId: listAdminSources
+      tags: [Admin sources]
+      summary: List registered official CMS sources and retrieval state
+      security:
+        - AdminSessionCookie: []
+      responses:
+        "200":
+          description: Private source registry with latest revision and check state.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminSourceList"
+        "401":
+          $ref: "#/components/responses/AdminUnauthorized"
+    post:
+      operationId: createAdminSource
+      tags: [Admin sources]
+      summary: Register an allowlisted official cms.gov source
+      security:
+        - AdminSessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/SourceRegistryAction"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminSourceCreateRequest"
+      responses:
+        "201":
+          description: Source registered without fetching or publishing it.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminSourceDetail"
+        "401":
+          $ref: "#/components/responses/AdminUnauthorized"
+        "403":
+          $ref: "#/components/responses/AdminActionForbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+  /api/admin/sources/{source_id}:
+    get:
+      operationId: getAdminSource
+      tags: [Admin sources]
+      summary: Inspect source revisions and append-only check history
+      security:
+        - AdminSessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/SourceId"
+      responses:
+        "200":
+          description: Registered source, revisions, extractions, and check events.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminSourceDetail"
+        "401":
+          $ref: "#/components/responses/AdminUnauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      operationId: updateAdminSource
+      tags: [Admin sources]
+      summary: Update or deactivate a registered CMS source
+      description: Deactivation preserves every historical revision and check event.
+      security:
+        - AdminSessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/SourceId"
+        - $ref: "#/components/parameters/SourceRegistryAction"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminSourceUpdateRequest"
+      responses:
+        "200":
+          description: Updated registry metadata.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminSourceDetail"
+        "401":
+          $ref: "#/components/responses/AdminUnauthorized"
+        "403":
+          $ref: "#/components/responses/AdminActionForbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+  /api/admin/sources/{source_id}/check:
+    post:
+      operationId: checkAdminSource
+      tags: [Admin sources]
+      summary: Fetch and extract one active registered CMS source
+      description: |
+        Every redirect is revalidated against the cms.gov allowlist. New content
+        creates an immutable revision. Unchanged content creates only a check event;
+        force=true creates a new extraction for the existing revision.
+      security:
+        - AdminSessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/SourceId"
+        - $ref: "#/components/parameters/SourceCheckAction"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminSourceCheckRequest"
+      responses:
+        "200":
+          description: Updated source state after the audited retrieval attempt.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminSourceDetail"
+        "401":
+          $ref: "#/components/responses/AdminUnauthorized"
+        "403":
+          $ref: "#/components/responses/AdminActionForbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "502":
+          description: Fetch, content validation, or extraction retrieval failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /api/admin/source-extractions/{extraction_id}:
+    get:
+      operationId: getAdminSourceExtraction
+      tags: [Admin sources]
+      summary: Inspect extracted source text with evidence locators
+      security:
+        - AdminSessionCookie: []
+      parameters:
+        - name: extraction_id
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 200
+      responses:
+        "200":
+          description: Append-only extraction metadata and ordered text segments.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminSourceExtractionDetail"
+        "401":
+          $ref: "#/components/responses/AdminUnauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
 components:
   securitySchemes:
     AdminSessionCookie:
@@ -341,6 +507,28 @@ components:
       in: cookie
       name: cmsqi_admin_session
   parameters:
+    SourceId:
+      name: source_id
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 100
+    SourceRegistryAction:
+      name: X-CMSQI-Admin-Action
+      in: header
+      required: true
+      schema:
+        type: string
+        const: source-registry
+    SourceCheckAction:
+      name: X-CMSQI-Admin-Action
+      in: header
+      required: true
+      schema:
+        type: string
+        const: source-check
     MeasureId:
       name: measure_id
       in: path
@@ -420,6 +608,12 @@ components:
         maximum: 100
         default: 25
   responses:
+    AdminActionForbidden:
+      description: The explicit administrator action header is invalid.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
     AdminUnauthorized:
       description: A valid administrator session is required.
       content:
@@ -428,6 +622,12 @@ components:
             $ref: "#/components/schemas/ApiError"
     NotFound:
       description: The requested public resource was not found.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+    Conflict:
+      description: The requested mutation conflicts with current source state.
       content:
         application/json:
           schema:
@@ -907,6 +1107,224 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/AdminMeasureVersion"
+    AdminSourceCreateRequest:
+      type: object
+      required: [source_id, title, official_url, source_format]
+      properties:
+        source_id:
+          type: string
+          pattern: "^[A-Z0-9][A-Z0-9_-]{2,99}$"
+        title:
+          type: string
+          minLength: 3
+          maxLength: 500
+        official_url:
+          type: string
+          format: uri
+          description: HTTPS URL on cms.gov or one of its subdomains.
+        source_format:
+          type: string
+          enum: [html, pdf]
+        notes:
+          type: [string, "null"]
+          maxLength: 4000
+    AdminSourceUpdateRequest:
+      type: object
+      properties:
+        title:
+          type: [string, "null"]
+          minLength: 3
+          maxLength: 500
+        official_url:
+          type: [string, "null"]
+          format: uri
+        source_format:
+          type: [string, "null"]
+          enum: [html, pdf, null]
+        notes:
+          type: [string, "null"]
+          maxLength: 4000
+        is_active:
+          type: [boolean, "null"]
+    AdminSourceCheckRequest:
+      type: object
+      properties:
+        force:
+          type: boolean
+          default: false
+          description: Re-extract unchanged bytes without creating a new revision.
+    SourceCheckOutcome:
+      type: string
+      enum: [new_revision, unchanged, reprocessed, failed]
+    SourceExtractionStatus:
+      type: string
+      enum: [extracted, manual_review, failed]
+    AdminSourceExtraction:
+      type: object
+      required:
+        - extraction_id
+        - sequence
+        - status
+        - page_count
+        - segment_count
+        - error
+        - extractor_version
+        - forced
+        - extracted_at
+        - created_by
+      properties:
+        extraction_id: {type: string}
+        sequence: {type: integer, minimum: 1}
+        status:
+          $ref: "#/components/schemas/SourceExtractionStatus"
+        page_count: {type: [integer, "null"], minimum: 0}
+        segment_count: {type: integer, minimum: 0}
+        error: {type: [string, "null"]}
+        extractor_version: {type: string}
+        forced: {type: boolean}
+        extracted_at: {type: string, format: date-time}
+        created_by: {type: string}
+    AdminSourceRevision:
+      type: object
+      required:
+        - revision_id
+        - revision_number
+        - content_hash
+        - source_url
+        - final_url
+        - http_status
+        - mime_type
+        - byte_length
+        - publication_date
+        - retrieved_at
+        - last_source_check_at
+        - extraction
+      properties:
+        revision_id: {type: string}
+        revision_number: {type: integer, minimum: 1}
+        content_hash: {type: string}
+        source_url: {type: [string, "null"], format: uri}
+        final_url: {type: [string, "null"], format: uri}
+        http_status: {type: [integer, "null"]}
+        mime_type: {type: [string, "null"]}
+        byte_length: {type: [integer, "null"], minimum: 0}
+        publication_date: {type: [string, "null"], format: date}
+        retrieved_at: {type: string, format: date-time}
+        last_source_check_at: {type: string, format: date-time}
+        extraction:
+          oneOf:
+            - $ref: "#/components/schemas/AdminSourceExtraction"
+            - type: "null"
+    AdminSourceCheck:
+      type: object
+      required:
+        - check_id
+        - outcome
+        - checked_at
+        - requested_url
+        - final_url
+        - http_status
+        - mime_type
+        - byte_length
+        - content_hash
+        - error
+        - forced
+        - checked_by
+        - revision_id
+        - extraction_id
+      properties:
+        check_id: {type: string}
+        outcome:
+          $ref: "#/components/schemas/SourceCheckOutcome"
+        checked_at: {type: string, format: date-time}
+        requested_url: {type: string, format: uri}
+        final_url: {type: [string, "null"], format: uri}
+        http_status: {type: [integer, "null"]}
+        mime_type: {type: [string, "null"]}
+        byte_length: {type: [integer, "null"], minimum: 0}
+        content_hash: {type: [string, "null"]}
+        error: {type: [string, "null"]}
+        forced: {type: boolean}
+        checked_by: {type: string}
+        revision_id: {type: [string, "null"]}
+        extraction_id: {type: [string, "null"]}
+    AdminSourceSummary:
+      type: object
+      required:
+        - source_id
+        - title
+        - official_url
+        - source_format
+        - is_active
+        - notes
+        - created_by
+        - created_at
+        - updated_at
+        - deactivated_at
+        - revision_count
+        - latest_revision
+        - latest_check
+      properties:
+        source_id: {type: string}
+        title: {type: string}
+        official_url: {type: string, format: uri}
+        source_format: {type: string, enum: [html, pdf]}
+        is_active: {type: boolean}
+        notes: {type: [string, "null"]}
+        created_by: {type: [string, "null"]}
+        created_at: {type: string, format: date-time}
+        updated_at: {type: string, format: date-time}
+        deactivated_at: {type: [string, "null"], format: date-time}
+        revision_count: {type: integer, minimum: 0}
+        latest_revision:
+          oneOf:
+            - $ref: "#/components/schemas/AdminSourceRevision"
+            - type: "null"
+        latest_check:
+          oneOf:
+            - $ref: "#/components/schemas/AdminSourceCheck"
+            - type: "null"
+    AdminSourceList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminSourceSummary"
+    AdminSourceDetail:
+      allOf:
+        - $ref: "#/components/schemas/AdminSourceSummary"
+        - type: object
+          required: [revisions, checks]
+          properties:
+            revisions:
+              type: array
+              items:
+                $ref: "#/components/schemas/AdminSourceRevision"
+            checks:
+              type: array
+              items:
+                $ref: "#/components/schemas/AdminSourceCheck"
+    AdminSourceSegment:
+      type: object
+      required: [sequence, locator, text]
+      properties:
+        sequence: {type: integer, minimum: 1}
+        locator: {type: string}
+        text: {type: string}
+    AdminSourceExtractionDetail:
+      allOf:
+        - $ref: "#/components/schemas/AdminSourceExtraction"
+        - type: object
+          required: [source_id, revision_id, segments]
+          properties:
+            source_id: {type: string}
+            revision_id: {type: string}
+            segments:
+              type: array
+              items:
+                $ref: "#/components/schemas/AdminSourceSegment"
     ApiError:
       type: object
       required: [code, message]

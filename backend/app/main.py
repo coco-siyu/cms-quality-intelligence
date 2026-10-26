@@ -4,6 +4,7 @@ from fastapi.responses import JSONResponse
 
 from app.api.admin import router as admin_router
 from app.api.measures import router as measures_router
+from app.api.sources import router as sources_router
 from app.schemas import ApiError, HealthResponse
 
 
@@ -15,6 +16,7 @@ def create_app() -> FastAPI:
     )
     application.include_router(measures_router)
     application.include_router(admin_router)
+    application.include_router(sources_router)
 
     @application.exception_handler(RequestValidationError)
     async def validation_error_handler(

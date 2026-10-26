@@ -151,6 +151,9 @@ def test_initial_migration_builds_and_reverts_schema(
         "evidence_references",
         "measure_comparisons",
         "measure_comparison_fields",
+        "source_checks",
+        "source_extractions",
+        "source_text_segments",
     }.issubset(inspect(engine).get_table_names())
     candidate_columns = {
         column["name"]

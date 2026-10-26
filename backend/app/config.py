@@ -23,6 +23,9 @@ class Settings(BaseSettings):
     admin_session_secret: str | None = None
     admin_session_secure: bool = False
     admin_session_ttl_seconds: int = 8 * 60 * 60
+    source_fetch_timeout_seconds: float = 30.0
+    source_fetch_max_bytes: int = 25 * 1024 * 1024
+    source_fetch_max_redirects: int = 5
 
 
 @lru_cache
