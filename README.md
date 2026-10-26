@@ -24,7 +24,7 @@ hold 32 collection-specific variants, 352 source-backed field candidates, and
 append-only reviewer decisions. Seeded detailed-field candidates begin pending
 and remain non-public unless a separate publication workflow is completed.
 
-The first M3 admin increment adds an environment-configured single-admin login,
+The M3 admin foundation adds an environment-configured single-admin login,
 signed HttpOnly sessions, and a private review desk for the roster, variants,
 field candidates, and their official source provenance. An administrator can
 review one field candidate at a time, correct an approved value, request a
@@ -34,8 +34,13 @@ PY2026, labels exact wording matches or differences without assigning clinical
 meaning, and explains extraction states that need SME, manual, or applicability
 review. Official source excerpts are stored and displayed separately from
 normalized candidate values; rows without a captured excerpt direct the reviewer
-to the exact locator and official source. Ingestion controls and publication
-remain intentionally unavailable.
+to the exact locator and official source. Separately, the source registry accepts
+only allowlisted cms.gov HTML/PDF URLs, records bounded retrieval attempts, stores
+immutable content-hash revisions, extracts text with section/page locators, skips
+unchanged files, and supports append-only force re-extraction. These source checks
+do not create field candidates or publish data. Individual reviewed fields have a
+separately authorized publication endpoint; the real queue remains unpublished
+until qualified review decisions exist.
 
 The Measure Explorer and API-mode measure detail pages now read from FastAPI.
 The Dashboard comparison ledger uses published API records in API mode and does
@@ -91,6 +96,7 @@ The current prototype routes are:
 - `/measures/:measureId` — API-backed overview, versions, evidence, and source status
 - `/whats-new` — dedicated fictional update feed
 - `/admin` — authenticated, read-only private review queue
+- `/admin/sources` — private CMS source registry, checks, and extraction status
 - `/admin/measures/:measureId` — private variants, candidates, and source provenance
 
 Frontend checks:
@@ -134,6 +140,11 @@ Restart FastAPI after updating `.env`, then choose **Admin** in the frontend
 workspace switch. Protected read endpoints live under `/api/admin/...` and use a
 signed HttpOnly session cookie. Set `CMSQI_ADMIN_SESSION_SECURE=true` in every
 HTTPS deployment.
+
+The source registry is available at `/admin/sources`. Register only a vetted
+official CMS URL, then use **Check source** to create a private retrieval event.
+**Force re-extract** reruns text extraction for identical bytes while retaining
+the prior extraction; neither action publishes measure data.
 
 To load the two explicitly fictional records into the local database, opt in
 for that command only. It refuses database names that do not contain `demo`:

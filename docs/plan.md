@@ -135,6 +135,13 @@ Pipeline:
 
 **Document Management Workspace:** source registry, previews, extracted content, progress by step (Downloading → Extracting → Comparing → Awaiting Verification), timestamps, persistent errors, and reprocess controls. Temporary failures automatically retry; persistent failures flag for admin action. Full token/cost analytics and step-by-step resumable execution are deferred.
 
+**Implemented source foundation (2026-10-26):** The protected registry now
+supports vetted cms.gov HTML/PDF entries, manual per-source checks, readable-text
+extraction with section/page locators, immutable SHA-256 revisions, unchanged-file
+skips, and force re-extraction history. It deliberately stops before normalized
+measure-field candidates, additional-source AI clarification, multi-document run
+orchestration/progress, and bounded automatic retries; those remain Tasks 43–47.
+
 **When sources change:** preserve old source versions. Flag reviews based on older versions as outdated and require re-verification before publication. Revisions that affect completed reviews set status to **Needs Re-review**. Previous signed-off work must remain recoverable.
 
 **Approval:** MVP allows editing and approving individual extracted changes. Bulk/batch verification and approval are post-MVP.

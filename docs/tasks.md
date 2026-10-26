@@ -1,6 +1,6 @@
 # CMS Quality Intelligence — Implementation Backlog
 
-## Checkpoint status (October 21, 2026)
+## Checkpoint status (October 26, 2026)
 
 - Tasks 1, 2, 5–12: implemented and verified through Checkpoints A, B, C1,
   and C2.1–C2.5. The official PY2025–PY2026 roster has two-source evidence,
@@ -25,7 +25,12 @@
   a first read-only queue and per-measure evidence view. Review mutations,
   ingestion controls, publishing, status workflow, and the full centralized
   dashboard remain open.
-- Tasks 23–37 and 39–47 remain unimplemented. Tasks 48–49 provide the manual
+- Tasks 39–42 are implemented: authenticated administrators can manage an
+  allowlisted cms.gov source registry, retrieve bounded HTML/PDF content,
+  inspect locator-preserving text extraction, and retain hash-addressed source,
+  check, and forced-reprocessing history. These operations remain private and
+  do not create measure-field candidates or publish records. Tasks 23–37 and
+  43–47 remain unimplemented. Tasks 48–49 provide the manual
   review and safe partial-publication slice ahead of automated ingestion. The
   dashboard change ledger, What's New feed, comparison highlighting, and AI
   Impact content remain visibly fictional prototypes and are not production-backed.
@@ -194,17 +199,40 @@ Description: Configure one secure admin login using environment-managed credenti
 Goal: Let an admin maintain the list of approved official source URLs.
 Description: Implement create, list, update, and deactivate operations for CMS source entries, with validation of allowed official CMS domains and relevant metadata. Reject unsafe or nonofficial URLs and test protections against using the ingestion service to fetch arbitrary internal addresses.
 
+Implementation status (complete, 2026-10-26): Protected list/create/update
+endpoints and a responsive admin registry page are available. Registration
+requires HTTPS on `cms.gov` or a subdomain, rejects userinfo, IP literals,
+non-default ports, fragments, duplicates, and off-domain redirects, and uses
+deactivation rather than deleting historical evidence.
+
 ## 40. Implement CMS HTML fetch and text extraction
 Goal: Turn official CMS webpages into traceable text sources.
 Description: Fetch a registered public CMS webpage, preserve retrieval metadata and content hash, and extract relevant readable text with section references where possible. Handle access failures and unexpected page formats without corrupting stored verified records.
+
+Implementation status (complete, 2026-10-26): Bounded, timeout-controlled HTML
+retrieval validates every redirect and verifies the response content. Readable
+blocks are stored as ordered segments with heading-based locators. Empty or
+unexpected pages enter explicit manual-review or failed states, and every failed
+attempt is retained as an audit event.
 
 ## 41. Implement CMS PDF fetch and text extraction
 Goal: Turn official CMS PDFs into traceable text sources.
 Description: Download a registered CMS PDF, record content hash and source metadata, and extract text with page references when available. Route unreadable/scanned or malformed PDFs to an explicit error/manual-review state instead of fabricating content.
 
+Implementation status (complete, 2026-10-26): PDF bytes and retrieval metadata
+are retained with the immutable source revision. Machine-readable text is stored
+with page locators; scanned/blank PDFs require manual review, while malformed
+documents are recorded as failed extraction attempts without fabricated text.
+
 ## 42. Persist source revisions and unchanged-file detection
 Goal: Avoid repeated extraction for sources whose content has not changed.
 Description: Store separate immutable source revisions using reliable content hashes and retrieval timestamps. On repeat admin checks, skip identical content but allow a forced reprocessing run without deleting historical revisions.
+
+Implementation status (complete, 2026-10-26): SHA-256 uniqueness is enforced per
+source. Identical bytes append an `unchanged` check without another extraction;
+changed bytes create a new numbered revision; and force reprocessing appends a
+new extraction to the existing revision. Prior revisions, extractions, segments,
+and check events are never overwritten.
 
 ## 43. Implement normalized extraction candidates
 Goal: Convert CMS document text into reviewable measure fields.

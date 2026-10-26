@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
-import { AlertTriangle, ArrowRight, FileCheck2, LogOut, Search, ShieldCheck } from "lucide-react";
+import { AlertTriangle, ArrowRight, Database, FileCheck2, LogOut, Search, ShieldCheck } from "lucide-react";
 
 import { ErrorState, LoadingState } from "../components/cms/shared";
 import { Button } from "../components/ui/button";
@@ -115,6 +115,9 @@ function ReviewWorkspace({ username }: { username: string }) {
         </div>
         <div className="admin-identity">
           <span>Signed in as <strong>{username}</strong></span>
+          <Button variant="outline" asChild>
+            <Link to="/admin/sources"><Database aria-hidden="true" /> Sources</Link>
+          </Button>
           <Button variant="outline" onClick={() => logout.mutate()} disabled={logout.isPending}>
             <LogOut aria-hidden="true" /> Sign out
           </Button>

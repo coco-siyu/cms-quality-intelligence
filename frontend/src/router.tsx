@@ -12,6 +12,7 @@ import { parseAdminSearch } from "./features/admin/search";
 import { DashboardPage } from "./pages/DashboardPage";
 import { AdminMeasureDetailPage } from "./pages/AdminMeasureDetailPage";
 import { AdminWorkspacePage } from "./pages/AdminWorkspacePage";
+import { AdminSourcesPage } from "./pages/AdminSourcesPage";
 import { MeasureExplorerPage } from "./pages/MeasureExplorerPage";
 import { MeasureDetailPage } from "./pages/MeasureDetailPage";
 import { WhatsNewPage } from "./pages/WhatsNewPage";
@@ -71,12 +72,19 @@ const adminMeasureDetailRoute = createRoute({
   component: AdminMeasureDetailPage,
 });
 
+const adminSourcesRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/admin/sources",
+  component: AdminSourcesPage,
+});
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
   measureExplorerRoute,
   measureDetailRoute,
   whatsNewRoute,
   adminRoute,
+  adminSourcesRoute,
   adminMeasureDetailRoute,
 ]);
 

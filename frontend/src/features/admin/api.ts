@@ -120,6 +120,80 @@ export type AdminMeasureDetail = {
   versions: AdminMeasureVersion[];
 };
 
+export type AdminSourceExtraction = {
+  extraction_id: string;
+  sequence: number;
+  status: "extracted" | "manual_review" | "failed";
+  page_count: number | null;
+  segment_count: number;
+  error: string | null;
+  extractor_version: string;
+  forced: boolean;
+  extracted_at: string;
+  created_by: string;
+};
+
+export type AdminSourceRevision = {
+  revision_id: string;
+  revision_number: number;
+  content_hash: string;
+  source_url: string | null;
+  final_url: string | null;
+  http_status: number | null;
+  mime_type: string | null;
+  byte_length: number | null;
+  publication_date: string | null;
+  retrieved_at: string;
+  last_source_check_at: string;
+  extraction: AdminSourceExtraction | null;
+};
+
+export type AdminSourceCheck = {
+  check_id: string;
+  outcome: "new_revision" | "unchanged" | "reprocessed" | "failed";
+  checked_at: string;
+  requested_url: string;
+  final_url: string | null;
+  http_status: number | null;
+  mime_type: string | null;
+  byte_length: number | null;
+  content_hash: string | null;
+  error: string | null;
+  forced: boolean;
+  checked_by: string;
+  revision_id: string | null;
+  extraction_id: string | null;
+};
+
+export type AdminSourceSummary = {
+  source_id: string;
+  title: string;
+  official_url: string;
+  source_format: "html" | "pdf";
+  is_active: boolean;
+  notes: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+  deactivated_at: string | null;
+  revision_count: number;
+  latest_revision: AdminSourceRevision | null;
+  latest_check: AdminSourceCheck | null;
+};
+
+export type AdminSourceDetail = AdminSourceSummary & {
+  revisions: AdminSourceRevision[];
+  checks: AdminSourceCheck[];
+};
+
+export type AdminSourceCreate = {
+  source_id: string;
+  title: string;
+  official_url: string;
+  source_format: "html" | "pdf";
+  notes: string | null;
+};
+
 async function adminRequest<T>(path: string, init?: RequestInit): Promise<T> {
   let response: Response;
   try {
@@ -195,6 +269,36 @@ export const adminApi = {
       },
     );
   },
+  sources(signal?: AbortSignal) {
+    return adminRequest<{ items: AdminSourceSummary[] }>("/api/admin/sources", { signal });
+  },
+  createSource(source: AdminSourceCreate) {
+    return adminRequest<AdminSourceDetail>("/api/admin/sources", {
+      method: "POST",
+      headers: { "X-CMSQI-Admin-Action": "source-registry" },
+      body: JSON.stringify(source),
+    });
+  },
+  updateSource(sourceId: string, update: { is_active: boolean }) {
+    return adminRequest<AdminSourceDetail>(
+      `/api/admin/sources/${encodeURIComponent(sourceId)}`,
+      {
+        method: "PATCH",
+        headers: { "X-CMSQI-Admin-Action": "source-registry" },
+        body: JSON.stringify(update),
+      },
+    );
+  },
+  checkSource(sourceId: string, force: boolean) {
+    return adminRequest<AdminSourceDetail>(
+      `/api/admin/sources/${encodeURIComponent(sourceId)}/check`,
+      {
+        method: "POST",
+        headers: { "X-CMSQI-Admin-Action": "source-check" },
+        body: JSON.stringify({ force }),
+      },
+    );
+  },
 };
 
 export function useAdminSession() {
@@ -221,6 +325,7 @@ export function useAdminLogout() {
     onSuccess: (session) => {
       queryClient.setQueryData(["admin-session"], session);
       queryClient.removeQueries({ queryKey: ["admin-review"] });
+      queryClient.removeQueries({ queryKey: ["admin-sources"] });
     },
   });
 }
@@ -249,6 +354,41 @@ export function useAdminMeasure(measureId: string, enabled: boolean) {
     queryFn: ({ signal }) => adminApi.measure(measureId, signal),
     enabled: enabled && Boolean(measureId),
     retry: false,
+  });
+}
+
+export function useAdminSources(enabled: boolean) {
+  return useQuery({
+    queryKey: ["admin-sources"],
+    queryFn: ({ signal }) => adminApi.sources(signal),
+    enabled,
+    retry: false,
+  });
+}
+
+export function useAdminSourceCreate() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (source: AdminSourceCreate) => adminApi.createSource(source),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["admin-sources"] }),
+  });
+}
+
+export function useAdminSourceUpdate() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ sourceId, isActive }: { sourceId: string; isActive: boolean }) =>
+      adminApi.updateSource(sourceId, { is_active: isActive }),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["admin-sources"] }),
+  });
+}
+
+export function useAdminSourceCheck() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ sourceId, force }: { sourceId: string; force: boolean }) =>
+      adminApi.checkSource(sourceId, force),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["admin-sources"] }),
   });
 }
 

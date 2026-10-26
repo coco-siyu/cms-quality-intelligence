@@ -4,6 +4,7 @@ import {
   ArrowRight,
   ChevronsLeft,
   ChevronsRight,
+  Database,
   Home,
   Menu,
   Newspaper,
@@ -239,11 +240,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {(isAdmin
           ? [
               { to: "/admin", label: "Review", icon: ShieldCheck },
+              { to: "/admin/sources", label: "Sources", icon: Database },
               { to: "/", label: "Public site", icon: Home },
             ] as const
           : primaryNavigation
         ).map((item) => {
-          const active = item.to === "/" ? path === "/" : path.startsWith(item.to);
+          const active =
+            item.to === "/" || item.to === "/admin"
+              ? path === item.to
+              : path.startsWith(item.to);
           return (
             <Link
               key={item.to}

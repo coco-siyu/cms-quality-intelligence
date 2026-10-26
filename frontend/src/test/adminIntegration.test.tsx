@@ -325,4 +325,92 @@ describe("private admin review workspace", () => {
     expect(screen.getByRole("heading", { name: "Review history" })).toBeInTheDocument();
     expect(screen.getByText(/reviewer · Oct 21, 2026/)).toBeInTheDocument();
   });
+
+  it("loads the private source registry and sends explicitly authorized checks", async () => {
+    const source = {
+      source_id: "CMS-PY2026-APP-REQ",
+      title: "PY 2026 APP Quality Requirements",
+      official_url: "https://www.cms.gov/example/py2026-app.pdf",
+      source_format: "pdf",
+      is_active: true,
+      notes: "Official CMS source under review.",
+      created_by: "reviewer",
+      created_at: "2026-10-26T12:00:00Z",
+      updated_at: "2026-10-26T12:00:00Z",
+      deactivated_at: null,
+      revision_count: 1,
+      latest_revision: {
+        revision_id: "CMS-PY2026-APP-REQ-R1-abcdef123456",
+        revision_number: 1,
+        content_hash: "abcdef1234567890",
+        source_url: "https://www.cms.gov/example/py2026-app.pdf",
+        final_url: "https://www.cms.gov/example/py2026-app.pdf",
+        http_status: 200,
+        mime_type: "application/pdf",
+        byte_length: 2048,
+        publication_date: null,
+        retrieved_at: "2026-10-26T12:00:00Z",
+        last_source_check_at: "2026-10-26T12:00:00Z",
+        extraction: {
+          extraction_id: "CMS-PY2026-APP-REQ-R1-abcdef123456-X1",
+          sequence: 1,
+          status: "extracted",
+          page_count: 4,
+          segment_count: 12,
+          error: null,
+          extractor_version: "pypdf-v1",
+          forced: false,
+          extracted_at: "2026-10-26T12:00:00Z",
+          created_by: "reviewer",
+        },
+      },
+      latest_check: {
+        check_id: "CMS-CHECK-1",
+        outcome: "new_revision",
+        checked_at: "2026-10-26T12:00:00Z",
+        requested_url: "https://www.cms.gov/example/py2026-app.pdf",
+        final_url: "https://www.cms.gov/example/py2026-app.pdf",
+        http_status: 200,
+        mime_type: "application/pdf",
+        byte_length: 2048,
+        content_hash: "abcdef1234567890",
+        error: null,
+        forced: false,
+        checked_by: "reviewer",
+        revision_id: "CMS-PY2026-APP-REQ-R1-abcdef123456",
+        extraction_id: "CMS-PY2026-APP-REQ-R1-abcdef123456-X1",
+      },
+    };
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith("/api/admin/session")) {
+        return Promise.resolve(
+          jsonResponse({ configured: true, authenticated: true, username: "reviewer" }),
+        );
+      }
+      if (url.endsWith("/api/admin/sources") && !init?.method) {
+        return Promise.resolve(jsonResponse({ items: [source] }));
+      }
+      if (url.endsWith("/api/admin/sources/CMS-PY2026-APP-REQ/check")) {
+        return Promise.resolve(jsonResponse({ ...source, revisions: [], checks: [] }));
+      }
+      return Promise.reject(new Error(`Unexpected request: ${url}`));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await renderRoute("/admin/sources");
+
+    expect(await screen.findByText("PY 2026 APP Quality Requirements")).toBeInTheDocument();
+    expect(screen.getByText(/12 text segments/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Check source" }));
+    await waitFor(() => {
+      const checkCall = fetchMock.mock.calls.find(([input]) =>
+        String(input).endsWith("/CMS-PY2026-APP-REQ/check"),
+      );
+      expect(checkCall?.[1]?.headers).toMatchObject({
+        "X-CMSQI-Admin-Action": "source-check",
+      });
+      expect(JSON.parse(String(checkCall?.[1]?.body))).toEqual({ force: false });
+    });
+  });
 });
