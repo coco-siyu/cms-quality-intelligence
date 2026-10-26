@@ -1,5 +1,6 @@
 import hashlib
 import re
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from html.parser import HTMLParser
@@ -316,6 +317,7 @@ def fetch_registered_source(
     checked_by: str,
     force: bool,
     client: httpx.Client | None = None,
+    on_extraction_started: Callable[[], None] | None = None,
 ) -> SourceCheck:
     if not source.is_active:
         check = _record_failed_check(
@@ -417,6 +419,8 @@ def fetch_registered_source(
         revision.last_source_check_at = checked_at
         outcome = SourceCheckOutcome.REPROCESSED
 
+    if on_extraction_started is not None:
+        on_extraction_started()
     extraction_result = (
         extract_pdf(retrieved.content)
         if expected_kind == "pdf"

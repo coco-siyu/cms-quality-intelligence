@@ -54,10 +54,63 @@ class SourceCheckOutcome(StrEnum):
     FAILED = "failed"
 
 
+class IngestionRunStatus(StrEnum):
+    RUNNING = "running"
+    COMPLETED = "completed"
+    COMPLETED_WITH_ERRORS = "completed_with_errors"
+    INTERRUPTED = "interrupted"
+
+
+class IngestionItemStage(StrEnum):
+    PENDING = "pending"
+    DOWNLOADING = "downloading"
+    EXTRACTING = "extracting"
+    COMPARING = "comparing"
+    AWAITING_VERIFICATION = "awaiting_verification"
+    UNCHANGED = "unchanged"
+    FAILED = "failed"
+
+
 class SourceExtractionStatus(StrEnum):
     EXTRACTED = "extracted"
     MANUAL_REVIEW = "manual_review"
     FAILED = "failed"
+
+
+class SourceNormalizationStatus(StrEnum):
+    NORMALIZED = "normalized"
+    NEEDS_REVIEW = "needs_review"
+    NO_CANDIDATES = "no_candidates"
+
+
+class NormalizedIdentityStatus(StrEnum):
+    MATCHED = "matched"
+    UNRESOLVED = "unresolved"
+    AMBIGUOUS = "ambiguous"
+
+
+class NormalizedFieldStatus(StrEnum):
+    EXTRACTED = "extracted"
+    UNRESOLVED = "unresolved"
+
+
+class NormalizedStagingStatus(StrEnum):
+    STAGED = "staged"
+    EXISTING = "existing"
+    BLOCKED_NEWER_REVISION = "blocked_newer_revision"
+    UNMATCHED = "unmatched"
+
+
+class ClarificationOutcome(StrEnum):
+    PROPOSED = "proposed"
+    UNRESOLVED = "unresolved"
+    CONFLICT = "conflict"
+
+
+class ClarificationEvidenceRelation(StrEnum):
+    SUPPORTS = "supports"
+    CONFLICTS = "conflicts"
+    CONTEXT = "context"
 
 
 class ChangeStatus(StrEnum):

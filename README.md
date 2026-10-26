@@ -37,10 +37,21 @@ normalized candidate values; rows without a captured excerpt direct the reviewer
 to the exact locator and official source. Separately, the source registry accepts
 only allowlisted cms.gov HTML/PDF URLs, records bounded retrieval attempts, stores
 immutable content-hash revisions, extracts text with section/page locators, skips
-unchanged files, and supports append-only force re-extraction. These source checks
-do not create field candidates or publish data. Individual reviewed fields have a
-separately authorized publication endpoint; the real queue remains unpublished
-until qualified review decisions exist.
+unchanged files, and supports append-only force re-extraction. A separate protected
+normalization action converts recognized document labels into typed private field
+candidates with exact segment evidence. Only exact existing identities can reach
+the review queue; incomplete and ambiguous results remain unresolved. An optional
+clarification action can inspect bounded excerpts from additional registered CMS
+sources and retain a schema-validated proposal or disagreement for human review.
+The source workspace can also launch a bounded registry-wide **Check for updates**
+run. It persists the run before retrieval, records each source's stage history,
+continues after isolated failures, normalizes changed readable sources, and stops
+all resulting candidates at human verification. Interrupted work remains visibly
+non-complete, and partially failed runs are never presented as successful.
+Neither source checking, normalization, nor clarification verifies or publishes
+data. Individual reviewed fields have a separately authorized publication
+endpoint; the real queue remains unpublished until qualified review decisions
+exist.
 
 The Measure Explorer and API-mode measure detail pages now read from FastAPI.
 The Dashboard comparison ledger uses published API records in API mode and does
@@ -96,7 +107,7 @@ The current prototype routes are:
 - `/measures/:measureId` — API-backed overview, versions, evidence, and source status
 - `/whats-new` — dedicated fictional update feed
 - `/admin` — authenticated, read-only private review queue
-- `/admin/sources` — private CMS source registry, checks, and extraction status
+- `/admin/sources` — private CMS source registry, bounded ingestion runs, and extraction status
 - `/admin/measures/:measureId` — private variants, candidates, and source provenance
 
 Frontend checks:
@@ -143,8 +154,29 @@ HTTPS deployment.
 
 The source registry is available at `/admin/sources`. Register only a vetted
 official CMS URL, then use **Check source** to create a private retrieval event.
+Use **Check for updates** to run the same safe path for every active source. The
+registry-wide action is capped by `CMSQI_INGESTION_RUN_MAX_SOURCES` (25 by default)
+and stores source-level stage events and final outcomes before returning.
 **Force re-extract** reruns text extraction for identical bytes while retaining
-the prior extraction; neither action publishes measure data.
+the prior extraction. **Normalize candidates** applies deterministic field rules to
+the latest successful extraction and may stage exact identity matches in the
+private review queue. **Inspect candidates** shows unresolved fields. When the
+optional provider is configured, **Clarify with AI** searches additional active
+registered CMS sources and stores a private evidence-bounded proposal. None of
+these actions approves or publishes measure data.
+
+AI clarification is disabled by default. To enable it locally, set both values
+below in the repository root `.env` and restart FastAPI:
+
+```sh
+CMSQI_OPENAI_API_KEY=your-api-key
+CMSQI_AI_CLARIFICATION_MODEL=your-structured-output-capable-model
+```
+
+The request uses strict structured output and `store=false`. The database retains
+the configured model name, prompt version, provider response ID, exact CMS excerpt
+snapshots, and support/conflict assessments for administrator review. Do not
+commit the API key.
 
 To load the two explicitly fictional records into the local database, opt in
 for that command only. It refuses database names that do not contain `demo`:

@@ -29,8 +29,10 @@
   allowlisted cms.gov source registry, retrieve bounded HTML/PDF content,
   inspect locator-preserving text extraction, and retain hash-addressed source,
   check, and forced-reprocessing history. These operations remain private and
-  do not create measure-field candidates or publish records. Tasks 23–37 and
-  43–47 remain unimplemented. Tasks 48–49 provide the manual
+  do not publish records. Task 43 now adds deterministic, typed normalization
+  from extracted source segments into private field candidates with exact
+  evidence locators; ambiguous identities and incomplete fields remain
+  unresolved. Tasks 23–37 and 44–47 remain unimplemented. Tasks 48–49 provide the manual
   review and safe partial-publication slice ahead of automated ingestion. The
   dashboard change ledger, What's New feed, comparison highlighting, and AI
   Impact content remain visibly fictional prototypes and are not production-backed.
@@ -238,13 +240,50 @@ and check events are never overwritten.
 Goal: Convert CMS document text into reviewable measure fields.
 Description: Use structured extraction to propose measure IDs, year applicability, numerator/denominator, exclusions, and other required fields with exact evidence pointers. Validate against typed schemas and retain incomplete/uncertain values as candidates rather than verified records.
 
+Implementation status (complete, 2026-10-26): A protected, idempotent
+normalization action applies versioned deterministic label rules to one successful
+HTML/PDF extraction. It records a typed candidate identity, all expected fields,
+source segment IDs, exact page/section locators, literal excerpts, and unresolved
+fields in append-only tables. Only an exact match to an existing private measure
+version can stage extracted fields in the human-review queue. Ambiguity never
+creates or guesses an identity, newer source evidence never overwrites an existing
+review item, and normalization never verifies or publishes a value.
+
 ## 44. Implement optional AI-assisted source clarification
 Goal: Help admins resolve ambiguous extracted measure fields.
 Description: For unresolved candidates, retrieve corroborating excerpts from additional approved official CMS sources and request a bounded AI clarification proposal. Store proposed evidence and disagreements for human review; do not permit the proposal to approve or publish itself.
 
+Implementation status (complete, 2026-10-26): An authenticated, explicitly
+authorized action retrieves a bounded set of identity-matched excerpts from
+additional active sources already registered on cms.gov. An optional OpenAI
+Responses API adapter requests strict typed output and stores the model, prompt
+version, input digest, provider response ID, exact excerpt snapshots, source
+revision references, and support/conflict assessments in append-only private
+tables. Every supplied evidence ID must be assessed exactly once; proposed
+wording must be a literal quotation from supporting evidence; disagreements
+remain conflicts. Repeated requests over identical inputs are idempotent. The
+workflow never changes normalized-field status, review decisions, verification,
+or publication state and fails closed when the provider is not configured.
+
 ## 45. Implement the admin-triggered ingestion run
 Goal: Process newly detected CMS sources through a defined pipeline.
 Description: Add a protected Check for Updates action that creates a run and moves each document through Downloading, Extracting, Comparing, and Awaiting Verification. Keep processing bounded for a solo-admin MVP and persist run outcomes so an interrupted request cannot silently imply completion.
+
+Implementation status (complete, 2026-10-26): The protected **Check for updates**
+action creates a durable run and one ordered item per active registered source
+before the first network request. Source-level events retain pending, downloading,
+extracting, content-comparing, and terminal states with timestamps and errors.
+Successful changed documents use the existing extraction and deterministic
+normalization services and stop at `awaiting_verification`; byte-identical
+documents stop at `unchanged`; one source failure does not prevent the remaining
+bounded run from completing. Run status distinguishes completed,
+completed-with-errors, and running work; if the process is interrupted, the
+durably stored run remains visibly non-complete. A second run is rejected while
+another run is active, and the configurable active-source limit fails closed
+instead of silently processing a partial registry. This task does not
+publish records, invoke optional AI, retry failures, or implement M2 semantic
+measure comparison. Detailed progress/error presentation and bounded retries
+remain Tasks 46–47.
 
 ## 46. Add ingestion progress and error states to admin UI
 Goal: Explain what each document is doing and why it failed.

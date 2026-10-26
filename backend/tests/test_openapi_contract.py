@@ -41,11 +41,23 @@ def test_runtime_openapi_exposes_contract_operation_ids_and_error_models() -> No
         ),
         ("/api/admin/sources", "get"): "listAdminSources",
         ("/api/admin/sources", "post"): "createAdminSource",
+        ("/api/admin/ingestion-runs", "get"): "listAdminIngestionRuns",
+        ("/api/admin/ingestion-runs", "post"): "createAdminIngestionRun",
+        ("/api/admin/ingestion-runs/{run_id}", "get"): "getAdminIngestionRun",
         ("/api/admin/sources/{source_id}", "get"): "getAdminSource",
         ("/api/admin/sources/{source_id}", "patch"): "updateAdminSource",
         ("/api/admin/sources/{source_id}/check", "post"): "checkAdminSource",
         ("/api/admin/source-extractions/{extraction_id}", "get"): (
             "getAdminSourceExtraction"
+        ),
+        ("/api/admin/source-extractions/{extraction_id}/normalize", "post"): (
+            "normalizeAdminSourceExtraction"
+        ),
+        ("/api/admin/source-normalizations/{normalization_id}", "get"): (
+            "getAdminSourceNormalization"
+        ),
+        ("/api/admin/normalized-fields/{field_candidate_id}/clarifications", "post"): (
+            "clarifyAdminNormalizedField"
         ),
     }
     for (path, method), operation_id in admin_operations.items():

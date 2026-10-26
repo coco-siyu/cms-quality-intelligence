@@ -138,9 +138,24 @@ Pipeline:
 **Implemented source foundation (2026-10-26):** The protected registry now
 supports vetted cms.gov HTML/PDF entries, manual per-source checks, readable-text
 extraction with section/page locators, immutable SHA-256 revisions, unchanged-file
-skips, and force re-extraction history. It deliberately stops before normalized
-measure-field candidates, additional-source AI clarification, multi-document run
-orchestration/progress, and bounded automatic retries; those remain Tasks 43–47.
+skips, force re-extraction history, and deterministic normalization into typed,
+private measure-field candidates. Exact stored identity matches may enter the
+existing human-review queue; uncertain identities and incomplete fields remain
+unresolved and private. Optional clarification now retrieves bounded excerpts
+from additional registered CMS sources and stores strict, evidence-validated AI
+proposals or conflicts for human review. It fails closed without provider
+configuration and cannot approve or publish.
+
+The first multi-document orchestration slice (Task 45) is also implemented. An
+explicitly authorized admin action durably queues every active registered source,
+then records download, extraction, content-hash comparison, and verification-staging
+events per document. Runs are capped by configuration, isolate source failures,
+and distinguish completed, completed-with-errors, and running states. Interrupted
+work remains visibly non-complete. Concurrent starts are rejected so an active
+run cannot be mislabeled interrupted.
+The current “comparing” stage means immutable revision/hash comparison plus private
+candidate normalization; authoritative M2 field/change comparison is not implied.
+Detailed live progress/error treatment and bounded retry policy remain Tasks 46–47.
 
 **When sources change:** preserve old source versions. Flag reviews based on older versions as outdated and require re-verification before publication. Revisions that affect completed reviews set status to **Needs Re-review**. Previous signed-off work must remain recoverable.
 

@@ -4,12 +4,14 @@ import {
   Archive,
   ArrowLeft,
   CheckCircle2,
+  ChevronDown,
   ExternalLink,
   FileText,
   Plus,
   RefreshCw,
   RotateCcw,
   ShieldAlert,
+  Sparkles,
 } from "lucide-react";
 
 import { ErrorState, LoadingState } from "../components/cms/shared";
@@ -17,8 +19,13 @@ import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import {
   useAdminSession,
+  useAdminFieldClarification,
+  useAdminIngestionRunCreate,
+  useAdminIngestionRuns,
   useAdminSourceCheck,
   useAdminSourceCreate,
+  useAdminSourceNormalization,
+  useAdminSourceNormalizationDetail,
   useAdminSources,
   useAdminSourceUpdate,
   type AdminSourceCreate,
@@ -46,11 +53,21 @@ function formatDate(value: string | null) {
 export function AdminSourcesPage() {
   const session = useAdminSession();
   const sources = useAdminSources(Boolean(session.data?.authenticated));
+  const ingestionRuns = useAdminIngestionRuns(Boolean(session.data?.authenticated));
+  const createIngestionRun = useAdminIngestionRunCreate();
   const createSource = useAdminSourceCreate();
   const updateSource = useAdminSourceUpdate();
   const checkSource = useAdminSourceCheck();
+  const normalizeSource = useAdminSourceNormalization();
+  const clarifyField = useAdminFieldClarification();
   const [draft, setDraft] = useState<AdminSourceCreate>(emptySource);
   const [showForm, setShowForm] = useState(false);
+  const [openNormalizationId, setOpenNormalizationId] = useState<string | null>(null);
+  const normalization = useAdminSourceNormalizationDetail(
+    openNormalizationId,
+    Boolean(session.data?.authenticated),
+  );
+  const latestRun = ingestionRuns.data?.items[0];
 
   if (session.isPending) return <LoadingState label="Checking administrator access…" />;
   if (session.isError) {
@@ -96,15 +113,59 @@ export function AdminSourcesPage() {
             extraction status before any field enters human review.
           </p>
         </div>
-        <Button onClick={() => setShowForm((value) => !value)}>
-          <Plus aria-hidden="true" /> {showForm ? "Close form" : "Register source"}
-        </Button>
+        <div className="admin-source-header-actions">
+          <Button
+            variant="outline"
+            disabled={createIngestionRun.isPending || sources.data.items.length === 0}
+            onClick={() => createIngestionRun.mutate()}
+          >
+            <RefreshCw aria-hidden="true" />
+            {createIngestionRun.isPending ? "Checking…" : "Check for updates"}
+          </Button>
+          <Button onClick={() => setShowForm((value) => !value)}>
+            <Plus aria-hidden="true" /> {showForm ? "Close form" : "Register source"}
+          </Button>
+        </div>
       </header>
 
       <div className="admin-boundary-note admin-source-boundary" role="note">
         <ShieldAlert aria-hidden="true" /> Only HTTPS URLs on cms.gov are accepted. Fetching a
         source creates private evidence history; it never publishes measure data.
       </div>
+
+      {ingestionRuns.isError && (
+        <p className="admin-form-error" role="alert">{ingestionRuns.error.message}</p>
+      )}
+      {latestRun && (
+        <section className="surface-card ingestion-run-ledger" aria-label="Latest ingestion run">
+          <header>
+            <div>
+              <p className="card-kicker">Latest registry check</p>
+              <h2>{latestRun.status.replaceAll("_", " ")}</h2>
+            </div>
+            <span>
+              {latestRun.completed_count}/{latestRun.source_count} sources · {latestRun.failed_count}
+              {" "}failed
+            </span>
+          </header>
+          <ol>
+            {latestRun.items.map((item) => (
+              <li key={item.item_id} className={item.stage}>
+                <div>
+                  <strong>{item.source_id}</strong>
+                  <span>{item.source_title}</span>
+                </div>
+                <div className="ingestion-stage-trail" aria-label={`${item.source_id} stages`}>
+                  {item.events.map((event) => (
+                    <span key={event.event_id}>{event.stage.replaceAll("_", " ")}</span>
+                  ))}
+                </div>
+                {item.error && <p>{item.error}</p>}
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
 
       {showForm && (
         <form className="surface-card admin-source-form" onSubmit={submit}>
@@ -179,7 +240,15 @@ export function AdminSourcesPage() {
 
       <section className="admin-source-list" aria-label="Registered CMS sources">
         {sources.data.items.map((source) => {
-          const mutationPending = updateSource.isPending || checkSource.isPending;
+          const mutationPending =
+            updateSource.isPending ||
+            checkSource.isPending ||
+            normalizeSource.isPending ||
+            clarifyField.isPending;
+          const normalizationId =
+            source.latest_revision?.extraction?.normalization?.normalization_id ?? null;
+          const isNormalizationOpen =
+            normalizationId !== null && normalizationId === openNormalizationId;
           return (
             <article className="surface-card admin-source-card" key={source.source_id}>
               <header>
@@ -221,7 +290,11 @@ export function AdminSourcesPage() {
                   <strong>{source.latest_revision.extraction.status.replace("_", " ")}</strong>
                   <span>
                     Revision {source.latest_revision.revision_number} · {source.latest_revision.extraction.segment_count}
-                    {" "}text segments · SHA-256 {source.latest_revision.content_hash.slice(0, 12)}…
+                    {" "}text segments
+                    {source.latest_revision.extraction.normalization && (
+                      <> · {source.latest_revision.extraction.normalization.staged_field_count} staged fields</>
+                    )}
+                    {" "}· SHA-256 {source.latest_revision.content_hash.slice(0, 12)}…
                   </span>
                 </div>
               )}
@@ -246,6 +319,32 @@ export function AdminSourcesPage() {
                 </Button>
                 <Button
                   variant="outline"
+                  disabled={
+                    mutationPending ||
+                    source.latest_revision?.extraction?.status !== "extracted" ||
+                    Boolean(source.latest_revision?.extraction?.normalization)
+                  }
+                  onClick={() => {
+                    const extractionId = source.latest_revision?.extraction?.extraction_id;
+                    if (extractionId) normalizeSource.mutate(extractionId);
+                  }}
+                >
+                  Normalize candidates
+                </Button>
+                {normalizationId && (
+                  <Button
+                    variant="outline"
+                    disabled={mutationPending}
+                    aria-expanded={isNormalizationOpen}
+                    onClick={() =>
+                      setOpenNormalizationId(isNormalizationOpen ? null : normalizationId)
+                    }
+                  >
+                    <ChevronDown aria-hidden="true" /> Inspect candidates
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
                   disabled={mutationPending}
                   onClick={() =>
                     updateSource.mutate({ sourceId: source.source_id, isActive: !source.is_active })
@@ -254,6 +353,71 @@ export function AdminSourcesPage() {
                   {source.is_active ? "Deactivate" : "Reactivate"}
                 </Button>
               </footer>
+              {isNormalizationOpen && (
+                <section className="admin-normalization-panel" aria-label="Normalized candidates">
+                  {normalization.isPending && <LoadingState label="Loading candidates…" />}
+                  {normalization.isError && (
+                    <p className="admin-form-error" role="alert">
+                      {normalization.error.message}
+                    </p>
+                  )}
+                  {normalization.data?.candidates.map((candidate) => (
+                    <div className="admin-normalized-candidate" key={candidate.candidate_id}>
+                      <header>
+                        <strong>
+                          {candidate.specification_identifier_candidate ??
+                            candidate.measure_id_candidate ??
+                            "Unresolved identity"}
+                        </strong>
+                        <span>{candidate.identity_status.replace("_", " ")}</span>
+                      </header>
+                      {candidate.fields
+                        .filter((field) => field.status === "unresolved")
+                        .map((field) => {
+                          const latest = field.clarifications[0];
+                          return (
+                            <article
+                              className="admin-clarification-field"
+                              key={field.field_candidate_id}
+                            >
+                              <div>
+                                <strong>{field.field_name.replaceAll("_", " ")}</strong>
+                                {latest && (
+                                  <span className={`clarification-outcome ${latest.outcome}`}>
+                                    {latest.outcome}
+                                  </span>
+                                )}
+                              </div>
+                              <Button
+                                variant="outline"
+                                disabled={mutationPending}
+                                onClick={() => clarifyField.mutate(field.field_candidate_id)}
+                              >
+                                <Sparkles aria-hidden="true" /> Clarify with AI
+                              </Button>
+                              {latest && (
+                                <div className="admin-clarification-result">
+                                  {latest.proposed_value && <blockquote>{latest.proposed_value}</blockquote>}
+                                  <p>{latest.summary}</p>
+                                  <ul>
+                                    {latest.evidence.map((evidence) => (
+                                      <li key={evidence.evidence_id}>
+                                        <a href={evidence.official_url} target="_blank" rel="noreferrer">
+                                          {evidence.source_title} · {evidence.locator}
+                                        </a>
+                                        <span>{evidence.relation}</span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+                            </article>
+                          );
+                        })}
+                    </div>
+                  ))}
+                </section>
+              )}
             </article>
           );
         })}
@@ -261,9 +425,19 @@ export function AdminSourcesPage() {
       {sources.data.items.length === 0 && !showForm && (
         <div className="empty-state surface-card">No official CMS sources are registered yet.</div>
       )}
-      {(checkSource.isError || updateSource.isError) && (
+      {(checkSource.isError ||
+        createIngestionRun.isError ||
+        updateSource.isError ||
+        normalizeSource.isError ||
+        clarifyField.isError) && (
         <p className="admin-form-error admin-source-mutation-error" role="alert">
-          {(checkSource.error ?? updateSource.error)?.message}
+          {(
+            checkSource.error ??
+            createIngestionRun.error ??
+            updateSource.error ??
+            normalizeSource.error ??
+            clarifyField.error
+          )?.message}
         </p>
       )}
     </div>
