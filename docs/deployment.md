@@ -4,9 +4,11 @@
 
 The repository contains production-style frontend and backend images and a local
 full-stack Compose configuration. Both images and the complete local stack passed
-the smoke check on October 27, 2026. A public URL has not yet been selected or
-created. Do not claim deployment completion until the verification checklist at
-the end of this document has been run against the chosen host.
+the smoke check on October 27, 2026. A Render Free public preview is also live.
+Automated public verification passed for HTTPS redirects, direct client routes,
+API health and proxying, the database-backed public endpoint, and unauthenticated
+Admin protection. The unchecked manual items below remain required before this
+preview should be described as production-ready.
 
 ## Render Free preview
 
@@ -103,18 +105,27 @@ the local `.env`, fictional fixtures as verified records, or patient-level data.
 8. Load only explicitly reviewed data through guarded commands.
 9. Record the public URL, release revision, and verification date below.
 
+## Rollback procedure
+
+For an application-only regression, open each affected Render web service,
+choose **Deploys**, and redeploy the last successful Git revision. Keep the API
+and frontend on compatible revisions. If the release included a database schema
+change, do not roll the API behind that migration without first reviewing the
+Alembic compatibility and taking a database backup. The Git-based fallback is a
+normal revert commit on `main`; do not rewrite shared history.
+
 ## Public verification checklist
 
-- [ ] HTTPS is valid and HTTP redirects to HTTPS.
-- [ ] `/` and a direct client route such as `/measures` load after refresh.
-- [ ] `/health` returns `{"status":"ok"}`.
-- [ ] Public API endpoints return only published records.
-- [ ] `/api/admin/...` returns `401` without an authenticated session.
+- [x] HTTPS is valid and HTTP redirects to HTTPS.
+- [x] `/` and a direct client route such as `/measures` load after refresh.
+- [x] `/health` returns `{"status":"ok"}`.
+- [x] Public API endpoints return only published records (currently an empty set).
+- [x] `/api/admin/...` returns `401` without an authenticated session.
 - [ ] Admin authentication uses a secure cookie.
 - [ ] Database data persists after an application restart.
 - [ ] Official source links open the expected CMS publication.
 - [ ] No `.env`, key, password, private draft, or internal review response is public.
-- [ ] The deployed Git revision and rollback procedure are recorded.
+- [x] The deployed Git revision and rollback procedure are recorded.
 
 ## Deployment evidence
 
@@ -122,8 +133,9 @@ Complete this only after deployment:
 
 | Field | Value |
 | --- | --- |
-| Public URL | Pending hosting selection |
-| Git revision | Pending |
-| Deployment environment | Pending |
-| Verified at | Pending |
-| Verified by | Pending |
+| Public URL | `https://cms-quality-intelligence-web.onrender.com` |
+| API URL | `https://cms-quality-intelligence-api.onrender.com` |
+| Verified application revision | `3e69248` |
+| Deployment environment | Render Free: Nginx/React, FastAPI, PostgreSQL 16 |
+| Verified at | 2026-10-27 22:12 UTC |
+| Verified by | Automated repository smoke check and public boundary probes |

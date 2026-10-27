@@ -19,10 +19,10 @@ compared with the final submission page before submission.
 | Persistent storage | PostgreSQL, SQLAlchemy models, and Alembic migrations | Complete |
 | Automated tests | Backend pytest suite; frontend Vitest, lint, and build | Complete |
 | Containerization | Backend/frontend Dockerfiles and full `compose.yaml` stack | Complete; both images and the full local smoke check passed October 27, 2026 |
-| Public deployment | `docs/deployment.md` | **Blocked: hosting choice and account authorization required** |
+| Public deployment | `docs/deployment.md` | Render Free preview live; automated public smoke and access-boundary checks pass |
 | AI-assisted workflow documentation | `AGENTS.md` and `docs/ai-development.md` | Complete |
-| Reproducible reviewer instructions | `README.md`, Makefile, smoke script, this guide | Complete locally; public URL pending |
-| CI and baseline security | GitHub Actions, CodeQL, Dependabot, `security/README.md` | Configured; first hosted runs require push |
+| Reproducible reviewer instructions | `README.md`, Makefile, smoke script, this guide | Complete locally and exercised against the public preview |
+| CI and baseline security | GitHub Actions, CodeQL, Dependabot, `security/README.md` | Hosted CI passes on deployment revision `3e69248` |
 
 ## Useful review commands
 
@@ -50,8 +50,10 @@ The demo must not describe unreviewed CMS candidates as verified production data
 
 ## Remaining submission blockers
 
-1. Select and authorize a hosting provider.
-2. Deploy the application and persistent PostgreSQL database.
-3. Complete the deployment evidence in `docs/deployment.md`.
-4. Recheck the official rubric and submission deadline.
-5. For the certificate path, complete the course's required peer reviews.
+1. Complete the remaining manual production-verification items in
+   `docs/deployment.md`, including secure-cookie login and persistence after a
+   controlled restart.
+2. Decide whether the temporary Render Free database should receive only the
+   source-backed private draft inventory for the Admin demonstration.
+3. Recheck the official rubric and submission deadline.
+4. For the certificate path, complete the course's required peer reviews.

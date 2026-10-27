@@ -438,6 +438,15 @@ workflow files must be pushed before their first hosted result can be reviewed.
 Goal: Publish a reliable portfolio-accessible application.
 Description: Select low-cost managed hosting or a single cloud VM based on actual operating costs, then deploy public React/FastAPI services and a persistent database. Verify HTTPS, public read access, protected admin operations, source links, and database persistence after restart; record the live URL and deployment steps.
 
+Implementation status (public preview deployed, production verification pending,
+2026-10-27): Render Free hosts the React/Nginx frontend, FastAPI API, and a
+private-network PostgreSQL 16 database. HTTPS redirects, direct SPA routes,
+same-origin API proxying, API health, an empty published-record boundary, and
+unauthenticated Admin rejection pass against the public URLs at revision
+`3e69248`. Secure-cookie login, restart persistence with retained data, official
+source links, and a final exposure review remain unchecked; the free database is
+temporary and is not a production durability claim.
+
 ## 67. Document the AI-assisted development workflow
 Goal: Show how AI tools were used and checked for the Zoomcamp rubric.
 Description: Record representative planning prompts, task delegation, code-review notes, human corrections, test evidence, and decisions in `docs/ai-development.md`. Make it clear which parts were AI-assisted and how source accuracy and implementation quality were independently verified.
