@@ -6,6 +6,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.config import Settings
+from app.database import SessionLocal
 from app.domain import (
     IngestionItemStage,
     IngestionRunStatus,
@@ -223,3 +224,55 @@ def execute_ingestion_run(
     finally:
         if owns_client:
             http_client.close()
+
+
+def execute_ingestion_run_by_id(
+    run_id: str,
+    *,
+    settings: Settings,
+    checked_by: str,
+) -> None:
+    """Execute a committed run in a fresh session after the API response is sent."""
+    with SessionLocal() as session:
+        run = session.scalar(select(IngestionRun).where(IngestionRun.run_id == run_id))
+        if run is None or run.status != IngestionRunStatus.RUNNING:
+            return
+        try:
+            execute_ingestion_run(
+                session,
+                run,
+                settings=settings,
+                checked_by=checked_by,
+            )
+        except Exception as error:
+            session.rollback()
+            failed_run = session.scalar(
+                select(IngestionRun).where(IngestionRun.run_id == run_id)
+            )
+            if failed_run is None or failed_run.status != IngestionRunStatus.RUNNING:
+                return
+            message = f"Ingestion stopped unexpectedly: {error}"
+            active_item = next(
+                (
+                    item
+                    for item in sorted(
+                        failed_run.items, key=lambda value: value.sequence
+                    )
+                    if item.stage
+                    in {
+                        IngestionItemStage.DOWNLOADING,
+                        IngestionItemStage.EXTRACTING,
+                        IngestionItemStage.COMPARING,
+                    }
+                ),
+                None,
+            )
+            if active_item is not None:
+                active_item.error = message
+                active_item.completed_at = _now()
+                _event(session, active_item, IngestionItemStage.FAILED, message)
+                failed_run.completed_count += 1
+                failed_run.failed_count += 1
+            failed_run.status = IngestionRunStatus.INTERRUPTED
+            failed_run.completed_at = _now()
+            session.commit()

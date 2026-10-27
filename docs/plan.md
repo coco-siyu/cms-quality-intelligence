@@ -155,7 +155,11 @@ work remains visibly non-complete. Concurrent starts are rejected so an active
 run cannot be mislabeled interrupted.
 The current “comparing” stage means immutable revision/hash comparison plus private
 candidate normalization; authoritative M2 field/change comparison is not implied.
-Detailed live progress/error treatment and bounded retry policy remain Tasks 46–47.
+Task 46 adds non-blocking execution and a polled document workspace with run
+history, completion counts, timestamped per-source stages, and persistent failure
+reasons. Unexpected processing exceptions are recorded as interrupted runs rather
+than disappearing behind a stalled browser request. Bounded retry policy remains
+Task 47; Task 46 does not retry or force processing.
 
 **When sources change:** preserve old source versions. Flag reviews based on older versions as outdated and require re-verification before publication. Revisions that affect completed reviews set status to **Needs Re-review**. Previous signed-off work must remain recoverable.
 

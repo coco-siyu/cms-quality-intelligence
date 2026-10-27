@@ -3080,6 +3080,16 @@ h3 {
 .ingestion-run-ledger {
   padding: 24px;
   margin-top: 18px;
+  border-top: 4px solid var(--powder);
+}
+
+.ingestion-run-ledger.completed {
+  border-top-color: var(--olive);
+}
+
+.ingestion-run-ledger.completed_with_errors,
+.ingestion-run-ledger.interrupted {
+  border-top-color: var(--butter);
 }
 
 .ingestion-run-ledger > header {
@@ -3096,13 +3106,112 @@ h3 {
   text-transform: capitalize;
 }
 
-.ingestion-run-ledger > header > span {
+.ingestion-run-controls {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.ingestion-run-controls label {
+  display: grid;
+  gap: 4px;
+}
+
+.ingestion-run-controls label > span {
+  color: var(--muted-foreground);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.ingestion-run-controls select {
+  max-width: 320px;
+  padding: 7px 30px 7px 9px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--card);
+  color: var(--navy);
+  font-size: 10px;
+}
+
+.ingestion-run-state,
+.ingestion-stage-badge {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 6px 9px;
+  border-radius: 999px;
+  background: var(--powder-soft);
+  color: var(--navy);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.ingestion-run-state.completed,
+.ingestion-stage-badge.unchanged,
+.ingestion-stage-badge.awaiting_verification {
+  background: color-mix(in srgb, var(--olive), white 82%);
+}
+
+.ingestion-run-state.completed_with_errors,
+.ingestion-run-state.interrupted,
+.ingestion-stage-badge.failed {
+  background: color-mix(in srgb, var(--butter), white 56%);
+}
+
+.ingestion-run-summary {
+  display: grid;
+  gap: 9px;
+  padding: 18px 0 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.ingestion-run-summary > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
   color: var(--muted-foreground);
   font-family: var(--font-mono);
   font-size: 10px;
 }
 
-.ingestion-run-ledger ol {
+.ingestion-run-summary progress {
+  width: 100%;
+  height: 6px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 999px;
+  background: var(--muted);
+  accent-color: var(--navy);
+}
+
+.ingestion-run-summary progress::-webkit-progress-bar {
+  border-radius: 999px;
+  background: var(--muted);
+}
+
+.ingestion-run-summary progress::-webkit-progress-value {
+  border-radius: 999px;
+  background: var(--navy);
+}
+
+.ingestion-run-notice,
+.ingestion-item-error {
+  padding: 10px 12px;
+  border-left: 3px solid var(--butter);
+  background: color-mix(in srgb, var(--butter), white 76%);
+  color: var(--secondary-foreground);
+  font-size: 11px;
+}
+
+.ingestion-run-notice {
+  margin: 16px 0 0;
+}
+
+.ingestion-run-ledger > .ingestion-run-items {
   display: grid;
   gap: 0;
   padding: 0;
@@ -3111,66 +3220,96 @@ h3 {
   border-top: 1px solid var(--border);
 }
 
-.ingestion-run-ledger li {
+.ingestion-run-items > li {
   display: grid;
-  grid-template-columns: minmax(180px, 0.8fr) minmax(0, 1.8fr);
-  align-items: center;
-  gap: 18px;
-  padding: 14px 2px;
+  gap: 12px;
+  padding: 18px 2px;
   border-bottom: 1px solid var(--border);
 }
 
-.ingestion-run-ledger li > div:first-child {
+.ingestion-item-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.ingestion-item-heading > div {
   display: grid;
   gap: 3px;
 }
 
-.ingestion-run-ledger li strong {
+.ingestion-item-heading strong {
   color: var(--navy);
   font-family: var(--font-mono);
   font-size: 10px;
 }
 
-.ingestion-run-ledger li > div:first-child span,
-.ingestion-run-ledger li > p {
+.ingestion-item-heading > div > span {
   color: var(--muted-foreground);
   font-size: 11px;
 }
 
-.ingestion-run-ledger li > p {
-  grid-column: 1 / -1;
-  color: var(--destructive);
+.ingestion-item-times {
+  display: flex;
+  gap: 16px;
+  color: var(--muted-foreground);
+  font-family: var(--font-mono);
+  font-size: 9px;
 }
 
 .ingestion-stage-trail {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--border);
 }
 
-.ingestion-stage-trail span {
-  padding: 5px 8px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: var(--muted);
+.ingestion-stage-event {
+  display: grid;
+  gap: 3px;
+  min-height: 76px;
+  padding: 10px;
+  background: var(--card);
+}
+
+.ingestion-stage-event > span {
   color: var(--secondary-foreground);
   font-size: 9px;
-  font-weight: 600;
-  text-transform: capitalize;
+  font-weight: 700;
+  text-transform: uppercase;
 }
 
-.ingestion-run-ledger li.awaiting_verification .ingestion-stage-trail span:last-child {
-  border-color: var(--butter);
-  background: color-mix(in srgb, var(--butter), white 68%);
+.ingestion-stage-event time {
+  color: var(--muted-foreground);
+  font-family: var(--font-mono);
+  font-size: 8px;
 }
 
-.ingestion-run-ledger li.unchanged .ingestion-stage-trail span:last-child {
-  border-color: var(--powder);
-  background: var(--powder-soft);
+.ingestion-stage-event small {
+  color: var(--muted-foreground);
+  font-size: 9px;
+  line-height: 1.35;
 }
 
-.ingestion-run-ledger li.failed .ingestion-stage-trail span:last-child {
-  border-color: color-mix(in srgb, var(--destructive), transparent 65%);
+.ingestion-item-error {
+  margin: 0;
+  border-left-color: var(--destructive);
+  background: color-mix(in srgb, var(--destructive), white 94%);
+  color: var(--destructive);
+}
+
+.is-spinning {
+  animation: ingestion-spin 1.2s linear infinite;
+}
+
+@keyframes ingestion-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .admin-source-form {
@@ -4436,7 +4575,26 @@ h3 {
     flex-direction: column;
   }
 
-  .ingestion-run-ledger li {
+  .ingestion-run-controls,
+  .ingestion-run-controls label,
+  .ingestion-run-controls select {
+    width: 100%;
+    max-width: none;
+  }
+
+  .ingestion-run-controls {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .ingestion-item-heading,
+  .ingestion-item-times,
+  .ingestion-run-times {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .ingestion-stage-trail {
     grid-template-columns: 1fr;
   }
 

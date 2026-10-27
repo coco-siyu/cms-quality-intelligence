@@ -409,8 +409,8 @@ paths:
       parameters:
         - $ref: "#/components/parameters/IngestionRunAction"
       responses:
-        "201":
-          description: The bounded ingestion run and its persisted outcomes.
+        "202":
+          description: The durable running ingestion record accepted for background processing.
           content:
             application/json:
               schema:

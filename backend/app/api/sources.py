@@ -1,7 +1,7 @@
 import hmac
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Path, status
+from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, Path, status
 from sqlalchemy.orm import Session
 
 from app.auth import AdminIdentity, require_admin
@@ -44,7 +44,7 @@ from app.services.ai_clarification import (
 from app.services.ingestion_runs import (
     IngestionRunError,
     create_ingestion_run,
-    execute_ingestion_run,
+    execute_ingestion_run_by_id,
 )
 from app.services.source_ingestion import SourceFetchError, fetch_registered_source
 from app.services.source_normalization import (
@@ -189,7 +189,7 @@ def admin_ingestion_run(
 @router.post(
     "/ingestion-runs",
     response_model=AdminIngestionRunResponse,
-    status_code=status.HTTP_201_CREATED,
+    status_code=status.HTTP_202_ACCEPTED,
     operation_id="createAdminIngestionRun",
     responses={
         **auth_responses,
@@ -198,6 +198,7 @@ def admin_ingestion_run(
     },
 )
 def create_admin_ingestion_run(
+    background_tasks: BackgroundTasks,
     session: DatabaseSession,
     settings: ApplicationSettings,
     admin: AuthenticatedAdmin,
@@ -210,12 +211,7 @@ def create_admin_ingestion_run(
             max_sources=settings.ingestion_run_max_sources,
         )
         run_id = run.run_id
-        execute_ingestion_run(
-            session,
-            run,
-            settings=settings,
-            checked_by=admin.username,
-        )
+        session.commit()
     except IngestionRunError as error:
         session.rollback()
         raise HTTPException(
@@ -225,7 +221,14 @@ def create_admin_ingestion_run(
     refreshed = get_ingestion_run(session, run_id)
     if refreshed is None:  # pragma: no cover - the run is committed before retrieval
         raise HTTPException(status_code=404, detail="Ingestion run was not found.")
-    return ingestion_run_response(refreshed)
+    response = ingestion_run_response(refreshed)
+    background_tasks.add_task(
+        execute_ingestion_run_by_id,
+        run_id,
+        settings=settings,
+        checked_by=admin.username,
+    )
+    return response
 
 
 @router.post(

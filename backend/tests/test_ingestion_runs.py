@@ -1,7 +1,7 @@
 import httpx
 import pytest
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, sessionmaker
 
 from app.config import Settings
 from app.domain import IngestionItemStage, IngestionRunStatus
@@ -10,6 +10,7 @@ from app.services.ingestion_runs import (
     IngestionRunError,
     create_ingestion_run,
     execute_ingestion_run,
+    execute_ingestion_run_by_id,
 )
 
 
@@ -119,6 +120,46 @@ def test_ingestion_run_continues_after_one_source_fails(session: Session) -> Non
         IngestionItemStage.FAILED,
         IngestionItemStage.AWAITING_VERIFICATION,
     }
+
+
+def test_background_run_persists_an_unexpected_interruption(
+    session: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    session.add(_source("CMS-INTERRUPTED", "interrupted"))
+    session.commit()
+    run = create_ingestion_run(session, created_by="reviewer", max_sources=5)
+    run.items[0].stage = IngestionItemStage.DOWNLOADING
+    session.commit()
+
+    factory = sessionmaker(bind=session.get_bind(), expire_on_commit=False)
+    monkeypatch.setattr("app.services.ingestion_runs.SessionLocal", factory)
+
+    def fail_unexpectedly(*_args: object, **_kwargs: object) -> None:
+        raise RuntimeError("parser process exited")
+
+    monkeypatch.setattr(
+        "app.services.ingestion_runs.execute_ingestion_run", fail_unexpectedly
+    )
+    execute_ingestion_run_by_id(
+        run.run_id,
+        settings=Settings(),
+        checked_by="reviewer",
+    )
+
+    session.expire_all()
+    interrupted = session.scalar(
+        select(IngestionRun).where(IngestionRun.run_id == run.run_id)
+    )
+    assert interrupted is not None
+    assert interrupted.status == IngestionRunStatus.INTERRUPTED
+    assert interrupted.completed_at is not None
+    assert interrupted.completed_count == 1
+    assert interrupted.failed_count == 1
+    assert interrupted.items[0].stage == IngestionItemStage.FAILED
+    assert interrupted.items[0].error == (
+        "Ingestion stopped unexpectedly: parser process exited"
+    )
+    assert interrupted.items[0].events[-1].stage == IngestionItemStage.FAILED
 
 
 def test_new_run_is_rejected_while_another_run_is_active(session: Session) -> None:

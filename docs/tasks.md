@@ -289,6 +289,16 @@ remain Tasks 46–47.
 Goal: Explain what each document is doing and why it failed.
 Description: Display the current stage, timestamps, completion state, and persistent errors for every ingestion run in a document workspace. Test that users can distinguish a still-running job from a failed or completed one.
 
+Implementation status (complete for MVP, 2026-10-26): Registry-wide checks now
+return a durable running record before network processing begins. The protected
+source workspace polls only while work is active and presents recent run history,
+overall progress, start/finish timestamps, each document's current stage, its full
+timestamped stage trail, and the stored reason for failure. Completed,
+completed-with-errors, interrupted, and still-running work have distinct states.
+Unexpected processing exceptions are persisted as interrupted runs, with the
+active document marked failed when one was in progress. This task intentionally
+does not add retries or new force-reprocess behavior; those remain Task 47.
+
 ## 47. Add bounded retries and force-reprocess controls
 Goal: Recover transient source failures without unnecessary work.
 Description: Retry temporary network or processing errors a limited number of times and report failures requiring admin attention. Provide a protected force-reprocess control for an existing source revision while preserving its previous verified output and review history.

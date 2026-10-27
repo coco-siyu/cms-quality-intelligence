@@ -512,6 +512,8 @@ export function useAdminIngestionRuns(enabled: boolean) {
     queryFn: ({ signal }) => adminApi.ingestionRuns(signal),
     enabled,
     retry: false,
+    refetchInterval: (query) =>
+      query.state.data?.items.some((run) => run.status === "running") ? 1_000 : false,
   });
 }
 
@@ -526,8 +528,6 @@ export function useAdminIngestionRunCreate() {
           items: [run, ...(history?.items.filter((item) => item.run_id !== run.run_id) ?? [])],
         }),
       );
-      void queryClient.invalidateQueries({ queryKey: ["admin-sources"] });
-      void queryClient.invalidateQueries({ queryKey: ["admin-review"] });
     },
   });
 }

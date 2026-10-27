@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Link } from "@tanstack/react-router";
 import {
   Archive,
@@ -28,6 +28,8 @@ import {
   useAdminSourceNormalizationDetail,
   useAdminSources,
   useAdminSourceUpdate,
+  type AdminIngestionRun,
+  type AdminIngestionStage,
   type AdminSourceCreate,
 } from "../features/admin/api";
 
@@ -47,12 +49,35 @@ function formatDate(value: string | null) {
     year: "numeric",
     hour: "numeric",
     minute: "2-digit",
+    second: "2-digit",
   }).format(new Date(value));
+}
+
+function runStatusLabel(status: AdminIngestionRun["status"]) {
+  return {
+    running: "Checking official sources",
+    completed: "Check complete",
+    completed_with_errors: "Complete with errors",
+    interrupted: "Check interrupted",
+  }[status];
+}
+
+function stageLabel(stage: AdminIngestionStage) {
+  return {
+    pending: "Queued",
+    downloading: "Downloading",
+    extracting: "Extracting",
+    comparing: "Comparing",
+    awaiting_verification: "Awaiting verification",
+    unchanged: "Unchanged",
+    failed: "Failed",
+  }[stage];
 }
 
 export function AdminSourcesPage() {
   const session = useAdminSession();
   const sources = useAdminSources(Boolean(session.data?.authenticated));
+  const refetchSources = sources.refetch;
   const ingestionRuns = useAdminIngestionRuns(Boolean(session.data?.authenticated));
   const createIngestionRun = useAdminIngestionRunCreate();
   const createSource = useAdminSourceCreate();
@@ -63,11 +88,21 @@ export function AdminSourcesPage() {
   const [draft, setDraft] = useState<AdminSourceCreate>(emptySource);
   const [showForm, setShowForm] = useState(false);
   const [openNormalizationId, setOpenNormalizationId] = useState<string | null>(null);
+  const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
   const normalization = useAdminSourceNormalizationDetail(
     openNormalizationId,
     Boolean(session.data?.authenticated),
   );
-  const latestRun = ingestionRuns.data?.items[0];
+  const runs = ingestionRuns.data?.items ?? [];
+  const latestRun = runs[0];
+  const activeRun = runs.find((run) => run.status === "running");
+  const displayedRun = runs.find((run) => run.run_id === selectedRunId) ?? latestRun;
+
+  useEffect(() => {
+    if (latestRun?.completed_at) {
+      void refetchSources();
+    }
+  }, [latestRun?.completed_at, latestRun?.run_id, refetchSources]);
 
   if (session.isPending) return <LoadingState label="Checking administrator access…" />;
   if (session.isError) {
@@ -116,11 +151,17 @@ export function AdminSourcesPage() {
         <div className="admin-source-header-actions">
           <Button
             variant="outline"
-            disabled={createIngestionRun.isPending || sources.data.items.length === 0}
-            onClick={() => createIngestionRun.mutate()}
+            disabled={
+              createIngestionRun.isPending || Boolean(activeRun) || sources.data.items.length === 0
+            }
+            onClick={() =>
+              createIngestionRun.mutate(undefined, {
+                onSuccess: (run) => setSelectedRunId(run.run_id),
+              })
+            }
           >
-            <RefreshCw aria-hidden="true" />
-            {createIngestionRun.isPending ? "Checking…" : "Check for updates"}
+            <RefreshCw className={activeRun ? "is-spinning" : undefined} aria-hidden="true" />
+            {createIngestionRun.isPending || activeRun ? "Checking sources…" : "Check for updates"}
           </Button>
           <Button onClick={() => setShowForm((value) => !value)}>
             <Plus aria-hidden="true" /> {showForm ? "Close form" : "Register source"}
@@ -136,31 +177,91 @@ export function AdminSourcesPage() {
       {ingestionRuns.isError && (
         <p className="admin-form-error" role="alert">{ingestionRuns.error.message}</p>
       )}
-      {latestRun && (
-        <section className="surface-card ingestion-run-ledger" aria-label="Latest ingestion run">
+      {displayedRun && (
+        <section
+          className={`surface-card ingestion-run-ledger ${displayedRun.status}`}
+          aria-label="Ingestion run progress"
+          aria-live={displayedRun.status === "running" ? "polite" : "off"}
+        >
           <header>
             <div>
-              <p className="card-kicker">Latest registry check</p>
-              <h2>{latestRun.status.replaceAll("_", " ")}</h2>
+              <p className="card-kicker">Ingestion run</p>
+              <h2>{runStatusLabel(displayedRun.status)}</h2>
             </div>
-            <span>
-              {latestRun.completed_count}/{latestRun.source_count} sources · {latestRun.failed_count}
-              {" "}failed
-            </span>
+            <div className="ingestion-run-controls">
+              {runs.length > 1 && (
+                <label>
+                  <span>Run history</span>
+                  <select
+                    value={displayedRun.run_id}
+                    onChange={(event) => setSelectedRunId(event.target.value)}
+                  >
+                    {runs.map((run) => (
+                      <option key={run.run_id} value={run.run_id}>
+                        {formatDate(run.started_at)} · {runStatusLabel(run.status)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+              <span className={`ingestion-run-state ${displayedRun.status}`}>
+                {runStatusLabel(displayedRun.status)}
+              </span>
+            </div>
           </header>
-          <ol>
-            {latestRun.items.map((item) => (
+          <div className="ingestion-run-summary">
+            <div>
+              <span>{displayedRun.completed_count} of {displayedRun.source_count} sources</span>
+              <span>{displayedRun.failed_count} failed</span>
+            </div>
+            <progress
+              value={displayedRun.completed_count}
+              max={Math.max(displayedRun.source_count, 1)}
+              aria-label={`${displayedRun.completed_count} of ${displayedRun.source_count} sources complete`}
+            />
+            <div className="ingestion-run-times">
+              <span>Started <time dateTime={displayedRun.started_at}>{formatDate(displayedRun.started_at)}</time></span>
+              <span>
+                {displayedRun.completed_at ? (
+                  <>Finished <time dateTime={displayedRun.completed_at}>{formatDate(displayedRun.completed_at)}</time></>
+                ) : (
+                  "Processing now"
+                )}
+              </span>
+            </div>
+          </div>
+          {displayedRun.status === "interrupted" && (
+            <p className="ingestion-run-notice" role="alert">
+              Processing stopped before every queued source finished. The last recorded document
+              stage remains below for investigation.
+            </p>
+          )}
+          <ol className="ingestion-run-items">
+            {displayedRun.items.map((item) => (
               <li key={item.item_id} className={item.stage}>
-                <div>
-                  <strong>{item.source_id}</strong>
-                  <span>{item.source_title}</span>
+                <div className="ingestion-item-heading">
+                  <div>
+                    <strong>{item.source_id}</strong>
+                    <span>{item.source_title}</span>
+                  </div>
+                  <span className={`ingestion-stage-badge ${item.stage}`}>
+                    {stageLabel(item.stage)}
+                  </span>
                 </div>
-                <div className="ingestion-stage-trail" aria-label={`${item.source_id} stages`}>
+                <div className="ingestion-item-times">
+                  <span>Started {formatDate(item.started_at)}</span>
+                  <span>{item.completed_at ? `Finished ${formatDate(item.completed_at)}` : "Not finished"}</span>
+                </div>
+                <div className="ingestion-stage-trail" aria-label={`${item.source_id} processing history`}>
                   {item.events.map((event) => (
-                    <span key={event.event_id}>{event.stage.replaceAll("_", " ")}</span>
+                    <div key={event.event_id} className="ingestion-stage-event">
+                      <span>{stageLabel(event.stage)}</span>
+                      <time dateTime={event.occurred_at}>{formatDate(event.occurred_at)}</time>
+                      {event.detail && <small>{event.detail}</small>}
+                    </div>
                   ))}
                 </div>
-                {item.error && <p>{item.error}</p>}
+                {item.error && <p className="ingestion-item-error" role="alert">{item.error}</p>}
               </li>
             ))}
           </ol>

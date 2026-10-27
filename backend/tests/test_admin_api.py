@@ -13,8 +13,6 @@ from app.database import get_db
 from app.domain import (
     CandidateReviewDecision,
     ClarificationOutcome,
-    IngestionItemStage,
-    IngestionRunStatus,
     PublicationState,
     PublicVerificationStatus,
     SourceExtractionStatus,
@@ -264,20 +262,8 @@ def test_admin_source_registry_is_private_validated_and_reversible(
 def test_admin_ingestion_run_requires_explicit_action_and_stays_private(
     admin_client: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    def complete_without_network(session: Session, run, **_kwargs):
-        completed_at = datetime.now(UTC)
-        for item in run.items:
-            item.stage = IngestionItemStage.UNCHANGED
-            item.started_at = completed_at
-            item.completed_at = completed_at
-        run.completed_count = run.source_count
-        run.status = IngestionRunStatus.COMPLETED
-        run.completed_at = completed_at
-        session.commit()
-        return run
-
     monkeypatch.setattr(
-        "app.api.sources.execute_ingestion_run", complete_without_network
+        "app.api.sources.execute_ingestion_run_by_id", lambda *_args, **_kwargs: None
     )
     assert admin_client.get("/api/admin/ingestion-runs").status_code == 401
     _login_admin(admin_client)
@@ -294,9 +280,9 @@ def test_admin_ingestion_run_requires_explicit_action_and_stays_private(
 
     assert missing_action.status_code == 422
     assert invalid_action.status_code == 403
-    assert created.status_code == 201
-    assert created.json()["status"] == "completed"
-    assert created.json()["completed_count"] == created.json()["source_count"]
+    assert created.status_code == 202
+    assert created.json()["status"] == "running"
+    assert created.json()["completed_count"] == 0
     listed = admin_client.get("/api/admin/ingestion-runs")
     assert listed.status_code == 200
     assert listed.json()["items"][0]["run_id"] == created.json()["run_id"]

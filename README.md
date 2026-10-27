@@ -44,10 +44,13 @@ the review queue; incomplete and ambiguous results remain unresolved. An optiona
 clarification action can inspect bounded excerpts from additional registered CMS
 sources and retain a schema-validated proposal or disagreement for human review.
 The source workspace can also launch a bounded registry-wide **Check for updates**
-run. It persists the run before retrieval, records each source's stage history,
+run. It persists and returns the queued run before retrieval, then the private UI
+polls while work is active. The run records each source's timestamped stage history,
 continues after isolated failures, normalizes changed readable sources, and stops
-all resulting candidates at human verification. Interrupted work remains visibly
-non-complete, and partially failed runs are never presented as successful.
+all resulting candidates at human verification. Administrators can inspect recent
+run history, completion counts, current document stages, and persistent failure
+reasons. Interrupted work remains visibly non-complete, and partially failed runs
+are never presented as successful.
 Neither source checking, normalization, nor clarification verifies or publishes
 data. Individual reviewed fields have a separately authorized publication
 endpoint; the real queue remains unpublished until qualified review decisions
@@ -156,7 +159,9 @@ The source registry is available at `/admin/sources`. Register only a vetted
 official CMS URL, then use **Check source** to create a private retrieval event.
 Use **Check for updates** to run the same safe path for every active source. The
 registry-wide action is capped by `CMSQI_INGESTION_RUN_MAX_SOURCES` (25 by default)
-and stores source-level stage events and final outcomes before returning.
+and returns a durable queued run for background processing. The page refreshes
+progress while that run is active and preserves timestamped source-level stages,
+final outcomes, and errors in run history.
 **Force re-extract** reruns text extraction for identical bytes while retaining
 the prior extraction. **Normalize candidates** applies deterministic field rules to
 the latest successful extraction and may stage exact identity matches in the

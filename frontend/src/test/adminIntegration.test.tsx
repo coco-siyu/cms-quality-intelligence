@@ -384,12 +384,12 @@ describe("private admin review workspace", () => {
     };
     const ingestionRun = {
       run_id: "CMS-INGEST-1",
-      status: "completed",
+      status: "running",
       source_count: 1,
-      completed_count: 1,
+      completed_count: 0,
       failed_count: 0,
       started_at: "2026-10-26T12:10:00Z",
-      completed_at: "2026-10-26T12:10:02Z",
+      completed_at: null,
       created_by: "reviewer",
       items: [
         {
@@ -397,24 +397,24 @@ describe("private admin review workspace", () => {
           sequence: 1,
           source_id: source.source_id,
           source_title: source.title,
-          stage: "awaiting_verification",
-          source_check_id: "CMS-CHECK-2",
-          source_check_outcome: "new_revision",
+          stage: "downloading",
+          source_check_id: null,
+          source_check_outcome: null,
           started_at: "2026-10-26T12:10:00Z",
-          completed_at: "2026-10-26T12:10:02Z",
+          completed_at: null,
           error: null,
           events: [
+            {
+              event_id: "CMS-EVENT-0",
+              stage: "pending",
+              occurred_at: "2026-10-26T12:09:59Z",
+              detail: "Queued for source retrieval.",
+            },
             {
               event_id: "CMS-EVENT-1",
               stage: "downloading",
               occurred_at: "2026-10-26T12:10:00Z",
               detail: "Retrieving official CMS source.",
-            },
-            {
-              event_id: "CMS-EVENT-2",
-              stage: "awaiting_verification",
-              occurred_at: "2026-10-26T12:10:02Z",
-              detail: "Private normalized candidates are ready for verification.",
             },
           ],
         },
@@ -431,7 +431,7 @@ describe("private admin review workspace", () => {
         return Promise.resolve(jsonResponse({ items: [source] }));
       }
       if (url.endsWith("/api/admin/ingestion-runs") && init?.method === "POST") {
-        return Promise.resolve(jsonResponse(ingestionRun, 201));
+        return Promise.resolve(jsonResponse(ingestionRun, 202));
       }
       if (url.endsWith("/api/admin/ingestion-runs")) {
         return Promise.resolve(jsonResponse({ items: [] }));
@@ -466,8 +466,12 @@ describe("private admin review workspace", () => {
     expect(screen.getByText(/12 text segments/)).toBeInTheDocument();
     expect(screen.queryByText("Loading candidates…")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Check for updates" }));
-    expect(await screen.findByText("Latest registry check")).toBeInTheDocument();
-    expect(screen.getByText("awaiting verification")).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: "Checking official sources" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("0 of 1 sources")).toBeInTheDocument();
+    expect(screen.getByText("Downloading", { selector: ".ingestion-stage-badge" })).toBeInTheDocument();
+    expect(screen.getByText("Processing now")).toBeInTheDocument();
     const runCall = fetchMock.mock.calls.find(
       ([input, init]) =>
         String(input).endsWith("/api/admin/ingestion-runs") && init?.method === "POST",
@@ -495,6 +499,147 @@ describe("private admin review workspace", () => {
         "X-CMSQI-Admin-Action": "normalize-source",
       });
     });
+  });
+
+  it("distinguishes running, failed, and completed ingestion history", async () => {
+    const source = {
+      source_id: "CMS-SOURCE-1",
+      title: "Official CMS source",
+      official_url: "https://www.cms.gov/example/source.html",
+      source_format: "html",
+      is_active: true,
+      notes: null,
+      created_by: "reviewer",
+      created_at: "2026-10-26T12:00:00Z",
+      updated_at: "2026-10-26T12:00:00Z",
+      deactivated_at: null,
+      revision_count: 0,
+      latest_revision: null,
+      latest_check: null,
+    };
+    const item = {
+      item_id: "CMS-ITEM-COMPLETE",
+      sequence: 1,
+      source_id: source.source_id,
+      source_title: source.title,
+      stage: "unchanged",
+      source_check_id: "CMS-CHECK-COMPLETE",
+      source_check_outcome: "unchanged",
+      started_at: "2026-10-26T12:00:00Z",
+      completed_at: "2026-10-26T12:00:02Z",
+      error: null,
+      events: [
+        {
+          event_id: "CMS-EVENT-COMPLETE",
+          stage: "unchanged",
+          occurred_at: "2026-10-26T12:00:02Z",
+          detail: "The retrieved content matches an existing immutable revision.",
+        },
+      ],
+    };
+    const runs = [
+      {
+        run_id: "CMS-RUN-COMPLETE",
+        status: "completed",
+        source_count: 1,
+        completed_count: 1,
+        failed_count: 0,
+        started_at: "2026-10-26T12:00:00Z",
+        completed_at: "2026-10-26T12:00:02Z",
+        created_by: "reviewer",
+        items: [item],
+      },
+      {
+        run_id: "CMS-RUN-FAILED",
+        status: "completed_with_errors",
+        source_count: 1,
+        completed_count: 1,
+        failed_count: 1,
+        started_at: "2026-10-26T11:00:00Z",
+        completed_at: "2026-10-26T11:00:03Z",
+        created_by: "reviewer",
+        items: [
+          {
+            ...item,
+            item_id: "CMS-ITEM-FAILED",
+            stage: "failed",
+            source_check_id: "CMS-CHECK-FAILED",
+            source_check_outcome: "failed",
+            error: "CMS returned HTTP 503 while retrieving the document.",
+            events: [
+              {
+                event_id: "CMS-EVENT-FAILED",
+                stage: "failed",
+                occurred_at: "2026-10-26T11:00:03Z",
+                detail: "CMS returned HTTP 503 while retrieving the document.",
+              },
+            ],
+          },
+        ],
+      },
+      {
+        run_id: "CMS-RUN-RUNNING",
+        status: "running",
+        source_count: 1,
+        completed_count: 0,
+        failed_count: 0,
+        started_at: "2026-10-26T10:00:00Z",
+        completed_at: null,
+        created_by: "reviewer",
+        items: [
+          {
+            ...item,
+            item_id: "CMS-ITEM-RUNNING",
+            stage: "extracting",
+            source_check_id: null,
+            source_check_outcome: null,
+            completed_at: null,
+            events: [
+              {
+                event_id: "CMS-EVENT-RUNNING",
+                stage: "extracting",
+                occurred_at: "2026-10-26T10:00:01Z",
+                detail: "Extracting traceable text from the changed source revision.",
+              },
+            ],
+          },
+        ],
+      },
+    ];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.endsWith("/api/admin/session")) {
+          return Promise.resolve(
+            jsonResponse({ configured: true, authenticated: true, username: "reviewer" }),
+          );
+        }
+        if (url.endsWith("/api/admin/sources")) {
+          return Promise.resolve(jsonResponse({ items: [source] }));
+        }
+        if (url.endsWith("/api/admin/ingestion-runs")) {
+          return Promise.resolve(jsonResponse({ items: runs }));
+        }
+        return Promise.reject(new Error(`Unexpected request: ${url}`));
+      }),
+    );
+
+    await renderRoute("/admin/sources");
+
+    expect(await screen.findByRole("heading", { name: "Check complete" })).toBeInTheDocument();
+    const history = screen.getByLabelText("Run history");
+    fireEvent.change(history, { target: { value: "CMS-RUN-RUNNING" } });
+    expect(screen.getByRole("heading", { name: "Checking official sources" })).toBeInTheDocument();
+    expect(screen.getByText("Processing now")).toBeInTheDocument();
+    fireEvent.change(history, { target: { value: "CMS-RUN-FAILED" } });
+    expect(screen.getByRole("heading", { name: "Complete with errors" })).toBeInTheDocument();
+    expect(
+      screen.getByText("CMS returned HTTP 503 while retrieving the document.", {
+        selector: ".ingestion-item-error",
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("1 failed")).toBeInTheDocument();
   });
 
   it("inspects unresolved normalized fields and requests private clarification", async () => {
