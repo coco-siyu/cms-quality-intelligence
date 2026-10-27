@@ -1,0 +1,54 @@
+services:
+  - type: web
+    name: cms-quality-intelligence-api
+    runtime: docker
+    plan: free
+    region: virginia
+    dockerContext: .
+    dockerfilePath: ./backend/Dockerfile
+    healthCheckPath: /health
+    autoDeployTrigger: checksPass
+    envVars:
+      - key: CMSQI_DATABASE_URL
+        fromDatabase:
+          name: cms-quality-intelligence-db
+          property: connectionString
+      - key: CMSQI_DEFAULT_FROM_YEAR
+        value: "2025"
+      - key: CMSQI_DEFAULT_TO_YEAR
+        value: "2026"
+      - key: CMSQI_ALLOW_DEMO_SEED
+        value: "false"
+      - key: CMSQI_ADMIN_USERNAME
+        sync: false
+      - key: CMSQI_ADMIN_PASSWORD_HASH
+        sync: false
+      - key: CMSQI_ADMIN_SESSION_SECRET
+        generateValue: true
+      - key: CMSQI_ADMIN_SESSION_SECURE
+        value: "true"
+
+  - type: web
+    name: cms-quality-intelligence-web
+    runtime: docker
+    plan: free
+    region: virginia
+    dockerContext: ./frontend
+    dockerfilePath: ./frontend/Dockerfile
+    healthCheckPath: /
+    autoDeployTrigger: checksPass
+    envVars:
+      - key: CMSQI_BACKEND_URL
+        fromService:
+          type: web
+          name: cms-quality-intelligence-api
+          envVarKey: RENDER_EXTERNAL_URL
+
+databases:
+  - name: cms-quality-intelligence-db
+    plan: free
+    region: virginia
+    postgresMajorVersion: "16"
+    databaseName: cms_quality
+    user: cms_quality
+    ipAllowList: []

@@ -8,6 +8,57 @@ the smoke check on October 27, 2026. A public URL has not yet been selected or
 created. Do not claim deployment completion until the verification checklist at
 the end of this document has been run against the chosen host.
 
+## Render Free preview
+
+The repository includes `render.yaml` for a temporary, no-cost public preview:
+
+- `cms-quality-intelligence-web`: the compiled React application served by
+  Nginx. It proxies `/api` and `/health` to the API so browser requests and the
+  administrator session remain same-origin.
+- `cms-quality-intelligence-api`: the FastAPI Docker image. Its normal container
+  startup applies Alembic migrations before accepting requests.
+- `cms-quality-intelligence-db`: a private-network PostgreSQL 16 database.
+
+To create the preview:
+
+1. Run the complete local verification pass with `make check`.
+2. Generate an administrator username and password hash locally:
+
+   ```sh
+   cd backend
+   uv run python -m app.commands.generate_admin_credentials
+   ```
+
+3. Commit and push the reviewed deployment files to the GitHub branch that
+   Render will track.
+4. In Render, choose **New > Blueprint**, connect the repository, and select the
+   root `render.yaml` file.
+5. When prompted, provide `CMSQI_ADMIN_USERNAME` and
+   `CMSQI_ADMIN_PASSWORD_HASH`. Do not provide or commit the plaintext password.
+   Render generates the independent session-signing secret.
+6. Apply the Blueprint and wait for the database, API, and web service to finish
+   their initial deploys.
+7. Treat the `cms-quality-intelligence-web` URL as the public application URL.
+   The API service URL is an implementation detail.
+8. Run the remote smoke check, replacing both placeholders:
+
+   ```sh
+   CMSQI_SMOKE_FRONTEND_URL=https://YOUR-WEB-SERVICE.onrender.com \
+   CMSQI_SMOKE_API_URL=https://YOUR-API-SERVICE.onrender.com \
+   ./scripts/smoke.sh
+   ```
+
+Do not run either seed command against this preview by default. A new Render
+database intentionally begins with only the schema, so public endpoints remain
+empty until separately reviewed records are explicitly published.
+
+Render Free is a preview environment, not a durable production environment. A
+free web service sleeps after 15 minutes without traffic and can take about a
+minute to wake. The free database is limited to 1 GB, has no backups, and expires
+30 days after creation. Before expiration, export any records that must be
+retained or upgrade/migrate the database. Never represent the preview as a
+durable production deployment.
+
 ## Recommended layouts
 
 Choose one of these without changing application behavior:

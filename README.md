@@ -14,6 +14,9 @@ The application is being built as a small modular monolith:
 
 See [`docs/architecture.md`](docs/architecture.md) for component boundaries,
 trust decisions, processing flow, and local/deployed runtime layouts.
+See [`docs/deployment.md`](docs/deployment.md) for the local container workflow,
+the Render Free preview procedure, required secrets, and public verification
+checklist.
 
 ## Current status
 
