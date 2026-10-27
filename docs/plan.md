@@ -5,7 +5,7 @@
 **Status:** Product scoping complete (55 decisions); implementation not started  
 **Project purpose:** An evidence-grounded, AI-assisted platform for tracking, explaining, and reviewing changes to CMS quality measure requirements.
 
-> This document consolidates the decisions made during product discovery. It is a product and implementation plan, not a statement that CMS documents have all been ingested or that the specified features are already built. The 2026 AI Dev Tools Zoomcamp rubric is a draft and should be rechecked before submission.
+> This document consolidates the decisions made during product discovery. It is a product and implementation plan, not a statement that CMS documents have all been ingested or that the specified features are already built. The 2026 AI Dev Tools Zoomcamp final-project summary was rechecked on October 27, 2026, but the course materials still warn that requirements may change before submission.
 
 ## 1. Vision, users, and product boundaries
 
@@ -289,9 +289,12 @@ Write `openapi.yaml` and contract tests early. Restrict admin endpoints server-s
 - Track actual evaluation results instead of asserting unmeasured reliability.
 - Reprocessed sources must not erase earlier versions, reviewer notes or checklist history.
 
-## 9. Zoomcamp rubric alignment without feature bloat
+## 9. Zoomcamp final-project alignment without feature bloat
 
-The 2026 project rubric is draft: https://github.com/DataTalksClub/ai-dev-tools-zoomcamp/blob/main/project/README.md
+Rechecked October 27, 2026 against the official final-project summary:
+https://github.com/DataTalksClub/ai-dev-tools-zoomcamp#final-project. The course
+repository still warns that 2026 materials may change, so submission requirements
+must be checked again before the deadline.
 
 | Rubric area | Evidence | Rationale |
 | --- | --- | --- |
@@ -302,15 +305,17 @@ The 2026 project rubric is draft: https://github.com/DataTalksClub/ai-dev-tools-
 | API contract | `openapi.yaml` + contract tests | Supports explicit frontend/backend boundary |
 | Backend | FastAPI routes, services + tests | Implements contract and product logic |
 | Database | schema/migrations/seed | Durable versions, history and tasks |
-| Docker | `docker-compose.yml` | Local end-to-end reproducibility |
+| Docker | Backend/frontend Dockerfiles and `compose.yaml` | Local end-to-end reproducibility |
 | Integration tests | API/database and ingestion-to-publication scenarios | Trustworthy workflow |
-| Deployment | Public working demo | Portfolio showcase |
-| CI/CD | GitHub Actions test/check/deploy pipeline | Reliability |
-| Agent extension pack | Small CMS Source Verification development toolkit | Separate from production UI, course-specific |
-| Security/DevOps | Scans, PR audit, permissions and data policy | Protect admin actions and provenance |
-| Reproducibility | Setup, test, and deployment instructions | Clear for peers |
+| Deployment | `docs/deployment.md`; public URL pending | Required portfolio showcase |
+| CI/CD | GitHub Actions test/check/image pipeline | Reliability evidence beyond the minimum |
+| AI workflow | `AGENTS.md`, `docs/ai-development.md` | Required explanation of AI-assisted development and human review |
+| Security/DevOps | Credential guard, CodeQL, Dependabot, tested data boundaries | Protect admin actions and provenance |
+| Reproducibility | README, Makefile, smoke script, submission index | Clear for peers |
 
-**Agent extension pack (development tooling only):** One read-only MCP capability for consulting the local curated evidence base, reusable validation workflow, specialist instructions, a guardrail for changes to approved source data, and permission notes. Do not force agents into the end-user production request path solely for rubric points.
+The current final-project baseline does not require an application-specific MCP
+server or production agent. Tasks 68–71 remain optional portfolio enhancements;
+do not let them delay a working, tested, containerized, publicly deployed app.
 
 ## 10. Post-MVP roadmap
 

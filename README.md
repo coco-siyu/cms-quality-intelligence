@@ -12,6 +12,9 @@ The application is being built as a small modular monolith:
 - PostgreSQL for persistent, versioned measure and evidence records
 - `openapi.yaml` as the frontend/backend contract
 
+See [`docs/architecture.md`](docs/architecture.md) for component boundaries,
+trust decisions, processing flow, and local/deployed runtime layouts.
+
 ## Current status
 
 Checkpoints A and B provide the runnable application foundation and the
@@ -70,7 +73,12 @@ verified local workflow.
 
 ## Quick local start
 
-The repository Makefile keeps the normal workflow short. On the first run:
+The repository supports a fast host-development workflow and a fully containerized
+review workflow. Both use the same PostgreSQL schema and API contract.
+
+### Host development with live reload
+
+On the first run:
 
 ```sh
 make setup
@@ -87,9 +95,32 @@ make dev
 ```
 
 Press `Ctrl+C` once to stop the frontend and backend. PostgreSQL intentionally
-stays running for faster restarts; stop it separately with `make stop`. Run the
-complete backend and frontend checks with `make check`. Use `make help` to see
-the available shortcuts.
+stays running for faster restarts; stop Compose services with `make stop`. Run
+the complete backend and frontend checks with `make check`. Use `make help` to
+see the available shortcuts.
+
+### Complete containerized application
+
+After creating `.env` and local admin credentials, build and start PostgreSQL,
+FastAPI, migrations, and the compiled frontend with one command:
+
+```sh
+make containers
+```
+
+The frontend is available at `http://localhost:5173` and FastAPI at
+`http://localhost:8000`. `make containers` waits for the stack and checks the
+frontend, API health, and a database-backed endpoint. Repeat that check with
+`make smoke`, follow output with `make container-logs`, and stop the stack with
+`make stop`.
+
+To seed private reviewed-draft artifacts inside the containerized backend:
+
+```sh
+docker compose exec \
+  -e CMSQI_ALLOW_VERIFIED_DRAFT_SEED=true \
+  backend .venv/bin/python -m app.commands.seed_verified
+```
 
 The commands below remain available when working on one service independently.
 
@@ -214,3 +245,15 @@ demo database.
 
 No patient-level data or PHI belongs in this repository. CMS facts must be
 source-backed and admin-verified before being exposed as verified data.
+
+## Zoomcamp evidence
+
+- [`docs/zoomcamp-submission.md`](docs/zoomcamp-submission.md) maps final-project
+  requirements to repository evidence and records remaining blockers.
+- [`docs/ai-development.md`](docs/ai-development.md) documents how Lovable,
+  Codex, automated checks, and human review were used.
+- [`docs/deployment.md`](docs/deployment.md) defines production settings and the
+  public verification checklist. A real public URL is still pending a hosting
+  decision and must not be claimed before it is tested.
+- [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs backend, frontend,
+  contract, and image-build checks for pushes and pull requests.

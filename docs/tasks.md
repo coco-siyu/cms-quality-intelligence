@@ -1,6 +1,6 @@
 # CMS Quality Intelligence — Implementation Backlog
 
-## Checkpoint status (October 26, 2026)
+## Checkpoint status (October 27, 2026)
 
 - Tasks 1, 2, 5–12: implemented and verified through Checkpoints A, B, C1,
   and C2.1–C2.5. The official PY2025–PY2026 roster has two-source evidence,
@@ -19,12 +19,11 @@
   release. Tasks 17, 20, and 22 also remain open, including
   dynamic year options, server-paginated Previous/Next, and full end-to-end M1
   validation.
-- Task 38 is partially complete: environment-managed single-admin credentials,
-  signed HttpOnly sessions, backend authorization, and authenticated read-only
-  private-review endpoints are implemented and contract-tested. Task 57 also has
-  a first read-only queue and per-measure evidence view. Review mutations,
-  ingestion controls, publishing, status workflow, and the full centralized
-  dashboard remain open.
+- Task 38 is complete: environment-managed single-admin credentials, signed
+  HttpOnly sessions, backend authorization, and authenticated private-review
+  endpoints are implemented and contract-tested. Task 57 has a first queue and
+  per-measure evidence view, while the full checklist/status dashboard remains
+  open. Individual review mutations and guarded field publication are implemented.
 - Tasks 39–42 are implemented: authenticated administrators can manage an
   allowlisted cms.gov source registry, retrieve bounded HTML/PDF content,
   inspect locator-preserving text extraction, and retain hash-addressed source,
@@ -32,8 +31,9 @@
   do not publish records. Task 43 now adds deterministic, typed normalization
   from extracted source segments into private field candidates with exact
   evidence locators; ambiguous identities and incomplete fields remain
-  unresolved. Tasks 23–37 and 44–47 remain unimplemented. Tasks 48–49 provide the manual
-  review and safe partial-publication slice ahead of automated ingestion. The
+  unresolved. Tasks 23–37 remain unimplemented. Tasks 44–46 and 48–49 provide AI
+  clarification, durable ingestion progress, manual review, and the safe
+  partial-publication slice. Task 47 remains open. The
   dashboard change ledger, What's New feed, comparison highlighting, and AI
   Impact content remain visibly fictional prototypes and are not production-backed.
 
@@ -53,9 +53,18 @@ Description: Describe the change-first workflow for Healthcare Data Analysts and
 Goal: Record a small, maintainable full-stack architecture.
 Description: Write `docs/architecture.md` describing React/TypeScript, FastAPI/Pydantic, PostgreSQL, an OpenAI-backed analysis service, and Docker Compose. Explain why source-backed deterministic comparison is authoritative for field differences and why microservices, vector search, and autonomous production agents are excluded from MVP.
 
+Implementation status (complete, 2026-10-27): `docs/architecture.md` documents
+component responsibilities, browser/API/database/source trust boundaries,
+developer and container runtime layouts, and deliberate exclusions.
+
 ## 4. Create project-level AI development instructions
 Goal: Make AI-assisted work predictable and reviewable.
 Description: Add `AGENTS.md` specifying code structure, test expectations, small change sets, secrets handling, no-PHI policy, and the rule that CMS facts require source evidence and admin verification. Include expectations for documenting prompts, reviewing diffs, and validating AI-produced changes.
+
+Implementation status (complete, 2026-10-27): `AGENTS.md` now records the
+authoritative product/contract documents, `uv` and npm dependency rules,
+evidence and no-PHI boundaries, public/private separation, Git authorization,
+and proportional verification requirements.
 
 ## 5. Establish the backend application skeleton
 Goal: Run an empty FastAPI service with an automated health test.
@@ -396,13 +405,34 @@ Description: Validate API responses against `openapi.yaml` and test homepage fil
 Goal: Prevent exposure of credentials or internal review data.
 Description: Test backend authorization, official-source URL restrictions, safe document retrieval, output encoding, and private/public record separation; run a dependency and secret scan. Document findings and fixes in `security/` with a no-PHI and AI tool/data policy.
 
+Implementation status (partially complete, 2026-10-27): Authorization, private/
+public isolation, and bounded source retrieval have automated backend coverage.
+The local credential guard passed, CodeQL is configured for Python and
+JavaScript/TypeScript, Dependabot monitors application/images/actions, and
+`security/README.md` records the policies and evidence. The first hosted CodeQL
+and dependency-monitoring results require a push before this task is verified.
+
 ## 64. Compose the full local application
 Goal: Bring frontend, backend, and database up with one command.
 Description: Extend Docker Compose so a new contributor can start React, FastAPI, and PostgreSQL with documented environment variables and migrations. Add a local smoke check covering frontend availability, API health, and database connectivity.
 
+Implementation status (complete, 2026-10-27):
+The repository now contains locked backend and frontend images, an Nginx
+same-origin API proxy, health checks, a three-service Compose stack, `make
+containers`, and a smoke script covering the frontend, API health, and a
+database-backed endpoint. Both images built successfully and the complete stack
+passed its local smoke check, including direct client-route fallback and API
+proxying.
+
 ## 65. Build continuous integration checks
 Goal: Reject changes that break the application or its safety boundaries.
 Description: Configure GitHub Actions to run backend unit/integration tests, frontend tests/build, API contract checks, and baseline security scans on pull requests. Keep cloud secrets out of PR workflows and document how to reproduce failures locally.
+
+Implementation status (implemented, hosted verification pending, 2026-10-27): GitHub Actions now runs
+locked backend lint/tests including OpenAPI contract checks, frontend tests/lint/
+build, Compose validation, both image builds, and the repository credential
+guard. CodeQL and Dependabot provide the baseline hosted security layer. The
+workflow files must be pushed before their first hosted result can be reviewed.
 
 ## 66. Deploy and verify the public demo
 Goal: Publish a reliable portfolio-accessible application.
@@ -411,6 +441,11 @@ Description: Select low-cost managed hosting or a single cloud VM based on actua
 ## 67. Document the AI-assisted development workflow
 Goal: Show how AI tools were used and checked for the Zoomcamp rubric.
 Description: Record representative planning prompts, task delegation, code-review notes, human corrections, test evidence, and decisions in `docs/ai-development.md`. Make it clear which parts were AI-assisted and how source accuracy and implementation quality were independently verified.
+
+Implementation status (complete, 2026-10-27): `docs/ai-development.md` records
+the roles of Lovable, Codex, Git/GitHub, and the optional AI provider; the
+specification/implementation/correction workflow; representative fixes; and the
+decisions that remain explicitly human-controlled.
 
 ## 68. Add a development-only CMS verification specialist
 Goal: Provide an agent instruction set that supports source review without altering production behavior.
@@ -431,6 +466,11 @@ Description: Run an open-source PR/code audit, deterministic security checks, an
 ## 72. Create a final reproducibility and submission guide
 Goal: Enable a new reviewer to run and assess the finished MVP.
 Description: Update `README.md` with problem statement, architecture, setup, migrations, test commands, environment-variable template, deployment/demo URL, and known limitations. Add a concise rubric-evidence index and verify the instructions from a clean checkout before calling the release complete.
+
+Implementation status (partially complete, 2026-10-27): The README, architecture,
+AI-development record, deployment checklist, container workflow, and Zoomcamp
+evidence index are present. Clean-host container verification, a deployed demo
+URL, and a final official-rubric recheck remain required.
 
 ## Post-MVP — Explicitly Deferred (Do Not Block Initial Release)
 
