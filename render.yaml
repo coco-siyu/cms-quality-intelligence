@@ -39,10 +39,7 @@ services:
     autoDeployTrigger: checksPass
     envVars:
       - key: CMSQI_BACKEND_URL
-        fromService:
-          type: web
-          name: cms-quality-intelligence-api
-          envVarKey: RENDER_EXTERNAL_URL
+        value: https://cms-quality-intelligence-api.onrender.com
 
 databases:
   - name: cms-quality-intelligence-db

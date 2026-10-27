@@ -14,7 +14,9 @@ The repository includes `render.yaml` for a temporary, no-cost public preview:
 
 - `cms-quality-intelligence-web`: the compiled React application served by
   Nginx. It proxies `/api` and `/health` to the API so browser requests and the
-  administrator session remain same-origin.
+  administrator session remain same-origin. Its `CMSQI_BACKEND_URL` points to
+  the API's public Render hostname because free web services cannot receive
+  private-network requests.
 - `cms-quality-intelligence-api`: the FastAPI Docker image. Its normal container
   startup applies Alembic migrations before accepting requests.
 - `cms-quality-intelligence-db`: a private-network PostgreSQL 16 database.
