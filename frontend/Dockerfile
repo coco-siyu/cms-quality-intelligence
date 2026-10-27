@@ -14,7 +14,7 @@ ENV VITE_DATA_MODE=${VITE_DATA_MODE} \
 
 RUN npm run build
 
-FROM nginx:1.27-alpine
+FROM nginx:1.31-alpine
 
 ENV PORT=8080 \
     CMSQI_BACKEND_URL=http://backend:8000
