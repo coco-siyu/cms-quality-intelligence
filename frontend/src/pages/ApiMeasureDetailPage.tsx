@@ -6,7 +6,7 @@ import { ErrorState, LoadingState, SectionTitle, StatusMark } from "../component
 import { Button } from "../components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
 import { apiSummaryToMeasure, formatApiDate, labelField } from "../features/measures/api/adapters";
-import { useApiMeasure, useApiMeasureList } from "../features/measures/api/queries";
+import { useApiMeasure, useApiMeasureNavigation } from "../features/measures/api/queries";
 import type { EvidenceReference, MeasureVersion } from "../features/measures/api/types";
 import { parseDemoFilters } from "../features/measures/demo/filters";
 
@@ -59,28 +59,24 @@ export function ApiMeasureDetailPage() {
   const measureId = typeof params.measureId === "string" ? params.measureId : "";
   const [tab, setTab] = useState("changes");
   const detailQuery = useApiMeasure(measureId, filters);
-  const listQuery = useApiMeasureList(filters);
+  const navigationQuery = useApiMeasureNavigation(measureId, filters);
 
-  if (detailQuery.isPending || listQuery.isPending) {
+  if (detailQuery.isPending || navigationQuery.isPending) {
     return <LoadingState label="Loading approved measure evidence…" />;
   }
-  if (detailQuery.isError || listQuery.isError) {
-    const error = detailQuery.error ?? listQuery.error;
+  if (detailQuery.isError) {
     return (
       <ErrorState
-        message={error?.message ?? "The public measure API request failed."}
-        onRetry={() =>
-          void (detailQuery.isError ? detailQuery.refetch() : listQuery.refetch())
-        }
+        message={detailQuery.error.message}
+        onRetry={() => void detailQuery.refetch()}
       />
     );
   }
 
   const measure = detailQuery.data;
-  const results = listQuery.data.items;
-  const index = results.findIndex((candidate) => candidate.measure_id === measure.measure_id);
-  const previous = index > 0 ? results[index - 1] : undefined;
-  const next = index >= 0 ? results[index + 1] : undefined;
+  const navigation = navigationQuery.data;
+  const previousId = navigation?.previous_measure_id;
+  const nextId = navigation?.next_measure_id;
   const availableFields = [...new Set(measure.versions.flatMap((version) => version.fields.map((field) => field.field)))];
 
   return (
@@ -94,20 +90,20 @@ export function ApiMeasureDetailPage() {
           <span className="font-mono">{measure.measure_id}</span>
         </nav>
         <div className="previous-next">
-          <Button asChild={Boolean(previous)} variant="ghost" size="sm" disabled={!previous}>
-            {previous ? (
-              <Link to="/measures/$measureId" params={{ measureId: previous.measure_id }} search={filters}>
-                <ChevronLeft /> Previous <span className="font-mono neighbor-id">{previous.measure_id}</span>
+          <Button asChild={Boolean(previousId)} variant="ghost" size="sm" disabled={!previousId}>
+            {previousId ? (
+              <Link to="/measures/$measureId" params={{ measureId: previousId }} search={filters}>
+                <ChevronLeft /> Previous <span className="font-mono neighbor-id">{previousId}</span>
               </Link>
             ) : <span><ChevronLeft size={14} /> Previous</span>}
           </Button>
           <span className="quiet-label">
-            {index >= 0 ? `${index + 1} of ${results.length}` : "Outside filtered results"}
+            {navigation ? `${navigation.position} of ${navigation.total_items}` : "Outside filtered results"}
           </span>
-          <Button asChild={Boolean(next)} variant="ghost" size="sm" disabled={!next}>
-            {next ? (
-              <Link to="/measures/$measureId" params={{ measureId: next.measure_id }} search={filters}>
-                Next <span className="font-mono neighbor-id">{next.measure_id}</span> <ChevronRight />
+          <Button asChild={Boolean(nextId)} variant="ghost" size="sm" disabled={!nextId}>
+            {nextId ? (
+              <Link to="/measures/$measureId" params={{ measureId: nextId }} search={filters}>
+                Next <span className="font-mono neighbor-id">{nextId}</span> <ChevronRight />
               </Link>
             ) : <span>Next <ChevronRight size={14} /></span>}
           </Button>

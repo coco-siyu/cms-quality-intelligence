@@ -10,12 +10,14 @@ import { FilterSelect, SectionTitle, StatusMark } from "./shared";
 export function MeasureTable({
   filters,
   measures,
+  performanceYears,
   total,
   onFiltersChange,
   dataMode = "demo",
 }: {
   filters: DemoFilters;
   measures: DemoMeasure[];
+  performanceYears: number[];
   total: number;
   onFiltersChange: (values: Partial<DemoFilters>) => void;
   dataMode?: "api" | "demo";
@@ -72,9 +74,8 @@ export function MeasureTable({
           label="Year"
           value={filters.year}
           options={[
-            { value: "all", label: "Both" },
-            { value: "2025", label: "PY2025" },
-            { value: "2026", label: "PY2026" },
+            { value: "all", label: "All years" },
+            ...performanceYears.map((year) => ({ value: String(year), label: `PY${year}` })),
           ]}
           onChange={(year) => onFiltersChange({ year })}
         />

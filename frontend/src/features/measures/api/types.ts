@@ -71,6 +71,14 @@ export type PublicMeasurePage = {
   };
 };
 
+export type PublicMeasureNavigation = {
+  measure_id: string;
+  position: number;
+  total_items: number;
+  previous_measure_id: string | null;
+  next_measure_id: string | null;
+};
+
 export type PerformanceYearList = {
   years: number[];
   default_from_year: number;

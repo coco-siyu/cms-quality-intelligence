@@ -5,7 +5,7 @@ import { MeasureTable } from "../components/cms/MeasureTable";
 import { ErrorState, LoadingState } from "../components/cms/shared";
 import { Button } from "../components/ui/button";
 import { apiSummaryToMeasure } from "../features/measures/api/adapters";
-import { useApiMeasureList } from "../features/measures/api/queries";
+import { useApiMeasureList, usePerformanceYears } from "../features/measures/api/queries";
 import { getDataMode, type DataMode } from "../features/measures/dataMode";
 import { parseDemoFilters } from "../features/measures/demo/filters";
 import { useDemoMeasureList } from "../features/measures/demo/queries";
@@ -42,11 +42,13 @@ function ExplorerContent({
   dataMode,
   filters,
   measures,
+  performanceYears,
   total,
 }: {
   dataMode: DataMode;
   filters: DemoFilters;
   measures: DemoMeasure[];
+  performanceYears: number[];
   total: number;
 }) {
   const navigate = useNavigate({ from: "/measures" });
@@ -76,6 +78,7 @@ function ExplorerContent({
         dataMode={dataMode}
         filters={filters}
         measures={measures}
+        performanceYears={performanceYears}
         total={total}
         onFiltersChange={(values) =>
           void navigate({ search: { ...filters, ...values }, replace: true })
@@ -99,6 +102,7 @@ function DemoMeasureExplorerPage() {
       dataMode="demo"
       filters={filters}
       measures={measureQuery.data.items}
+      performanceYears={[2025, 2026]}
       total={measureQuery.data.total}
     />
   );
@@ -108,13 +112,21 @@ function ApiMeasureExplorerPage() {
   const rawSearch = useSearch({ from: "/measures" });
   const filters = parseDemoFilters(rawSearch);
   const measureQuery = useApiMeasureList(filters);
+  const performanceYearsQuery = usePerformanceYears();
 
-  if (measureQuery.isPending) {
+  if (measureQuery.isPending || performanceYearsQuery.isPending) {
     return <LoadingState label="Loading approved public measures…" />;
   }
-  if (measureQuery.isError) {
+  if (measureQuery.isError || performanceYearsQuery.isError) {
+    const error = measureQuery.error ?? performanceYearsQuery.error;
     return (
-      <ErrorState message={measureQuery.error.message} onRetry={() => void measureQuery.refetch()} />
+      <ErrorState
+        message={error?.message ?? "Published measure data could not be loaded."}
+        onRetry={() => {
+          void measureQuery.refetch();
+          void performanceYearsQuery.refetch();
+        }}
+      />
     );
   }
 
@@ -123,6 +135,7 @@ function ApiMeasureExplorerPage() {
       dataMode="api"
       filters={filters}
       measures={measureQuery.data.items.map(apiSummaryToMeasure)}
+      performanceYears={performanceYearsQuery.data.years}
       total={measureQuery.data.pagination.total_items}
     />
   );

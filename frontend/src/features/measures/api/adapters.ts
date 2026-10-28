@@ -41,7 +41,7 @@ function displayDate(value: string | null): string {
   }).format(new Date(value));
 }
 
-export function filtersToApiParameters(filters: DemoFilters) {
+export function filtersToApiFilters(filters: DemoFilters) {
   return {
     q: filters.q || undefined,
     performance_year: filters.year === "all" ? undefined : Number(filters.year),
@@ -49,8 +49,13 @@ export function filtersToApiParameters(filters: DemoFilters) {
     to_year: Number(filters.to),
     change_status: filters.status === "all" ? undefined : filters.status,
     affected_field: filters.field === "all" ? undefined : fieldParameters[filters.field],
-    verification_status:
-      filters.review === "all" ? undefined : reviewParameters[filters.review],
+    verification_status: filters.review === "all" ? undefined : reviewParameters[filters.review],
+  };
+}
+
+export function filtersToApiParameters(filters: DemoFilters) {
+  return {
+    ...filtersToApiFilters(filters),
     page_size: 100,
   };
 }

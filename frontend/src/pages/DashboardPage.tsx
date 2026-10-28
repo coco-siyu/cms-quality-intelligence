@@ -5,7 +5,7 @@ import { ChangeLedger } from "../components/cms/ChangeLedger";
 import { HeroCollage } from "../components/cms/HeroCollage";
 import { DemoBadge, ErrorState, LoadingState } from "../components/cms/shared";
 import { apiSummaryToMeasure } from "../features/measures/api/adapters";
-import { useApiMeasureList } from "../features/measures/api/queries";
+import { useApiMeasureList, usePerformanceYears } from "../features/measures/api/queries";
 import { getDataMode, type DataMode } from "../features/measures/dataMode";
 import { parseDemoFilters } from "../features/measures/demo/filters";
 import { useDemoMeasureList } from "../features/measures/demo/queries";
@@ -14,10 +14,12 @@ import type { DemoFilters, DemoMeasure } from "../features/measures/demo/types";
 function DashboardContent({
   filters,
   measures,
+  performanceYears,
   dataMode,
 }: {
   filters: DemoFilters;
   measures: DemoMeasure[];
+  performanceYears: number[];
   dataMode: DataMode;
 }) {
   const navigate = useNavigate({ from: "/" });
@@ -49,7 +51,7 @@ function DashboardContent({
             <Link to="/measures" search={filters} className="primary-action">
               Explore changes <ArrowRight aria-hidden="true" />
             </Link>
-            <span>MSSP / APP Plus · PY2025–2026</span>
+            <span>MSSP / APP Plus · PY{filters.from}–PY{filters.to}</span>
           </div>
         </div>
         <HeroCollage />
@@ -66,8 +68,9 @@ function DashboardContent({
                 value={filters.from}
                 onChange={(event) => updateComparison({ from: event.target.value })}
               >
-                <option value="2025">2025</option>
-                <option value="2026">2026</option>
+                {performanceYears.map((year) => (
+                  <option key={year} value={year}>{year}</option>
+                ))}
               </select>
             </label>
             <ArrowRight aria-hidden="true" />
@@ -78,8 +81,9 @@ function DashboardContent({
                 value={filters.to}
                 onChange={(event) => updateComparison({ to: event.target.value })}
               >
-                <option value="2025">2025</option>
-                <option value="2026">2026</option>
+                {performanceYears.map((year) => (
+                  <option key={year} value={year}>{year}</option>
+                ))}
               </select>
             </label>
           </div>
@@ -142,7 +146,12 @@ function DemoDashboardPage({ filters }: { filters: DemoFilters }) {
   }
 
   return (
-    <DashboardContent filters={filters} measures={measureQuery.data.items} dataMode="demo" />
+    <DashboardContent
+      filters={filters}
+      measures={measureQuery.data.items}
+      performanceYears={[2025, 2026]}
+      dataMode="demo"
+    />
   );
 }
 
@@ -155,13 +164,21 @@ function ApiDashboardPage({ filters }: { filters: DemoFilters }) {
     field: "all",
     review: "all",
   });
+  const performanceYearsQuery = usePerformanceYears();
 
-  if (measureQuery.isPending) {
+  if (measureQuery.isPending || performanceYearsQuery.isPending) {
     return <LoadingState label="Loading published measures…" />;
   }
-  if (measureQuery.isError) {
+  if (measureQuery.isError || performanceYearsQuery.isError) {
+    const error = measureQuery.error ?? performanceYearsQuery.error;
     return (
-      <ErrorState message={measureQuery.error.message} onRetry={() => void measureQuery.refetch()} />
+      <ErrorState
+        message={error?.message ?? "Published measure data could not be loaded."}
+        onRetry={() => {
+          void measureQuery.refetch();
+          void performanceYearsQuery.refetch();
+        }}
+      />
     );
   }
 
@@ -169,6 +186,7 @@ function ApiDashboardPage({ filters }: { filters: DemoFilters }) {
     <DashboardContent
       filters={filters}
       measures={measureQuery.data.items.map(apiSummaryToMeasure)}
+      performanceYears={performanceYearsQuery.data.years}
       dataMode="api"
     />
   );

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useRouterState, useSearch } from "@tanstack/react-router";
 import {
   ArrowRight,
@@ -17,6 +17,7 @@ import { FICTIONAL_DATA_NOTICE } from "../../features/measures/demo/fixtures";
 import { parseDemoFilters } from "../../features/measures/demo/filters";
 import type { DemoFilters } from "../../features/measures/demo/types";
 import { getDataMode } from "../../features/measures/dataMode";
+import { usePerformanceYears } from "../../features/measures/api/queries";
 
 const primaryNavigation = [
   { to: "/", label: "Home", icon: Home },
@@ -134,8 +135,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const path = useRouterState({ select: (state) => state.location.pathname });
   const dataMode = getDataMode();
   const isAdmin = path.startsWith("/admin");
+  const performanceYearsQuery = usePerformanceYears(dataMode === "api" && !isAdmin);
+  const performanceYears =
+    dataMode === "demo"
+      ? [2025, 2026]
+      : (performanceYearsQuery.data?.years ??
+        [...new Set([Number(filters.from), Number(filters.to)])].filter(Number.isInteger));
 
-  function updateComparison(values: Partial<DemoFilters>) {
+  const updateComparison = useCallback((values: Partial<DemoFilters>) => {
     const nextSearch = { ...filters, ...values };
 
     if (path === "/") {
@@ -152,7 +159,23 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         replace: true,
       });
     }
-  }
+  }, [filters, navigate, path]);
+
+  useEffect(() => {
+    const available = performanceYearsQuery.data;
+    if (dataMode !== "api" || isAdmin || !available) return;
+
+    const allowedYears = new Set(available.years.map(String));
+    const from = allowedYears.has(filters.from)
+      ? filters.from
+      : String(available.default_from_year);
+    const to = allowedYears.has(filters.to) ? filters.to : String(available.default_to_year);
+    const year = filters.year === "all" || allowedYears.has(filters.year) ? filters.year : "all";
+
+    if (from !== filters.from || to !== filters.to || year !== filters.year) {
+      updateComparison({ from, to, year });
+    }
+  }, [dataMode, filters.from, filters.to, filters.year, isAdmin, performanceYearsQuery.data, updateComparison]);
 
   return (
     <div className={`site-layout ${collapsed ? "site-sidebar-collapsed" : ""}`}>
@@ -195,8 +218,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 value={filters.from}
                 onChange={(event) => updateComparison({ from: event.target.value })}
               >
-                <option value="2025">PY2025</option>
-                <option value="2026">PY2026</option>
+                {performanceYears.map((year) => (
+                  <option key={year} value={year}>PY{year}</option>
+                ))}
               </select>
             </label>
             <ArrowRight aria-hidden="true" />
@@ -207,8 +231,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 value={filters.to}
                 onChange={(event) => updateComparison({ to: event.target.value })}
               >
-                <option value="2025">PY2025</option>
-                <option value="2026">PY2026</option>
+                {performanceYears.map((year) => (
+                  <option key={year} value={year}>PY{year}</option>
+                ))}
               </select>
             </label>
           </div>}

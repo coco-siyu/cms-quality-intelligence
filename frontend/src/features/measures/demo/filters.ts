@@ -10,7 +10,9 @@ export const defaultDemoFilters: DemoFilters = {
   to: "2026",
 };
 
-const allowedYears = new Set(["2025", "2026"]);
+function isPerformanceYear(value: string) {
+  return /^\d{4}$/.test(value) && Number(value) >= 2000 && Number(value) <= 2100;
+}
 
 export function parseDemoFilters(value: Record<string, unknown>): DemoFilters {
   const stringValue = (key: keyof DemoFilters, fallback: string) => {
@@ -29,8 +31,8 @@ export function parseDemoFilters(value: Record<string, unknown>): DemoFilters {
     year: stringValue("year", "all"),
     field: stringValue("field", "all"),
     review: stringValue("review", "all"),
-    from: allowedYears.has(from) ? from : defaultDemoFilters.from,
-    to: allowedYears.has(to) ? to : defaultDemoFilters.to,
+    from: isPerformanceYear(from) ? from : defaultDemoFilters.from,
+    to: isPerformanceYear(to) ? to : defaultDemoFilters.to,
   };
 }
 

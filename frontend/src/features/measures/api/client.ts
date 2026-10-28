@@ -2,6 +2,7 @@ import type {
   ApiErrorPayload,
   PerformanceYearList,
   PublicMeasureDetail,
+  PublicMeasureNavigation,
   PublicMeasurePage,
 } from "./types";
 
@@ -72,6 +73,16 @@ export const measureApi = {
     const parameters = queryString({ from_year: fromYear, to_year: toYear });
     return apiGet<PublicMeasureDetail>(
       `/api/measures/${encodeURIComponent(measureId)}${parameters}`,
+      signal,
+    );
+  },
+  navigation(
+    measureId: string,
+    parameters: MeasureListParameters,
+    signal?: AbortSignal,
+  ) {
+    return apiGet<PublicMeasureNavigation>(
+      `/api/measures/${encodeURIComponent(measureId)}/navigation${queryString(parameters)}`,
       signal,
     );
   },
