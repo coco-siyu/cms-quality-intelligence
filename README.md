@@ -84,6 +84,20 @@ claimed as part of the M1 roster release.
 See `docs/checkpoint-c1.md` for schema decisions, scope boundaries, and the
 verified local workflow.
 
+## Live Zoomcamp demo
+
+- Public application: <https://cms-quality-intelligence-web.onrender.com>
+- Admin review workspace: <https://cms-quality-intelligence-web.onrender.com/admin>
+- Demo username: `admin`
+- Demo password: `adminadmin123`
+
+These credentials are intentionally public and belong only to the disposable
+Render Free Zoomcamp preview. They are not reused for local development or any
+production system. The Admin workspace contains no patient-level data, but it
+does include writable review controls; reviewers should inspect the workflow
+without approving, publishing, or changing source records. The credential must
+be rotated or removed after the course review period.
+
 ## Quick local start
 
 The repository supports a fast host-development workflow and a fully containerized

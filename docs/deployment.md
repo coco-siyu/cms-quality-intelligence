@@ -101,8 +101,9 @@ Provide these through the host's encrypted secret/environment system:
 - Optional `CMSQI_OPENAI_API_KEY` and `CMSQI_AI_CLARIFICATION_MODEL` only if the
   private clarification feature is intentionally enabled.
 
-Use strong, unique database credentials. Do not deploy the local demo password,
-the local `.env`, fictional fixtures as verified records, or patient-level data.
+Use strong, unique database credentials. Production deployments must not reuse
+the intentionally public Zoomcamp preview login, the local `.env`, fictional
+fixtures as verified records, or patient-level data.
 
 ## Release procedure
 
@@ -132,10 +133,12 @@ normal revert commit on `main`; do not rewrite shared history.
 - [x] `/health` returns `{"status":"ok"}`.
 - [x] Public API returns the eight roster identities and 14 memberships after bootstrap.
 - [x] `/api/admin/...` returns `401` without an authenticated session.
-- [ ] Admin authentication uses a secure cookie.
+- [x] Admin authentication uses a Secure, HttpOnly, SameSite=Lax cookie.
 - [ ] Database data persists after an application restart.
 - [x] Each published roster record exposes two official CMS evidence references.
-- [x] No `.env`, key, password, private draft, or internal review response is public.
+- [x] No `.env`, private key, production credential, private draft response, or
+  internal review response is public. The disposable Zoomcamp preview login is
+  intentionally published in the README.
 - [x] The deployed Git revision and rollback procedure are recorded.
 
 ## Deployment evidence

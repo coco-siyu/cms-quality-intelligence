@@ -1,6 +1,6 @@
 # AI Dev Tools Zoomcamp submission evidence
 
-Status date: October 27, 2026
+Status date: October 28, 2026
 
 The current course repository describes the final project as an end-to-end
 application with a clear problem, frontend, backend, API contract, persistence,
@@ -22,7 +22,7 @@ compared with the final submission page before submission.
 | Public deployment | `docs/deployment.md` | Render Free preview live; automated public smoke and access-boundary checks pass |
 | AI-assisted workflow documentation | `AGENTS.md` and `docs/ai-development.md` | Complete |
 | Reproducible reviewer instructions | `README.md`, Makefile, smoke script, this guide | Complete locally and exercised against the public preview |
-| CI and baseline security | GitHub Actions, CodeQL, Dependabot, `security/README.md` | Hosted CI passes on deployment revision `3e69248` |
+| CI and baseline security | GitHub Actions, CodeQL, Dependabot, `security/README.md` | Hosted CI and CodeQL pass on application revision `93a9826` |
 
 ## Useful review commands
 
@@ -39,7 +39,8 @@ The non-container development workflow remains available through `make dev`.
 
 1. Open the public homepage and Measure Explorer.
 2. Show that public routes contain only published API records.
-3. Sign in to the private admin workspace.
+3. Sign in to the private admin workspace with the disposable credentials in
+   `README.md`.
 4. Open the CMS source registry and inspect immutable source history.
 5. Start **Check for updates** and show timestamped document progress.
 6. Inspect a source-backed candidate and its official evidence.
@@ -50,10 +51,9 @@ The demo must not describe unreviewed CMS candidates as verified production data
 
 ## Remaining submission blockers
 
-1. Complete the remaining manual production-verification items in
-   `docs/deployment.md`, including secure-cookie login and persistence after a
-   controlled restart.
-2. Decide whether the temporary Render Free database should receive only the
-   source-backed private draft inventory for the Admin demonstration.
-3. Recheck the official rubric and submission deadline.
-4. For the certificate path, complete the course's required peer reviews.
+1. Verify database persistence after a controlled Render restart independently
+   of the idempotent preview bootstrap.
+2. Recheck the official rubric and submission deadline.
+3. For the certificate path, complete the course's required peer reviews.
+4. Rotate or remove the intentionally public preview login after the review
+   period.
