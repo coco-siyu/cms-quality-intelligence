@@ -74,15 +74,54 @@ def test_measure_versions_can_be_selected_by_year(client: TestClient) -> None:
     assert [item["performance_year"] for item in response.json()["versions"]] == [2025]
 
 
+def test_measure_navigation_preserves_public_filters_and_stable_order(
+    client: TestClient,
+) -> None:
+    first = client.get(
+        "/api/measures/DEMO-001/navigation",
+        params={"from_year": 2025, "to_year": 2026},
+    )
+    assert first.status_code == 200
+    assert first.json() == {
+        "measure_id": "DEMO-001",
+        "position": 1,
+        "total_items": 2,
+        "previous_measure_id": None,
+        "next_measure_id": "DEMO-002",
+    }
+
+    filtered = client.get(
+        "/api/measures/DEMO-002/navigation",
+        params={"q": "Unresolved", "from_year": 2025, "to_year": 2026},
+    )
+    assert filtered.status_code == 200
+    assert filtered.json() == {
+        "measure_id": "DEMO-002",
+        "position": 1,
+        "total_items": 1,
+        "previous_measure_id": None,
+        "next_measure_id": None,
+    }
+
+    outside_filter = client.get(
+        "/api/measures/DEMO-002/navigation",
+        params={"performance_year": 2025},
+    )
+    assert outside_filter.status_code == 404
+
+
 def test_not_found_and_validation_errors_match_public_error_shape(client: TestClient) -> None:
     not_found = client.get("/api/measures/DEMO-MISSING")
     invalid = client.get("/api/measures", params={"page_size": 101})
+    navigation_not_found = client.get("/api/measures/DEMO-MISSING/navigation")
 
     assert not_found.status_code == 404
     assert not_found.json()["code"] == "not_found"
     assert invalid.status_code == 422
     assert invalid.json()["code"] == "validation_error"
     assert invalid.json()["details"]
+    assert navigation_not_found.status_code == 404
+    assert navigation_not_found.json()["code"] == "not_found"
 
 
 def test_performance_years_are_derived_from_published_memberships(client: TestClient) -> None:

@@ -20,6 +20,7 @@ def test_runtime_openapi_exposes_contract_operation_ids_and_error_models() -> No
         "/api/performance-years": "listPerformanceYears",
         "/api/measures": "listMeasures",
         "/api/measures/{measure_id}": "getMeasure",
+        "/api/measures/{measure_id}/navigation": "getMeasureNavigation",
         "/api/measures/{measure_id}/versions": "listMeasureVersions",
     }
 

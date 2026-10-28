@@ -9,6 +9,7 @@ from app.domain import AffectedField, ChangeStatus, PublicVerificationStatus
 from app.repositories.measures import (
     MeasureFilters,
     get_measure,
+    get_measure_navigation,
     list_measure_versions,
     list_measures,
     list_performance_years,
@@ -18,6 +19,7 @@ from app.schemas import (
     MeasureVersionList,
     PerformanceYearList,
     PublicMeasureDetail,
+    PublicMeasureNavigation,
     PublicMeasurePage,
 )
 
@@ -103,6 +105,41 @@ def measures(
             page_size=page_size,
         ),
     )
+
+
+@router.get(
+    "/measures/{measure_id}/navigation",
+    response_model=PublicMeasureNavigation,
+    operation_id="getMeasureNavigation",
+    responses=resource_responses,
+)
+def measure_navigation(
+    session: DatabaseSession,
+    measure_id: Annotated[str, Path(min_length=1)],
+    q: Annotated[str | None, Query(max_length=200)] = None,
+    performance_year: Annotated[int | None, Query(ge=2000, le=2100)] = None,
+    from_year: Annotated[int | None, Query(ge=2000, le=2100)] = None,
+    to_year: Annotated[int | None, Query(ge=2000, le=2100)] = None,
+    change_status: ChangeStatus | None = None,
+    affected_field: AffectedField | None = None,
+    verification_status: PublicVerificationStatus | None = None,
+) -> PublicMeasureNavigation:
+    result = get_measure_navigation(
+        session,
+        measure_id,
+        MeasureFilters(
+            q=q,
+            performance_year=performance_year,
+            from_year=from_year,
+            to_year=to_year,
+            change_status=change_status,
+            affected_field=affected_field,
+            verification_status=verification_status,
+        ),
+    )
+    if result is None:
+        raise _not_found(measure_id)
+    return result
 
 
 @router.get(

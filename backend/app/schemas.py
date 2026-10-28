@@ -98,6 +98,14 @@ class PublicMeasurePage(BaseModel):
     pagination: PaginationMeta
 
 
+class PublicMeasureNavigation(BaseModel):
+    measure_id: str
+    position: int
+    total_items: int
+    previous_measure_id: str | None
+    next_measure_id: str | None
+
+
 class MeasureVersionList(BaseModel):
     measure_id: str
     versions: list[MeasureVersionResponse]

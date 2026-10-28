@@ -86,6 +86,34 @@ paths:
           $ref: "#/components/responses/NotFound"
         "422":
           $ref: "#/components/responses/ValidationError"
+  /api/measures/{measure_id}/navigation:
+    get:
+      operationId: getMeasureNavigation
+      tags: [Public measures]
+      summary: Get filtered Previous/Next measure navigation
+      description: |
+        Resolves the selected measure's position and adjacent stable IDs using
+        the same public filters and measure-ID ordering as the directory.
+      parameters:
+        - $ref: "#/components/parameters/MeasureId"
+        - $ref: "#/components/parameters/SearchQuery"
+        - $ref: "#/components/parameters/PerformanceYear"
+        - $ref: "#/components/parameters/FromYear"
+        - $ref: "#/components/parameters/ToYear"
+        - $ref: "#/components/parameters/ChangeStatus"
+        - $ref: "#/components/parameters/AffectedField"
+        - $ref: "#/components/parameters/VerificationStatus"
+      responses:
+        "200":
+          description: Position and adjacent IDs within the filtered public directory.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicMeasureNavigation"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
   /api/measures/{measure_id}/versions:
     get:
       operationId: listMeasureVersions
@@ -1032,6 +1060,28 @@ components:
             $ref: "#/components/schemas/PublicMeasureSummary"
         pagination:
           $ref: "#/components/schemas/PaginationMeta"
+    PublicMeasureNavigation:
+      type: object
+      additionalProperties: false
+      required:
+        - measure_id
+        - position
+        - total_items
+        - previous_measure_id
+        - next_measure_id
+      properties:
+        measure_id:
+          type: string
+        position:
+          type: integer
+          minimum: 1
+        total_items:
+          type: integer
+          minimum: 1
+        previous_measure_id:
+          type: [string, "null"]
+        next_measure_id:
+          type: [string, "null"]
     AdminLoginRequest:
       type: object
       required: [username, password]

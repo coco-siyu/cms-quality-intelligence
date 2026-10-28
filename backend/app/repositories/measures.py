@@ -27,6 +27,7 @@ from app.schemas import (
     MeasureVersionResponse,
     PaginationMeta,
     PublicMeasureDetail,
+    PublicMeasureNavigation,
     PublicMeasurePage,
     PublicMeasureSummary,
     SpecificationFieldResponse,
@@ -223,7 +224,7 @@ def list_performance_years(session: Session) -> list[int]:
     return list(session.scalars(statement))
 
 
-def list_measures(session: Session, filters: MeasureFilters) -> PublicMeasurePage:
+def _filtered_measures_statement(filters: MeasureFilters) -> Select[tuple[Measure]]:
     statement = select(Measure).where(
         Measure.is_public.is_(True),
         Measure.versions.any(MeasureVersion.publication_state == PublicationState.PUBLISHED),
@@ -273,6 +274,11 @@ def list_measures(session: Session, filters: MeasureFilters) -> PublicMeasurePag
                 )
             )
         statement = statement.where(Measure.comparisons.any(and_(*comparison_predicates)))
+    return statement
+
+
+def list_measures(session: Session, filters: MeasureFilters) -> PublicMeasurePage:
+    statement = _filtered_measures_statement(filters)
 
     count_statement = select(func.count()).select_from(statement.subquery())
     total_items = session.scalar(count_statement) or 0
@@ -292,6 +298,26 @@ def list_measures(session: Session, filters: MeasureFilters) -> PublicMeasurePag
             total_items=total_items,
             total_pages=math.ceil(total_items / filters.page_size) if total_items else 0,
         ),
+    )
+
+
+def get_measure_navigation(
+    session: Session,
+    measure_id: str,
+    filters: MeasureFilters,
+) -> PublicMeasureNavigation | None:
+    statement = _filtered_measures_statement(filters).with_only_columns(Measure.measure_id)
+    measure_ids = list(session.scalars(statement.order_by(Measure.measure_id)))
+    try:
+        index = measure_ids.index(measure_id)
+    except ValueError:
+        return None
+    return PublicMeasureNavigation(
+        measure_id=measure_id,
+        position=index + 1,
+        total_items=len(measure_ids),
+        previous_measure_id=measure_ids[index - 1] if index > 0 else None,
+        next_measure_id=measure_ids[index + 1] if index + 1 < len(measure_ids) else None,
     )
 
 
