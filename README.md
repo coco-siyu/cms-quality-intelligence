@@ -279,7 +279,6 @@ source-backed and admin-verified before being exposed as verified data.
 - [`docs/ai-development.md`](docs/ai-development.md) documents how Lovable,
   Codex, automated checks, and human review were used.
 - [`docs/deployment.md`](docs/deployment.md) defines production settings and the
-  public verification checklist. A real public URL is still pending a hosting
-  decision and must not be claimed before it is tested.
+  public verification checklist and records the tested Render Free preview URLs.
 - [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs backend, frontend,
   contract, and image-build checks for pushes and pull requests.

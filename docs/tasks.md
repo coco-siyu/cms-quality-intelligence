@@ -443,11 +443,12 @@ Description: Select low-cost managed hosting or a single cloud VM based on actua
 Implementation status (public preview deployed, production verification pending,
 2026-10-27): Render Free hosts the React/Nginx frontend, FastAPI API, and a
 private-network PostgreSQL 16 database. HTTPS redirects, direct SPA routes,
-same-origin API proxying, API health, an empty published-record boundary, and
-unauthenticated Admin rejection pass against the public URLs at revision
-`3e69248`. Secure-cookie login, restart persistence with retained data, official
-source links, and a final exposure review remain unchecked; the free database is
-temporary and is not a production durability claim.
+same-origin API proxying, API health, the eight-measure published roster,
+two-source public evidence, the populated private review queue, authenticated
+Admin access, and unauthenticated Admin rejection pass at revision `92212ad`.
+Restart persistence independent of the idempotent bootstrap and the remaining
+manual production checks are still open; the free database is temporary and is
+not a production durability claim.
 
 ## 67. Document the AI-assisted development workflow
 Goal: Show how AI tools were used and checked for the Zoomcamp rubric.

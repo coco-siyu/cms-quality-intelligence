@@ -6,9 +6,11 @@ The repository contains production-style frontend and backend images and a local
 full-stack Compose configuration. Both images and the complete local stack passed
 the smoke check on October 27, 2026. A Render Free public preview is also live.
 Automated public verification passed for HTTPS redirects, direct client routes,
-API health and proxying, the database-backed public endpoint, and unauthenticated
-Admin protection. The unchecked manual items below remain required before this
-preview should be described as production-ready.
+API health and proxying, the database-backed public roster, official CMS evidence
+projection, and unauthenticated Admin protection. An authenticated browser check
+also confirmed that the private review queue was populated. The unchecked manual
+items below remain required before this preview should be described as
+production-ready.
 
 ## Render Free preview
 
@@ -128,12 +130,12 @@ normal revert commit on `main`; do not rewrite shared history.
 - [x] HTTPS is valid and HTTP redirects to HTTPS.
 - [x] `/` and a direct client route such as `/measures` load after refresh.
 - [x] `/health` returns `{"status":"ok"}`.
-- [ ] Public API returns the eight roster identities and 14 memberships after bootstrap.
+- [x] Public API returns the eight roster identities and 14 memberships after bootstrap.
 - [x] `/api/admin/...` returns `401` without an authenticated session.
 - [ ] Admin authentication uses a secure cookie.
 - [ ] Database data persists after an application restart.
-- [ ] Each published roster record exposes two working official CMS evidence links.
-- [ ] No `.env`, key, password, private draft, or internal review response is public.
+- [x] Each published roster record exposes two official CMS evidence references.
+- [x] No `.env`, key, password, private draft, or internal review response is public.
 - [x] The deployed Git revision and rollback procedure are recorded.
 
 ## Deployment evidence
@@ -144,7 +146,7 @@ Complete this only after deployment:
 | --- | --- |
 | Public URL | `https://cms-quality-intelligence-web.onrender.com` |
 | API URL | `https://cms-quality-intelligence-api.onrender.com` |
-| Verified application revision | `3e69248` |
+| Verified application revision | `92212ad` |
 | Deployment environment | Render Free: Nginx/React, FastAPI, PostgreSQL 16 |
-| Verified at | 2026-10-27 22:12 UTC |
-| Verified by | Automated repository smoke check and public boundary probes |
+| Verified at | 2026-10-28 02:45 UTC |
+| Verified by | Automated checks, public boundary probes, and authenticated UI review |
