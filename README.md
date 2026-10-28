@@ -66,14 +66,20 @@ data. Individual reviewed fields have a separately authorized publication
 endpoint; the real queue remains unpublished until qualified review decisions
 exist.
 
-The Measure Explorer and API-mode measure detail pages now read from FastAPI.
+The M1 public roster explorer is complete within its approved publication
+boundary. The Dashboard, Measure Explorer, and API-mode detail pages read from
+FastAPI; performance-year selectors are populated by the public API, and detail
+Previous/Next controls retain filters while following server-side list order.
+The guarded seed-to-HTTP-to-render workflow and manual inventory checklist are
+documented in [`docs/m1-validation.md`](docs/m1-validation.md).
+
 The Dashboard comparison ledger uses published API records in API mode and does
 not label them fictional; comparison states remain unknown until the M2 backend
 is implemented. What's New shows an honest unavailable state in API mode, and AI
 Impact remains a demo-only prototype. The public roster baseline can be explored
 without presenting unreviewed clinical details as verified. Detailed
-specification review and formal field publication remain incomplete, so M1 is
-not complete.
+specification review and formal field publication remain incomplete and are not
+claimed as part of the M1 roster release.
 
 See `docs/checkpoint-c1.md` for schema decisions, scope boundaries, and the
 verified local workflow.

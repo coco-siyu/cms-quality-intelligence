@@ -1,6 +1,6 @@
 # CMS Quality Intelligence — Implementation Backlog
 
-## Checkpoint status (October 27, 2026)
+## Checkpoint status (October 28, 2026)
 
 - Tasks 1, 2, 5–12: implemented and verified through Checkpoints A, B, C1,
   and C2.1–C2.5. The official PY2025–PY2026 roster has two-source evidence,
@@ -18,9 +18,11 @@
   append-only audit trail. Task 49 now supports separately authorized publication
   of an individually approved, excerpt-backed field, but the real queue still has
   no expert decisions and therefore no production field has been approved for
-  release. Tasks 17, 20, and 22 also remain open, including
-  dynamic year options, server-paginated Previous/Next, and full end-to-end M1
-  validation.
+  release. Tasks 17, 20, and 22 are complete: the public routes use API-provided
+  performance years, measure detail navigation follows the filtered server-side
+  order, and the verified seed is covered through public HTTP responses and a
+  rendered source-backed page. The repeatable reviewer workflow is documented
+  in `docs/m1-validation.md`.
 - Task 38 is complete: environment-managed single-admin credentials, signed
   HttpOnly sessions, backend authorization, and authenticated private-review
   endpoints are implemented and contract-tested. Task 57 has a first queue and
@@ -120,6 +122,12 @@ Description: Create a reusable client layer for measure listing, detail, and yea
 Goal: Give public visitors an entry point into CMS changes and measures.
 Description: Implement a responsive homepage shell with locations for summary counts, What's New, year selection, and a searchable measure list. Use actual public API data where available and clearly label sections not yet populated rather than showing invented metrics.
 
+Implementation status (complete, 2026-10-28): The Lovable-derived responsive
+homepage uses published API roster data and API-provided year options. Per the
+approved navigation refinement, searchable measures and What's New have their
+own linked routes; unavailable production comparison/feed content is not
+replaced with fictional claims.
+
 ## 18. Add keyword search and structured measure filters
 Goal: Let visitors find measures without conversational search.
 Description: Build search by measure ID/name/description and filters for performance year, membership/change status, and affected specification area when data is available. Keep filters in URL query parameters or equivalent navigable state, and test that clearing filters restores the full verified roster.
@@ -132,6 +140,12 @@ Description: Create a shareable route for each measure with an Overview tab show
 Goal: Support efficient sequential review of filtered measures.
 Description: Allow selecting two available performance years, initially 2025 and 2026, without hardcoding the comparison UI to those years. Add Previous/Next navigation on dedicated measure pages that retains the originating measure filters and list order.
 
+Implementation status (complete, 2026-10-28): Public selectors use
+`GET /api/performance-years`, invalid direct-route years reconcile to API
+defaults, and `GET /api/measures/{measure_id}/navigation` computes adjacent IDs
+from the same public filters and stable ordering used by the list. Detail links
+retain the originating URL state.
+
 ## 21. Display verification and source-freshness metadata
 Goal: Let visitors distinguish reviewed content from newly detected source updates.
 Description: Show last verified date, last source check, and newer-source indicator on public measure pages when such data exists. Explain that a recent check is not proof the CMS specification itself is still current; test empty or unknown freshness states.
@@ -139,6 +153,12 @@ Description: Show last verified date, last source check, and newer-source indica
 ## 22. Validate the M1 public explorer workflow
 Goal: Demonstrate a reliable, AI-free first release.
 Description: Add a test covering seeded data through API retrieval to a rendered measure page, plus checks for source provenance and year selection. Document how a reviewer can run the test and manually inspect the complete 2025–2026 inventory.
+
+Implementation status (complete, 2026-10-28): Backend integration coverage runs
+the guarded verified seed through public years, list, detail, and navigation
+HTTP responses. Frontend integration coverage renders source-backed roster
+evidence and checks that draft clinical fields stay absent. Automated and manual
+review steps are recorded in `docs/m1-validation.md`.
 
 ## M2 — Change Intelligence
 
