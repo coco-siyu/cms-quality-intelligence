@@ -4,6 +4,7 @@ from datetime import UTC, date, datetime
 
 from sqlalchemy import select
 from sqlalchemy.engine import make_url
+from sqlalchemy.orm import Session
 
 from app.database import SessionLocal
 from app.domain import (
@@ -36,17 +37,27 @@ def _assert_demo_target() -> None:
         raise RuntimeError("Refusing to seed a database whose name does not contain 'demo'.")
 
 
+def clear_demo_records_in_session(session: Session) -> tuple[int, int]:
+    measures = list(
+        session.scalars(select(Measure).where(Measure.measure_id.startswith(DEMO_PREFIX)))
+    )
+    for measure in measures:
+        session.delete(measure)
+    session.flush()
+    documents = list(
+        session.scalars(
+            select(SourceDocument).where(SourceDocument.source_id.startswith(DEMO_PREFIX))
+        )
+    )
+    for document in documents:
+        session.delete(document)
+    session.flush()
+    return len(measures), len(documents)
+
+
 def clear_demo_records() -> None:
     with SessionLocal.begin() as session:
-        for measure in session.scalars(
-            select(Measure).where(Measure.measure_id.startswith(DEMO_PREFIX))
-        ):
-            session.delete(measure)
-        session.flush()
-        for document in session.scalars(
-            select(SourceDocument).where(SourceDocument.source_id.startswith(DEMO_PREFIX))
-        ):
-            session.delete(document)
+        clear_demo_records_in_session(session)
 
 
 def _field(

@@ -170,6 +170,16 @@ def _public_description(versions: list[MeasureVersion]) -> str:
                 )
             ):
                 return field.value
+    if any(
+        field.field == AffectedField.MEASURE_SET
+        and field.availability == FieldAvailability.AVAILABLE
+        for version in versions
+        for field in version.fields
+    ):
+        return (
+            "Official program-year roster membership is verified; detailed "
+            "specification fields remain under review."
+        )
     return "Verified specification fields are partially available; unresolved fields are withheld."
 
 
