@@ -8,10 +8,12 @@
 - Tasks 14–16, 18, 19, and 21: C1 implementation is present against synthetic
   contract fixtures, including public/private isolation and explicit
   unavailable/unresolved states.
-- Task 13 is partially complete: a validated, draft seed artifact now
-  contains all eight identities and 14 verified program-year memberships. The
-  collection-variant schema is implemented, and the guarded PostgreSQL import
-  stages 32 private variants and 352 field candidates without publishing them.
+- Task 13 is partially complete: a validated seed artifact contains all eight
+  identities and 14 verified program-year memberships. A guarded preview
+  publication step now requires two distinct official CMS sources for every
+  membership before exposing only the roster baseline. The collection-variant
+  schema is implemented, and the guarded PostgreSQL import stages 32 private
+  variants and 352 field candidates without publishing them.
   A guarded, idempotent review importer now preserves future decisions in an
   append-only audit trail. Task 49 now supports separately authorized publication
   of an individually approved, excerpt-backed field, but the real queue still has

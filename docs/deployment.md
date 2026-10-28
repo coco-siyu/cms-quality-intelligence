@@ -19,8 +19,9 @@ The repository includes `render.yaml` for a temporary, no-cost public preview:
   administrator session remain same-origin. Its `CMSQI_BACKEND_URL` points to
   the API's public Render hostname because free web services cannot receive
   private-network requests.
-- `cms-quality-intelligence-api`: the FastAPI Docker image. Its normal container
-  startup applies Alembic migrations before accepting requests.
+- `cms-quality-intelligence-api`: the FastAPI Docker image. Its preview startup
+  applies Alembic migrations, idempotently prepares the frozen reviewed dataset,
+  publishes only the verified roster baseline, and then accepts requests.
 - `cms-quality-intelligence-db`: a private-network PostgreSQL 16 database.
 
 To create the preview:
@@ -52,9 +53,17 @@ To create the preview:
    ./scripts/smoke.sh
    ```
 
-Do not run either seed command against this preview by default. A new Render
-database intentionally begins with only the schema, so public endpoints remain
-empty until separately reviewed records are explicitly published.
+The Blueprint sets `CMSQI_DEPLOYMENT_ENVIRONMENT=preview` and
+`CMSQI_BOOTSTRAP_PREVIEW=true`. Together these explicitly authorize the guarded,
+idempotent preview bootstrap on service startup. The public side receives eight
+measure identities, 14 verified PY2025/PY2026 memberships, their roster evidence,
+and only the source revisions needed for that evidence. The Admin workspace
+receives the 32 private collection variants and 352 pending field candidates.
+Detailed candidate values, reviewer notes, and unresolved specification fields
+remain outside public responses. The bootstrap also removes only explicitly
+fictional `DEMO-*` seed fixtures so they cannot be mixed into the public roster.
+Do not enable these preview flags in a durable production environment; use a
+separately reviewed release procedure there.
 
 Render Free is a preview environment, not a durable production environment. A
 free web service sleeps after 15 minutes without traffic and can take about a
@@ -119,11 +128,11 @@ normal revert commit on `main`; do not rewrite shared history.
 - [x] HTTPS is valid and HTTP redirects to HTTPS.
 - [x] `/` and a direct client route such as `/measures` load after refresh.
 - [x] `/health` returns `{"status":"ok"}`.
-- [x] Public API endpoints return only published records (currently an empty set).
+- [ ] Public API returns the eight roster identities and 14 memberships after bootstrap.
 - [x] `/api/admin/...` returns `401` without an authenticated session.
 - [ ] Admin authentication uses a secure cookie.
 - [ ] Database data persists after an application restart.
-- [ ] Official source links open the expected CMS publication.
+- [ ] Each published roster record exposes two working official CMS evidence links.
 - [ ] No `.env`, key, password, private draft, or internal review response is public.
 - [x] The deployed Git revision and rollback procedure are recorded.
 

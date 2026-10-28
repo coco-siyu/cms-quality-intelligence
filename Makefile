@@ -2,7 +2,7 @@ SHELL := /bin/bash
 
 .DEFAULT_GOAL := help
 
-.PHONY: help setup db dev containers container-logs stop seed admin-credentials smoke check security-check backend-check frontend-check
+.PHONY: help setup db dev containers container-logs stop seed preview-data admin-credentials smoke check security-check backend-check frontend-check
 
 help:
 	@echo "CMS Quality Intelligence local commands"
@@ -10,6 +10,7 @@ help:
 	@echo "  make setup              Install dependencies, start PostgreSQL, and migrate"
 	@echo "  make admin-credentials  Generate the one-time local admin settings"
 	@echo "  make seed               Load source-backed CMS records as private drafts"
+	@echo "  make preview-data       Publish verified roster data; keep details private"
 	@echo "  make dev                Start PostgreSQL, FastAPI, and Vite"
 	@echo "  make containers         Build and start the complete containerized application"
 	@echo "  make container-logs     Follow logs from the containerized application"
@@ -54,6 +55,10 @@ stop:
 seed: db
 	cd backend && uv run alembic upgrade head
 	cd backend && CMSQI_ALLOW_VERIFIED_DRAFT_SEED=true uv run python -m app.commands.seed_verified
+
+preview-data: db
+	cd backend && uv run alembic upgrade head
+	cd backend && CMSQI_DEPLOYMENT_ENVIRONMENT=preview CMSQI_BOOTSTRAP_PREVIEW=true uv run python -m app.commands.bootstrap_preview
 
 admin-credentials: .env
 	cd backend && uv run python -m app.commands.generate_admin_credentials

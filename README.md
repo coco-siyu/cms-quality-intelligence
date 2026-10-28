@@ -28,7 +28,11 @@ immutable retrieval manifest, exact roster evidence locators, explicit
 collection variants, and a guarded private review workflow. The database can
 hold 32 collection-specific variants, 352 source-backed field candidates, and
 append-only reviewer decisions. Seeded detailed-field candidates begin pending
-and remain non-public unless a separate publication workflow is completed.
+and remain non-public unless a separate publication workflow is completed. A
+guarded preview bootstrap publishes only the eight verified identities, 14
+program-year memberships, roster evidence, and the three official source
+revisions supporting those memberships. All 32 collection variants and 352
+detailed field candidates remain private for administrator review.
 
 The M3 admin foundation adds an environment-configured single-admin login,
 signed HttpOnly sessions, and a private review desk for the roster, variants,
@@ -66,10 +70,10 @@ The Measure Explorer and API-mode measure detail pages now read from FastAPI.
 The Dashboard comparison ledger uses published API records in API mode and does
 not label them fictional; comparison states remain unknown until the M2 backend
 is implemented. What's New shows an honest unavailable state in API mode, and AI
-Impact remains a demo-only prototype. The reviewed CMS roster may be loaded
-locally only as private draft data; it is intentionally excluded from public API
-responses. Detailed specification review and formal publication approval remain
-incomplete, so M1 is not complete.
+Impact remains a demo-only prototype. The public roster baseline can be explored
+without presenting unreviewed clinical details as verified. Detailed
+specification review and formal field publication remain incomplete, so M1 is
+not complete.
 
 See `docs/checkpoint-c1.md` for schema decisions, scope boundaries, and the
 verified local workflow.
@@ -87,7 +91,7 @@ On the first run:
 make setup
 make admin-credentials
 # Copy the generated CMSQI_ADMIN_* lines into .env once.
-make seed
+make preview-data
 ```
 
 After that, start PostgreSQL, apply pending migrations, and launch both FastAPI
@@ -124,6 +128,11 @@ docker compose exec \
   -e CMSQI_ALLOW_VERIFIED_DRAFT_SEED=true \
   backend .venv/bin/python -m app.commands.seed_verified
 ```
+
+Use `make preview-data` in the host-development workflow when you want the same
+split as the hosted preview: verified roster membership in the public workspace,
+with collection variants and detailed candidates available only in Admin. The
+command is idempotent.
 
 The commands below remain available when working on one service independently.
 
@@ -234,6 +243,20 @@ never changes records to published:
 ```sh
 CMSQI_ALLOW_VERIFIED_DRAFT_SEED=true uv run python -m app.commands.seed_verified
 ```
+
+For an explicit preview environment, prepare the same records and publish only
+the source-backed roster baseline:
+
+```sh
+CMSQI_DEPLOYMENT_ENVIRONMENT=preview \
+CMSQI_BOOTSTRAP_PREVIEW=true \
+uv run python -m app.commands.bootstrap_preview
+```
+
+This operation does not publish collection-specific variants, extracted field
+candidates, reviewer notes, or detailed specification values. It also removes
+only explicitly fictional `DEMO-*` seed fixtures so the preview cannot mix them
+with the verified roster.
 
 Backend checks:
 
