@@ -130,7 +130,16 @@ def seeded_session(session: Session) -> Session:
             to_year=2026,
             status=ChangeStatus.MODIFIED,
             publication_state=PublicationState.PUBLISHED,
-            affected_fields=[MeasureComparisonField(field=AffectedField.DEFINITION)],
+            affected_fields=[
+                MeasureComparisonField(
+                    field=AffectedField.DEFINITION,
+                    status=ChangeStatus.MODIFIED,
+                    from_availability=FieldAvailability.AVAILABLE,
+                    to_availability=FieldAvailability.AVAILABLE,
+                    from_value="Fictional definition for 2025.",
+                    to_value="Fictional definition for 2026.",
+                )
+            ],
         )
     )
 

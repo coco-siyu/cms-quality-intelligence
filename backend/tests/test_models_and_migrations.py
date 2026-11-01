@@ -4,12 +4,28 @@ from pathlib import Path
 import pytest
 from alembic import command
 from alembic.config import Config
-from sqlalchemy import inspect
+from sqlalchemy import inspect, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.domain import AffectedField, CollectionType, FieldAvailability
-from app.models import Measure, MeasureVersion, SourceDocument, SourceRevision, SpecificationField
+from app.domain import (
+    AffectedField,
+    ChangeEvidenceSide,
+    ChangeStatus,
+    CollectionType,
+    FieldAvailability,
+    PublicationState,
+)
+from app.models import (
+    Measure,
+    MeasureComparison,
+    MeasureComparisonEvidence,
+    MeasureComparisonField,
+    MeasureVersion,
+    SourceDocument,
+    SourceRevision,
+    SpecificationField,
+)
 
 
 def test_unavailable_field_cannot_carry_a_value(session: Session) -> None:
@@ -123,6 +139,68 @@ def test_collection_variants_have_independent_version_streams(session: Session) 
     }
 
 
+def test_unresolved_comparison_side_cannot_be_claimed_as_removed(session: Session) -> None:
+    measure = Measure(
+        measure_id="DEMO-UNRESOLVED-COMPARISON",
+        name="Unresolved comparison constraint test",
+        description="Synthetic test record.",
+        is_public=False,
+        comparisons=[
+            MeasureComparison(
+                program="Fictional Quality Program",
+                from_year=2025,
+                to_year=2026,
+                status=ChangeStatus.REMOVED,
+                publication_state=PublicationState.DRAFT,
+                affected_fields=[
+                    MeasureComparisonField(
+                        field=AffectedField.MEASURE_SET,
+                        status=ChangeStatus.REMOVED,
+                        from_availability=FieldAvailability.AVAILABLE,
+                        from_value="true",
+                        to_availability=FieldAvailability.UNRESOLVED,
+                        to_value=None,
+                    )
+                ],
+            )
+        ],
+    )
+    session.add(measure)
+
+    with pytest.raises(IntegrityError):
+        session.commit()
+
+
+def test_change_field_links_evidence_to_each_year_side(seeded_session: Session) -> None:
+    measure = seeded_session.scalar(
+        select(Measure).where(Measure.measure_id == "DEMO-001")
+    )
+    assert measure is not None
+    comparison_field = measure.comparisons[0].affected_fields[0]
+    evidence_by_year = {
+        version.performance_year: version.fields[0].evidence[0]
+        for version in measure.versions
+    }
+    comparison_field.evidence_links.extend(
+        [
+            MeasureComparisonEvidence(
+                evidence_reference=evidence_by_year[2025],
+                side=ChangeEvidenceSide.FROM_VERSION,
+            ),
+            MeasureComparisonEvidence(
+                evidence_reference=evidence_by_year[2026],
+                side=ChangeEvidenceSide.TO_VERSION,
+            ),
+        ]
+    )
+    seeded_session.commit()
+
+    assert {link.side for link in comparison_field.evidence_links} == {
+        ChangeEvidenceSide.FROM_VERSION,
+        ChangeEvidenceSide.TO_VERSION,
+    }
+
+
 def test_initial_migration_builds_and_reverts_schema(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -151,6 +229,7 @@ def test_initial_migration_builds_and_reverts_schema(
         "evidence_references",
         "measure_comparisons",
         "measure_comparison_fields",
+        "measure_comparison_evidence",
         "source_checks",
         "source_extractions",
         "source_text_segments",
@@ -174,6 +253,26 @@ def test_initial_migration_builds_and_reverts_schema(
         "published_at",
         "published_by",
     }.issubset(candidate_columns)
+    comparison_field_columns = {
+        column["name"]
+        for column in inspect(engine).get_columns("measure_comparison_fields")
+    }
+    assert {
+        "status",
+        "from_availability",
+        "to_availability",
+        "from_value",
+        "to_value",
+    }.issubset(comparison_field_columns)
+    comparison_checks = {
+        constraint["name"]
+        for constraint in inspect(engine).get_check_constraints("measure_comparisons")
+    }
+    assert {
+        "ck_comparison_from_year_range",
+        "ck_comparison_to_year_range",
+        "change_status",
+    }.issubset(comparison_checks)
 
     command.downgrade(config, "base")
     assert inspect(engine).get_table_names() == ["alembic_version"]

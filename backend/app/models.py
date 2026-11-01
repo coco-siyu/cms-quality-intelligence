@@ -20,6 +20,7 @@ from app.database import Base
 from app.domain import (
     AffectedField,
     CandidateReviewDecision,
+    ChangeEvidenceSide,
     ChangeStatus,
     ClarificationEvidenceRelation,
     ClarificationOutcome,
@@ -73,6 +74,34 @@ affected_field_enum = Enum(
 change_status_enum = Enum(
     ChangeStatus,
     name="change_status",
+    native_enum=False,
+    create_constraint=True,
+    values_callable=lambda values: [value.value for value in values],
+)
+comparison_field_change_status_enum = Enum(
+    ChangeStatus,
+    name="comparison_field_change_status",
+    native_enum=False,
+    create_constraint=True,
+    values_callable=lambda values: [value.value for value in values],
+)
+comparison_from_availability_enum = Enum(
+    FieldAvailability,
+    name="comparison_from_availability",
+    native_enum=False,
+    create_constraint=True,
+    values_callable=lambda values: [value.value for value in values],
+)
+comparison_to_availability_enum = Enum(
+    FieldAvailability,
+    name="comparison_to_availability",
+    native_enum=False,
+    create_constraint=True,
+    values_callable=lambda values: [value.value for value in values],
+)
+change_evidence_side_enum = Enum(
+    ChangeEvidenceSide,
+    name="change_evidence_side",
     native_enum=False,
     create_constraint=True,
     values_callable=lambda values: [value.value for value in values],
@@ -814,6 +843,9 @@ class EvidenceReference(Base):
 
     specification_field: Mapped[SpecificationField] = relationship(back_populates="evidence")
     source_revision: Mapped[SourceRevision] = relationship(back_populates="evidence_references")
+    comparison_links: Mapped[list["MeasureComparisonEvidence"]] = relationship(
+        back_populates="evidence_reference"
+    )
 
 
 class MeasureComparison(Base):
@@ -845,12 +877,66 @@ class MeasureComparison(Base):
 
 class MeasureComparisonField(Base):
     __tablename__ = "measure_comparison_fields"
-    __table_args__ = (UniqueConstraint("comparison_id", "field"),)
+    __table_args__ = (
+        UniqueConstraint("comparison_id", "field"),
+        CheckConstraint(
+            "(from_availability = 'available' AND from_value IS NOT NULL) OR "
+            "(from_availability IN ('unavailable', 'unresolved') AND from_value IS NULL)",
+            name="ck_comparison_from_availability_value",
+        ),
+        CheckConstraint(
+            "(to_availability = 'available' AND to_value IS NOT NULL) OR "
+            "(to_availability IN ('unavailable', 'unresolved') AND to_value IS NULL)",
+            name="ck_comparison_to_availability_value",
+        ),
+        CheckConstraint(
+            "(from_availability != 'unresolved' AND to_availability != 'unresolved') "
+            "OR status = 'unknown'",
+            name="ck_unresolved_comparison_is_unknown",
+        ),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     comparison_id: Mapped[int] = mapped_column(
         ForeignKey("measure_comparisons.id", ondelete="CASCADE")
     )
     field: Mapped[AffectedField] = mapped_column(affected_field_enum)
+    status: Mapped[ChangeStatus] = mapped_column(
+        comparison_field_change_status_enum, default=ChangeStatus.UNKNOWN, index=True
+    )
+    from_availability: Mapped[FieldAvailability] = mapped_column(
+        comparison_from_availability_enum, default=FieldAvailability.UNRESOLVED
+    )
+    to_availability: Mapped[FieldAvailability] = mapped_column(
+        comparison_to_availability_enum, default=FieldAvailability.UNRESOLVED
+    )
+    from_value: Mapped[str | None] = mapped_column(Text)
+    to_value: Mapped[str | None] = mapped_column(Text)
 
     comparison: Mapped[MeasureComparison] = relationship(back_populates="affected_fields")
+    evidence_links: Mapped[list["MeasureComparisonEvidence"]] = relationship(
+        back_populates="comparison_field", cascade="all, delete-orphan"
+    )
+
+
+class MeasureComparisonEvidence(Base):
+    __tablename__ = "measure_comparison_evidence"
+    __table_args__ = (
+        UniqueConstraint("comparison_field_id", "evidence_reference_id", "side"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    comparison_field_id: Mapped[int] = mapped_column(
+        ForeignKey("measure_comparison_fields.id", ondelete="CASCADE")
+    )
+    evidence_reference_id: Mapped[int] = mapped_column(
+        ForeignKey("evidence_references.id", ondelete="RESTRICT")
+    )
+    side: Mapped[ChangeEvidenceSide] = mapped_column(change_evidence_side_enum)
+
+    comparison_field: Mapped[MeasureComparisonField] = relationship(
+        back_populates="evidence_links"
+    )
+    evidence_reference: Mapped[EvidenceReference] = relationship(
+        back_populates="comparison_links"
+    )

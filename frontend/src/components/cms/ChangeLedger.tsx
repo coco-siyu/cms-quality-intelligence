@@ -26,7 +26,14 @@ export function ChangeLedger({
   const all = measures.filter(
     (measure) => filters.from !== filters.to || measure.years.includes(Number(filters.from)),
   );
-  const order: DemoStatus[] = ["added", "modified", "unchanged", "removed"];
+  const order: DemoStatus[] = [
+    "added",
+    "modified",
+    "wording_only",
+    "unchanged",
+    "removed",
+    "unknown",
+  ];
   const columns = [...all].sort(
     (a, b) => order.indexOf(comparisonStatus(a, filters)) - order.indexOf(comparisonStatus(b, filters)),
   );

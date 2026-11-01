@@ -1,4 +1,10 @@
-export type DemoStatus = "added" | "removed" | "modified" | "unchanged" | "unknown";
+export type DemoStatus =
+  | "added"
+  | "removed"
+  | "modified"
+  | "wording_only"
+  | "unchanged"
+  | "unknown";
 
 export type DemoReviewStatus = "Approved" | "In review" | "Needs re-verification";
 

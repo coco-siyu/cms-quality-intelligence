@@ -6,6 +6,7 @@ export const statusLabels: Record<DemoStatus, string> = {
   added: "Added",
   removed: "Removed",
   modified: "Modified",
+  wording_only: "Wording only",
   unchanged: "Unchanged",
   unknown: "Unknown",
 };
@@ -14,6 +15,7 @@ export const statusIcons = {
   added: Plus,
   removed: Minus,
   modified: Pencil,
+  wording_only: Pencil,
   unchanged: Equal,
   unknown: CircleHelp,
 };

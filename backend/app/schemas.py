@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field, HttpUrl
 from app.domain import (
     AffectedField,
     CandidateReviewDecision,
+    ChangeEvidenceSide,
     ChangeStatus,
     ClarificationEvidenceRelation,
     ClarificationOutcome,
@@ -62,6 +63,29 @@ class SpecificationFieldResponse(BaseModel):
     availability: FieldAvailability
     value: str | None
     evidence: list[EvidenceReferenceResponse]
+
+
+class ChangeFieldEvidenceResponse(EvidenceReferenceResponse):
+    side: ChangeEvidenceSide
+
+
+class ChangeFieldResponse(BaseModel):
+    field: AffectedField
+    status: ChangeStatus
+    from_availability: FieldAvailability
+    to_availability: FieldAvailability
+    from_value: str | None
+    to_value: str | None
+    evidence: list[ChangeFieldEvidenceResponse]
+
+
+class PublicChangeRecord(BaseModel):
+    measure_id: str
+    program: str
+    from_year: int
+    to_year: int
+    status: ChangeStatus
+    fields: list[ChangeFieldResponse]
 
 
 class MeasureVersionResponse(BaseModel):

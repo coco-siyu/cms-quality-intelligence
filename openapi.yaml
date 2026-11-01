@@ -873,9 +873,15 @@ components:
     ChangeStatus:
       type: string
       description: |
-        Approved year-pair comparison state. `unknown` is distinct from a
-        verified removal and is used when evidence is incomplete.
-      enum: [added, removed, modified, unchanged, unknown]
+        Approved year-pair comparison state. `wording_only` is reserved for a
+        reviewed semantic finding; deterministic text inequality alone is
+        `modified`. `unknown` is distinct from a verified removal and is
+        required when either side is unresolved.
+      enum: [added, removed, modified, wording_only, unchanged, unknown]
+    ChangeEvidenceSide:
+      type: string
+      description: Identifies which year-version an evidence reference supports.
+      enum: [from_version, to_version, context]
     AffectedField:
       type: string
       enum:
@@ -960,6 +966,67 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/EvidenceReference"
+    ChangeFieldEvidence:
+      allOf:
+        - $ref: "#/components/schemas/EvidenceReference"
+        - type: object
+          required: [side]
+          properties:
+            side:
+              $ref: "#/components/schemas/ChangeEvidenceSide"
+    ChangeField:
+      type: object
+      description: |
+        One field-level comparison. If either availability is `unresolved`,
+        status must be `unknown`; absence alone never proves removal.
+      required:
+        - field
+        - status
+        - from_availability
+        - to_availability
+        - from_value
+        - to_value
+        - evidence
+      properties:
+        field:
+          $ref: "#/components/schemas/AffectedField"
+        status:
+          $ref: "#/components/schemas/ChangeStatus"
+        from_availability:
+          $ref: "#/components/schemas/FieldAvailability"
+        to_availability:
+          $ref: "#/components/schemas/FieldAvailability"
+        from_value:
+          type: [string, "null"]
+        to_value:
+          type: [string, "null"]
+        evidence:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChangeFieldEvidence"
+    PublicChangeRecord:
+      type: object
+      description: Approved, evidence-backed comparison for one measure and year pair.
+      required: [measure_id, program, from_year, to_year, status, fields]
+      properties:
+        measure_id:
+          type: string
+        program:
+          type: string
+        from_year:
+          type: integer
+          minimum: 2000
+          maximum: 2100
+        to_year:
+          type: integer
+          minimum: 2000
+          maximum: 2100
+        status:
+          $ref: "#/components/schemas/ChangeStatus"
+        fields:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChangeField"
     MeasureVersion:
       type: object
       required:
@@ -1018,7 +1085,7 @@ components:
         description: Explicitly fictional contract example; not a verified CMS measure.
         performance_years: [2025, 2026]
         change_status: unknown
-        affected_fields: [eligibility]
+        affected_fields: []
         freshness:
           last_verified_at: null
           last_source_check_at: "2026-10-16T12:00:00Z"

@@ -1,0 +1,81 @@
+# M2 change record contract
+
+This document defines the evidence and state rules for CMS Quality Intelligence
+year-pair comparisons. It is the contract for M2 Tasks 23–25; Task 23 establishes
+the representation only. Task 24 will implement deterministic comparison, and
+Task 25 will populate and validate comparison evidence.
+
+## Record shape
+
+A change record belongs to one stable measure, program, baseline performance
+year, and comparison performance year. Its overall status is one of:
+
+- `added`: official, reviewed evidence confirms program membership or a field on
+  the comparison side and confirms it did not apply on the baseline side.
+- `removed`: official, reviewed evidence confirms it applied on the baseline
+  side and explicitly did not apply on the comparison side.
+- `modified`: both approved values are available and differ. This is the
+  authoritative deterministic result until an approved semantic review says the
+  difference is wording-only.
+- `wording_only`: both approved values differ textually, but a reviewed semantic
+  finding concludes that the supported meaning did not change. Automated text
+  inequality alone cannot produce this state.
+- `unchanged`: both approved values are available and match after the documented
+  deterministic normalization used by Task 24.
+- `unknown`: the available official evidence cannot support another state.
+
+Each field comparison stores its field name, status, both explicit availability
+states, both approved values when available, and evidence links labeled
+`from_version`, `to_version`, or `context`.
+
+## Missing-data safety rules
+
+1. Absence from a document, extraction, candidate list, or database query is not
+   evidence of removal.
+2. If either side is `unresolved`, the field status must be `unknown`. This is
+   enforced by the database schema.
+3. `unavailable` means an approved source-backed determination that the field or
+   membership does not apply. It is not a synonym for missing data.
+4. `added` and `removed` require evidence for the applicable and non-applicable
+   sides. A missing year version cannot satisfy that requirement by itself.
+5. Only approved records and approved source revisions may cross the public API
+   boundary. Draft comparisons and unreviewed semantic findings remain private.
+6. A source update creates new review work; it must not silently rewrite an
+   already published historical finding.
+
+## Overall-status precedence
+
+Task 24 must derive the overall status from approved field and membership
+results, rather than accepting UI input. The intended precedence is:
+
+1. `unknown` when any required result is unresolved;
+2. explicit membership `added` or `removed`;
+3. any substantive `modified` field;
+4. any `wording_only` field;
+5. `unchanged` only when every required result is resolved and unchanged.
+
+Mixed cases must remain inspectable at field level. The overall status must not
+hide an unresolved required field.
+
+## API contract
+
+`openapi.yaml` defines reusable `PublicChangeRecord`, `ChangeField`, and
+`ChangeFieldEvidence` schemas. No new public endpoint is introduced by Task 23;
+Task 29 will attach these schemas to the change-list and detail operations after
+comparison generation and publication controls exist.
+
+The code representation uses `wording_only` for URL and JSON stability while
+the interface may display “Wording only.”
+
+## Task 24 handoff
+
+The deterministic comparator should:
+
+- compare only versions for the same program and normalized measure identity;
+- carry explicit `FieldAvailability` values into each result;
+- return `unknown` before comparing text when either side is unresolved;
+- never infer program removal from a missing version or roster row;
+- attach both sides' approved evidence references without copying or altering
+  the source excerpts; and
+- write a draft comparison first, leaving publication to a separate reviewed
+  action.

@@ -630,7 +630,8 @@ h3 {
   background: var(--card);
 }
 
-.status-modified .ledger-node {
+.status-modified .ledger-node,
+.status-wording_only .ledger-node {
   box-shadow: 0 0 0 4px var(--modified-surface);
 }
 
@@ -664,7 +665,8 @@ h3 {
   color: var(--removed);
 }
 
-.status-modified {
+.status-modified,
+.status-wording_only {
   color: var(--modified);
 }
 
@@ -2543,7 +2545,8 @@ h3 {
   background: var(--removed-surface);
 }
 
-.status-mark.status-modified {
+.status-mark.status-modified,
+.status-mark.status-wording_only {
   background: var(--modified-surface);
 }
 

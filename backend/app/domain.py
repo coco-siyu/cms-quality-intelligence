@@ -117,8 +117,15 @@ class ChangeStatus(StrEnum):
     ADDED = "added"
     REMOVED = "removed"
     MODIFIED = "modified"
+    WORDING_ONLY = "wording_only"
     UNCHANGED = "unchanged"
     UNKNOWN = "unknown"
+
+
+class ChangeEvidenceSide(StrEnum):
+    FROM_VERSION = "from_version"
+    TO_VERSION = "to_version"
+    CONTEXT = "context"
 
 
 class AffectedField(StrEnum):

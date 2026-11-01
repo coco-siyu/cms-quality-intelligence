@@ -6,6 +6,7 @@ import { comparisonStatus, defaultDemoFilters } from "../../features/measures/de
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { FilterSelect, SectionTitle, StatusMark } from "./shared";
+import { statusLabels } from "./statusPresentation";
 
 export function MeasureTable({
   filters,
@@ -61,11 +62,12 @@ export function MeasureTable({
               "added",
               "removed",
               "modified",
+              "wording_only",
               "unchanged",
               ...(dataMode === "api" ? ["unknown"] : []),
             ].map((value) => ({
               value,
-              label: value.charAt(0).toUpperCase() + value.slice(1),
+              label: statusLabels[value as keyof typeof statusLabels],
             })),
           ]}
           onChange={(status) => onFiltersChange({ status })}

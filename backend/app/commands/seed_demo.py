@@ -168,7 +168,16 @@ def seed_demo_records() -> None:
                 to_year=2026,
                 status=ChangeStatus.MODIFIED,
                 publication_state=PublicationState.PUBLISHED,
-                affected_fields=[MeasureComparisonField(field=AffectedField.DEFINITION)],
+                affected_fields=[
+                    MeasureComparisonField(
+                        field=AffectedField.DEFINITION,
+                        status=ChangeStatus.MODIFIED,
+                        from_availability=FieldAvailability.AVAILABLE,
+                        to_availability=FieldAvailability.AVAILABLE,
+                        from_value="Fictional baseline definition for interface testing.",
+                        to_value="Fictional revised definition for interface testing.",
+                    )
+                ],
             )
         )
 

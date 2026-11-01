@@ -1,4 +1,10 @@
-export type ChangeStatus = "added" | "removed" | "modified" | "unchanged" | "unknown";
+export type ChangeStatus =
+  | "added"
+  | "removed"
+  | "modified"
+  | "wording_only"
+  | "unchanged"
+  | "unknown";
 
 export type AffectedField =
   | "measure_set"
@@ -37,6 +43,31 @@ export type SpecificationField = {
   availability: FieldAvailability;
   value: string | null;
   evidence: EvidenceReference[];
+};
+
+export type ChangeEvidenceSide = "from_version" | "to_version" | "context";
+
+export type ChangeFieldEvidence = EvidenceReference & {
+  side: ChangeEvidenceSide;
+};
+
+export type ChangeField = {
+  field: AffectedField;
+  status: ChangeStatus;
+  from_availability: FieldAvailability;
+  to_availability: FieldAvailability;
+  from_value: string | null;
+  to_value: string | null;
+  evidence: ChangeFieldEvidence[];
+};
+
+export type PublicChangeRecord = {
+  measure_id: string;
+  program: string;
+  from_year: number;
+  to_year: number;
+  status: ChangeStatus;
+  fields: ChangeField[];
 };
 
 export type MeasureVersion = {

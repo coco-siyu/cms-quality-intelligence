@@ -33,6 +33,34 @@ from app.schemas import (
     SpecificationFieldResponse,
 )
 
+AFFECTED_CHANGE_STATUSES = {
+    ChangeStatus.ADDED,
+    ChangeStatus.REMOVED,
+    ChangeStatus.MODIFIED,
+    ChangeStatus.WORDING_ONLY,
+}
+
+
+def _safe_comparison_status(comparison: MeasureComparison | None) -> ChangeStatus:
+    if comparison is None or comparison.status == ChangeStatus.UNKNOWN:
+        return ChangeStatus.UNKNOWN
+    if any(
+        field.status == ChangeStatus.UNKNOWN
+        or field.from_availability == FieldAvailability.UNRESOLVED
+        or field.to_availability == FieldAvailability.UNRESOLVED
+        for field in comparison.affected_fields
+    ):
+        return ChangeStatus.UNKNOWN
+    if comparison.status in AFFECTED_CHANGE_STATUSES and not any(
+        field.status == comparison.status for field in comparison.affected_fields
+    ):
+        return ChangeStatus.UNKNOWN
+    if comparison.status == ChangeStatus.UNCHANGED and any(
+        field.status != ChangeStatus.UNCHANGED for field in comparison.affected_fields
+    ):
+        return ChangeStatus.UNKNOWN
+    return comparison.status
+
 
 @dataclass(frozen=True)
 class MeasureFilters:
@@ -199,9 +227,16 @@ def _summary(
         performance_years=sorted(
             {version.performance_year for version in versions if version.is_program_member}
         ),
-        change_status=comparison.status if comparison else ChangeStatus.UNKNOWN,
+        change_status=_safe_comparison_status(comparison),
         affected_fields=(
-            sorted((item.field for item in comparison.affected_fields), key=str)
+            sorted(
+                (
+                    item.field
+                    for item in comparison.affected_fields
+                    if item.status in AFFECTED_CHANGE_STATUSES
+                ),
+                key=str,
+            )
             if comparison
             else []
         ),
@@ -266,11 +301,37 @@ def _filtered_measures_statement(filters: MeasureFilters) -> Select[tuple[Measur
         if filters.to_year is not None:
             comparison_predicates.append(MeasureComparison.to_year == filters.to_year)
         if filters.change_status is not None:
-            comparison_predicates.append(MeasureComparison.status == filters.change_status)
+            unresolved_field = MeasureComparison.affected_fields.any(
+                or_(
+                    MeasureComparisonField.status == ChangeStatus.UNKNOWN,
+                    MeasureComparisonField.from_availability
+                    == FieldAvailability.UNRESOLVED,
+                    MeasureComparisonField.to_availability
+                    == FieldAvailability.UNRESOLVED,
+                )
+            )
+            if filters.change_status == ChangeStatus.UNKNOWN:
+                comparison_predicates.append(
+                    or_(MeasureComparison.status == ChangeStatus.UNKNOWN, unresolved_field)
+                )
+            else:
+                comparison_predicates.extend(
+                    [
+                        MeasureComparison.status == filters.change_status,
+                        ~unresolved_field,
+                    ]
+                )
+                if filters.change_status in AFFECTED_CHANGE_STATUSES:
+                    comparison_predicates.append(
+                        MeasureComparison.affected_fields.any(
+                            MeasureComparisonField.status == filters.change_status
+                        )
+                    )
         if filters.affected_field is not None:
             comparison_predicates.append(
                 MeasureComparison.affected_fields.any(
-                    MeasureComparisonField.field == filters.affected_field
+                    (MeasureComparisonField.field == filters.affected_field)
+                    & (MeasureComparisonField.status.in_(AFFECTED_CHANGE_STATUSES))
                 )
             )
         statement = statement.where(Measure.comparisons.any(and_(*comparison_predicates)))

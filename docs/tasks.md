@@ -166,6 +166,13 @@ review steps are recorded in `docs/m1-validation.md`.
 Goal: Standardize change types and comparisons across backend and UI.
 Description: Specify `added`, `removed`, `modified`, `unchanged`, `wording-only`, and `unknown` states with affected field and linked evidence references. Update schema/API contracts so missing values cannot be misclassified as policy removals.
 
+Implementation status (complete, 2026-10-31): Added typed overall and
+field-level change states, explicit before/after availability and values, and
+side-labeled links to immutable evidence references. Database constraints require
+an unresolved side to remain `unknown`. Reusable OpenAPI/frontend contracts and
+the review rules in `docs/change-record-contract.md` prepare Task 24 without
+publishing or generating comparisons yet.
+
 ## 24. Implement deterministic specification-field comparison
 Goal: Identify exact differences in normalized measure specifications.
 Description: Compare verified versions by program, measure ID, performance year, and fields including numerator, denominator, exclusions, eligibility, and calculation logic. Add fixtures for added, removed, unchanged, changed, null, and unknown fields and assert deterministic results.
