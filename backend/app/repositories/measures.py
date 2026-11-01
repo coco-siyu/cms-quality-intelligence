@@ -33,12 +33,12 @@ from app.schemas import (
     SpecificationFieldResponse,
 )
 
-AFFECTED_CHANGE_STATUSES = {
+AFFECTED_CHANGE_STATUSES = (
     ChangeStatus.ADDED,
     ChangeStatus.REMOVED,
     ChangeStatus.MODIFIED,
     ChangeStatus.WORDING_ONLY,
-}
+)
 
 
 def _safe_comparison_status(comparison: MeasureComparison | None) -> ChangeStatus:
@@ -310,15 +310,36 @@ def _filtered_measures_statement(filters: MeasureFilters) -> Select[tuple[Measur
                     == FieldAvailability.UNRESOLVED,
                 )
             )
-            if filters.change_status == ChangeStatus.UNKNOWN:
-                comparison_predicates.append(
-                    or_(MeasureComparison.status == ChangeStatus.UNKNOWN, unresolved_field)
+            mismatched_affected_status = or_(
+                *(
+                    and_(
+                        MeasureComparison.status == status,
+                        ~MeasureComparison.affected_fields.any(
+                            MeasureComparisonField.status == status
+                        ),
+                    )
+                    for status in AFFECTED_CHANGE_STATUSES
                 )
+            )
+            mismatched_unchanged_status = and_(
+                MeasureComparison.status == ChangeStatus.UNCHANGED,
+                MeasureComparison.affected_fields.any(
+                    MeasureComparisonField.status != ChangeStatus.UNCHANGED
+                ),
+            )
+            unsafe_comparison = or_(
+                MeasureComparison.status == ChangeStatus.UNKNOWN,
+                unresolved_field,
+                mismatched_affected_status,
+                mismatched_unchanged_status,
+            )
+            if filters.change_status == ChangeStatus.UNKNOWN:
+                comparison_predicates.append(unsafe_comparison)
             else:
                 comparison_predicates.extend(
                     [
                         MeasureComparison.status == filters.change_status,
-                        ~unresolved_field,
+                        ~unsafe_comparison,
                     ]
                 )
                 if filters.change_status in AFFECTED_CHANGE_STATUSES:

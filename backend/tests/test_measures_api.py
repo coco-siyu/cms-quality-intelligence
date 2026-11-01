@@ -71,6 +71,14 @@ def test_unresolved_field_cannot_surface_as_a_verified_change(
             "change_status": "modified",
         },
     )
+    unknown = client.get(
+        "/api/measures",
+        params={
+            "from_year": 2025,
+            "to_year": 2026,
+            "change_status": "unknown",
+        },
+    )
 
     assert response.status_code == 200
     first = response.json()["items"][0]
@@ -78,6 +86,8 @@ def test_unresolved_field_cannot_surface_as_a_verified_change(
     assert first["affected_fields"] == []
     assert modified.status_code == 200
     assert modified.json()["items"] == []
+    assert unknown.status_code == 200
+    assert [item["measure_id"] for item in unknown.json()["items"]] == ["DEMO-001"]
 
 
 def test_measure_detail_exposes_explicit_availability_and_public_evidence(
