@@ -851,7 +851,14 @@ class EvidenceReference(Base):
 class MeasureComparison(Base):
     __tablename__ = "measure_comparisons"
     __table_args__ = (
-        UniqueConstraint("measure_id", "program", "from_year", "to_year"),
+        UniqueConstraint(
+            "measure_id",
+            "program",
+            "from_year",
+            "to_year",
+            "collection_type",
+            name="uq_measure_comparison_variant_year_pair",
+        ),
         CheckConstraint("from_year >= 2000 AND from_year <= 2100"),
         CheckConstraint("to_year >= 2000 AND to_year <= 2100"),
         Index("ix_comparison_year_pair", "from_year", "to_year"),
@@ -862,6 +869,9 @@ class MeasureComparison(Base):
     program: Mapped[str] = mapped_column(String(120))
     from_year: Mapped[int] = mapped_column(Integer)
     to_year: Mapped[int] = mapped_column(Integer)
+    collection_type: Mapped[CollectionType] = mapped_column(
+        collection_type_enum, default=CollectionType.PROGRAM_ROSTER, index=True
+    )
     status: Mapped[ChangeStatus] = mapped_column(
         change_status_enum, default=ChangeStatus.UNKNOWN, index=True
     )

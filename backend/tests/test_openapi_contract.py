@@ -18,6 +18,7 @@ def test_root_openapi_contract_is_valid() -> None:
         "/ChangeFieldEvidence"
     )
     assert "PublicChangeRecord" in schemas
+    assert "collection_type" in schemas["PublicChangeRecord"]["required"]
 
 
 def test_runtime_openapi_exposes_contract_operation_ids_and_error_models() -> None:

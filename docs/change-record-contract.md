@@ -7,8 +7,9 @@ Task 25 will populate and validate comparison evidence.
 
 ## Record shape
 
-A change record belongs to one stable measure, program, baseline performance
-year, and comparison performance year. Its overall status is one of:
+A change record belongs to one stable measure, program, collection variant,
+baseline performance year, and comparison performance year. Its overall status
+is one of:
 
 - `added`: official, reviewed evidence confirms program membership or a field on
   the comparison side and confirms it did not apply on the baseline side.
@@ -67,7 +68,7 @@ comparison generation and publication controls exist.
 The code representation uses `wording_only` for URL and JSON stability while
 the interface may display “Wording only.”
 
-## Task 24 handoff
+## Task 24 requirements
 
 The deterministic comparator should:
 
@@ -79,3 +80,22 @@ The deterministic comparator should:
   the source excerpts; and
 - write a draft comparison first, leaving publication to a separate reviewed
   action.
+
+## Deterministic comparison behavior
+
+Task 24 compares only published, reviewer-approved, current versions for the
+same measure identity, program, and collection variant. Stored normalized text
+is compared exactly: whitespace, punctuation, and capitalization differences
+remain `modified`. The deterministic layer never emits `wording_only`; that
+requires the separate reviewed semantic workflow in Tasks 26–28.
+
+Missing field rows are treated as `unresolved`, not `unavailable`. A field is
+`added` or `removed` only when one version explicitly records `unavailable` and
+the other records an approved available value. Program membership uses the
+versions' reviewed membership flags plus explicit measure-set availability, so
+year-specific roster wording does not create a false modification.
+
+`generate_draft_comparison` selects the latest eligible version for each year,
+persists all requested field results and their before/after evidence links, and
+is idempotent for an identical draft. It refuses to overwrite a different draft
+or any published comparison.

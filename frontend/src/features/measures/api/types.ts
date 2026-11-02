@@ -47,6 +47,14 @@ export type SpecificationField = {
 
 export type ChangeEvidenceSide = "from_version" | "to_version" | "context";
 
+export type CollectionType =
+  | "program_roster"
+  | "ecqm"
+  | "mips_cqm"
+  | "medicare_cqm"
+  | "cahps_survey"
+  | "administrative_claims";
+
 export type ChangeFieldEvidence = EvidenceReference & {
   side: ChangeEvidenceSide;
 };
@@ -64,6 +72,7 @@ export type ChangeField = {
 export type PublicChangeRecord = {
   measure_id: string;
   program: string;
+  collection_type: CollectionType;
   from_year: number;
   to_year: number;
   status: ChangeStatus;

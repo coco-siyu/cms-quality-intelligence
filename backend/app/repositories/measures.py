@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session, selectinload
 from app.domain import (
     AffectedField,
     ChangeStatus,
+    CollectionType,
     FieldAvailability,
     PublicationState,
     PublicVerificationStatus,
@@ -115,6 +116,7 @@ def _published_comparison(
         select(MeasureComparison)
         .where(
             MeasureComparison.measure_id == measure_pk,
+            MeasureComparison.collection_type == CollectionType.PROGRAM_ROSTER,
             MeasureComparison.publication_state == PublicationState.PUBLISHED,
         )
         .options(selectinload(MeasureComparison.affected_fields))
@@ -295,7 +297,10 @@ def _filtered_measures_statement(filters: MeasureFilters) -> Select[tuple[Measur
             )
         )
     if filters.change_status is not None or filters.affected_field is not None:
-        comparison_predicates = [MeasureComparison.publication_state == PublicationState.PUBLISHED]
+        comparison_predicates = [
+            MeasureComparison.collection_type == CollectionType.PROGRAM_ROSTER,
+            MeasureComparison.publication_state == PublicationState.PUBLISHED,
+        ]
         if filters.from_year is not None:
             comparison_predicates.append(MeasureComparison.from_year == filters.from_year)
         if filters.to_year is not None:

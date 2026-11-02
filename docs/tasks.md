@@ -177,6 +177,13 @@ publishing or generating comparisons yet.
 Goal: Identify exact differences in normalized measure specifications.
 Description: Compare verified versions by program, measure ID, performance year, and fields including numerator, denominator, exclusions, eligibility, and calculation logic. Add fixtures for added, removed, unchanged, changed, null, and unknown fields and assert deterministic results.
 
+Implementation status (complete, 2026-11-02): Added an exact field comparator
+and private draft generator scoped by measure, program, year pair, and collection
+variant. Explicit availability drives added/removed states; missing or unresolved
+inputs remain unknown. Tests cover all deterministic states, identity and
+verification guards, membership semantics, idempotent persistence, evidence
+linking, and the rule that wording-only is never inferred from text alone.
+
 ## 25. Add evidence excerpts to change records
 Goal: Connect each asserted difference to official CMS material.
 Description: Store short source excerpts with document/version IDs, section or page locators when available, and official URLs for each comparison result. Test that a public change does not claim verified evidence when its source reference is absent or unresolved.

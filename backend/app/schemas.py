@@ -82,6 +82,7 @@ class ChangeFieldResponse(BaseModel):
 class PublicChangeRecord(BaseModel):
     measure_id: str
     program: str
+    collection_type: CollectionType
     from_year: int
     to_year: int
     status: ChangeStatus

@@ -1007,12 +1007,14 @@ components:
     PublicChangeRecord:
       type: object
       description: Approved, evidence-backed comparison for one measure and year pair.
-      required: [measure_id, program, from_year, to_year, status, fields]
+      required: [measure_id, program, collection_type, from_year, to_year, status, fields]
       properties:
         measure_id:
           type: string
         program:
           type: string
+        collection_type:
+          $ref: "#/components/schemas/CollectionType"
         from_year:
           type: integer
           minimum: 2000

@@ -273,6 +273,18 @@ def test_initial_migration_builds_and_reverts_schema(
         "ck_comparison_to_year_range",
         "change_status",
     }.issubset(comparison_checks)
+    comparison_columns = {
+        column["name"]
+        for column in inspect(engine).get_columns("measure_comparisons")
+    }
+    assert "collection_type" in comparison_columns
+    comparison_unique_constraints = {
+        frozenset(constraint["column_names"])
+        for constraint in inspect(engine).get_unique_constraints("measure_comparisons")
+    }
+    assert frozenset(
+        {"measure_id", "program", "from_year", "to_year", "collection_type"}
+    ) in comparison_unique_constraints
 
     command.downgrade(config, "base")
     assert inspect(engine).get_table_names() == ["alembic_version"]
