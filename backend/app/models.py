@@ -34,6 +34,7 @@ from app.domain import (
     NormalizedStagingStatus,
     PublicationState,
     PublicVerificationStatus,
+    SemanticClassification,
     SourceCheckOutcome,
     SourceExtractionStatus,
     SourceNormalizationStatus,
@@ -110,6 +111,13 @@ change_evidence_side_enum = Enum(
 comparison_evidence_status_enum = Enum(
     ComparisonEvidenceStatus,
     name="comparison_evidence_status",
+    native_enum=False,
+    create_constraint=True,
+    values_callable=lambda values: [value.value for value in values],
+)
+semantic_classification_enum = Enum(
+    SemanticClassification,
+    name="semantic_classification",
     native_enum=False,
     create_constraint=True,
     values_callable=lambda values: [value.value for value in values],
@@ -940,6 +948,9 @@ class MeasureComparisonField(Base):
     evidence_links: Mapped[list["MeasureComparisonEvidence"]] = relationship(
         back_populates="comparison_field", cascade="all, delete-orphan"
     )
+    semantic_proposals: Mapped[list["SemanticClassificationProposal"]] = relationship(
+        back_populates="comparison_field", cascade="all, delete-orphan"
+    )
 
 
 class MeasureComparisonEvidence(Base):
@@ -962,4 +973,79 @@ class MeasureComparisonEvidence(Base):
     )
     evidence_reference: Mapped[EvidenceReference] = relationship(
         back_populates="comparison_links"
+    )
+    semantic_citations: Mapped[list["SemanticClassificationCitation"]] = relationship(
+        back_populates="comparison_evidence"
+    )
+
+
+class SemanticClassificationProposal(Base):
+    __tablename__ = "semantic_classification_proposals"
+    __table_args__ = (
+        UniqueConstraint(
+            "comparison_field_id",
+            "provider",
+            "model",
+            "prompt_version",
+            "input_digest",
+            name="uq_semantic_classification_input",
+        ),
+        CheckConstraint(
+            "(classification = 'needs_review' AND uncertainty_summary IS NOT NULL) OR "
+            "(classification IN ('substantive', 'wording_only') "
+            "AND uncertainty_summary IS NULL)",
+            name="ck_semantic_classification_uncertainty",
+        ),
+        CheckConstraint(
+            "validation_error_code IS NULL OR classification = 'needs_review'",
+            name="ck_semantic_validation_error_needs_review",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    proposal_id: Mapped[str] = mapped_column(String(120), unique=True, index=True)
+    comparison_field_id: Mapped[int] = mapped_column(
+        ForeignKey("measure_comparison_fields.id", ondelete="CASCADE")
+    )
+    provider: Mapped[str] = mapped_column(String(80))
+    model: Mapped[str] = mapped_column(String(160))
+    prompt_version: Mapped[str] = mapped_column(String(120))
+    input_digest: Mapped[str] = mapped_column(String(128))
+    classification: Mapped[SemanticClassification] = mapped_column(
+        semantic_classification_enum, index=True
+    )
+    reasoning_summary: Mapped[str] = mapped_column(Text)
+    uncertainty_summary: Mapped[str | None] = mapped_column(Text)
+    validation_error_code: Mapped[str | None] = mapped_column(String(120))
+    provider_response_id: Mapped[str | None] = mapped_column(String(200))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    created_by: Mapped[str] = mapped_column(String(200))
+
+    comparison_field: Mapped[MeasureComparisonField] = relationship(
+        back_populates="semantic_proposals"
+    )
+    citations: Mapped[list["SemanticClassificationCitation"]] = relationship(
+        back_populates="proposal", cascade="all, delete-orphan"
+    )
+
+
+class SemanticClassificationCitation(Base):
+    __tablename__ = "semantic_classification_citations"
+    __table_args__ = (
+        UniqueConstraint("semantic_classification_proposal_id", "comparison_evidence_id"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    semantic_classification_proposal_id: Mapped[int] = mapped_column(
+        ForeignKey("semantic_classification_proposals.id", ondelete="CASCADE")
+    )
+    comparison_evidence_id: Mapped[int] = mapped_column(
+        ForeignKey("measure_comparison_evidence.id", ondelete="CASCADE")
+    )
+
+    proposal: Mapped[SemanticClassificationProposal] = relationship(
+        back_populates="citations"
+    )
+    comparison_evidence: Mapped[MeasureComparisonEvidence] = relationship(
+        back_populates="semantic_citations"
     )

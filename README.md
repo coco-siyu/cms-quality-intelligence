@@ -233,18 +233,21 @@ optional provider is configured, **Clarify with AI** searches additional active
 registered CMS sources and stores a private evidence-bounded proposal. None of
 these actions approves or publishes measure data.
 
-AI clarification is disabled by default. To enable it locally, set both values
-below in the repository root `.env` and restart FastAPI:
+Optional AI features are disabled by default. To enable extraction clarification
+and/or semantic classification locally, set the shared API key plus the relevant
+model name in the repository root `.env`, then restart FastAPI:
 
 ```sh
 CMSQI_OPENAI_API_KEY=your-api-key
 CMSQI_AI_CLARIFICATION_MODEL=your-structured-output-capable-model
+CMSQI_AI_SEMANTIC_MODEL=your-structured-output-capable-model
 ```
 
-The request uses strict structured output and `store=false`. The database retains
-the configured model name, prompt version, provider response ID, exact CMS excerpt
-snapshots, and support/conflict assessments for administrator review. Do not
-commit the API key.
+Requests use strict structured output and `store=false`. Private records retain
+the configured model name, prompt version, provider response ID, and exact cited
+CMS evidence for administrator review. Semantic classification currently has no
+public endpoint or UI and cannot alter a deterministic comparison. Do not commit
+the API key.
 
 To load the two explicitly fictional records into the local database, opt in
 for that command only. It refuses database names that do not contain `demo`:

@@ -98,8 +98,9 @@ Provide these through the host's encrypted secret/environment system:
   plaintext password.
 - `CMSQI_ADMIN_SESSION_SECRET`: independently generated signing secret.
 - `CMSQI_ADMIN_SESSION_SECURE=true`: required behind HTTPS.
-- Optional `CMSQI_OPENAI_API_KEY` and `CMSQI_AI_CLARIFICATION_MODEL` only if the
-  private clarification feature is intentionally enabled.
+- Optional `CMSQI_OPENAI_API_KEY` with `CMSQI_AI_CLARIFICATION_MODEL` and/or
+  `CMSQI_AI_SEMANTIC_MODEL` only when the corresponding private AI feature is
+  intentionally enabled.
 
 Use strong, unique database credentials. Production deployments must not reuse
 the intentionally public Zoomcamp preview login, the local `.env`, fictional

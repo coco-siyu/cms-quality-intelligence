@@ -15,7 +15,7 @@ correct.
 | Lovable | Produced visual interface references and interactive prototypes | The maintainer selected the visual direction and rejected its generated backend/runtime choices |
 | Codex | Repository inspection, scoped implementation, tests, debugging, and documentation | The maintainer approved checkpoints, selected branches, reviewed screens, and decided when work advanced |
 | Git and GitHub | Preserved small reviewable changes and pull-request history | The maintainer controlled commits, pushes, merges, and the `main` branch |
-| Optional OpenAI API | Private evidence-bounded clarification proposals | Disabled without configuration; output requires human review and cannot publish records |
+| Optional OpenAI API | Private evidence-bounded clarification and semantic-classification proposals | Disabled without configuration; output requires human review and cannot change or publish records |
 
 ## Representative workflow
 
@@ -80,5 +80,5 @@ The maintainer retains responsibility for:
 - Automated tests validate software behavior, not clinical or policy correctness.
 - AI-generated code and prose can be wrong. Passing checks and human source review
   remain required.
-- The optional clarification provider is not necessary for normal public browsing
-  and fails closed when credentials are absent.
+- Optional AI providers are not necessary for normal public browsing and fail
+  closed when credentials are absent.

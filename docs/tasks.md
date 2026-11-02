@@ -1,6 +1,6 @@
 # CMS Quality Intelligence — Implementation Backlog
 
-## Checkpoint status (October 28, 2026)
+## Checkpoint status (November 2, 2026)
 
 - Tasks 1, 2, 5–12: implemented and verified through Checkpoints A, B, C1,
   and C2.1–C2.5. The official PY2025–PY2026 roster has two-source evidence,
@@ -35,9 +35,11 @@
   do not publish records. Task 43 now adds deterministic, typed normalization
   from extracted source segments into private field candidates with exact
   evidence locators; ambiguous identities and incomplete fields remain
-  unresolved. Tasks 23–37 remain unimplemented. Tasks 44–46 and 48–49 provide AI
-  clarification, durable ingestion progress, manual review, and the safe
-  partial-publication slice. Task 47 remains open. The
+  unresolved. M2 Tasks 23–27 now provide deterministic comparison, evidence
+  gating, and private evidence-bounded semantic proposals; Tasks 28–37 remain
+  open. Tasks 44–46 and 48–49 provide AI clarification, durable ingestion
+  progress, manual review, and the safe partial-publication slice. Task 47
+  remains open. The
   dashboard change ledger, What's New feed, comparison highlighting, and AI
   Impact content remain visibly fictional prototypes and are not production-backed.
 
@@ -215,6 +217,17 @@ public endpoint, and persists no AI judgment; those remain Tasks 27–28.
 ## 27. Implement AI semantic classification for field diffs
 Goal: Help analysts distinguish policy-relevant changes from rephrasing.
 Description: Pass the deterministic difference and verified CMS excerpts to the model, validate its structured response, and record the model/prompt version. Fall back to `needs review` on parsing errors, unsupported citations, or conflicting evidence instead of auto-approving a conclusion.
+
+Implementation status (complete, 2026-11-02): Added an optional OpenAI
+structured-output adapter and an idempotent private classification service for
+persisted deterministic `modified` fields with verified evidence on both year
+sides. Proposals retain provider/model/prompt metadata, an input digest,
+provider response ID, uncertainty, validation failure code, and foreign-key
+links to every cited comparison excerpt. Provider refusals, parsing failures,
+unsupported citations, and one-sided coverage persist as `needs_review`;
+provider-declared conflicts remain unresolved, while transport failures stay
+retryable without creating a record. The workflow cannot mutate or publish the
+deterministic comparison and is disabled without explicit environment settings.
 
 ## 28. Build semantic-change evaluation fixtures
 Goal: Quantify whether classification respects evidence and uncertainty.

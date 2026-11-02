@@ -215,6 +215,8 @@ def test_initial_migration_builds_and_reverts_schema(
         "measure_comparisons",
         "measure_comparison_fields",
         "measure_comparison_evidence",
+        "semantic_classification_proposals",
+        "semantic_classification_citations",
         "source_checks",
         "source_extractions",
         "source_text_segments",
@@ -271,6 +273,22 @@ def test_initial_migration_builds_and_reverts_schema(
     assert frozenset(
         {"measure_id", "program", "from_year", "to_year", "collection_type"}
     ) in comparison_unique_constraints
+    semantic_columns = {
+        column["name"]
+        for column in inspect(engine).get_columns("semantic_classification_proposals")
+    }
+    assert {
+        "comparison_field_id",
+        "provider",
+        "model",
+        "prompt_version",
+        "input_digest",
+        "classification",
+        "reasoning_summary",
+        "uncertainty_summary",
+        "validation_error_code",
+        "provider_response_id",
+    }.issubset(semantic_columns)
 
     command.downgrade(config, "base")
     assert inspect(engine).get_table_names() == ["alembic_version"]

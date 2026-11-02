@@ -17,7 +17,7 @@ flowchart LR
     Browser -->|same-origin /api requests| API
     API -->|SQLAlchemy transactions| DB
     API -->|bounded HTTPS retrieval| CMS
-    API -. private clarification only .-> AI
+    API -. private evidence-bounded proposals .-> AI
 ```
 
 The containerized local application uses Nginx to serve the compiled React
@@ -42,8 +42,8 @@ relative URLs and does not need deployment-specific CORS exceptions.
   review, and publication rules.
 - Public repositories return only published records. Draft candidates and audit
   details are available only through authenticated `/api/admin/...` endpoints.
-- The optional AI clarification path proposes evidence-bounded private values;
-  it cannot approve or publish them.
+- Optional AI paths propose evidence-bounded private extraction clarifications
+  and semantic classifications; neither can approve, change, or publish records.
 
 ### Database
 

@@ -1,8 +1,9 @@
 # M2 semantic classification contract
 
 Task 26 defines the provider-independent structured output used to assess the
-meaning of one deterministic field difference. It does not call an AI provider,
-persist an assessment, approve a finding, or change the deterministic comparison.
+meaning of one deterministic field difference. Task 27 uses that contract in a
+private provider workflow. Neither task approves a finding or changes the
+deterministic comparison.
 
 ## Classification states
 
@@ -75,14 +76,25 @@ Validation requires that:
    citation it does return must still be supplied.
 
 The Pydantic evidence shape is not itself proof that a source is official or
-verified. Task 27 must construct provider input server-side from the Task 25
-verified comparison evidence; it must never trust excerpts submitted by the
-model or a public client.
+verified. Task 27 constructs provider input server-side from the Task 25
+verified comparison evidence; it never trusts excerpts submitted by the model
+or a public client.
 
-## Deferred to Tasks 27–28
+## Task 27 private provider workflow
 
-Task 27 will invoke the configured provider, validate its parsed response, store
-model and prompt versions, and fall back to `needs_review` on provider, parsing,
-citation, or evidence conflicts. Task 28 will evaluate the behavior against
-labeled substantive, paraphrase, unchanged, missing, and conflicting fixtures.
-No endpoint or UI is introduced by Task 26.
+`classify_field_difference` accepts only a persisted deterministic `modified`
+field with approved values on both sides and a currently verified Task 25
+evidence set. It sends the exact values and immutable excerpts to the configured
+structured-output provider, then revalidates citations on the server.
+
+Each result is stored privately with provider, model, prompt version, input
+digest, provider response ID, classification, uncertainty, and links to the
+exact comparison-evidence rows it cited. Identical inputs are idempotent.
+Parsing failures, refusals, unsupported citations, and one-sided citation
+coverage become persisted `needs_review` proposals. Transport failures remain
+retryable and create no misleading assessment. A provider-declared evidence
+conflict also remains `needs_review`.
+
+No public endpoint, UI, approval, or publication path is added by Tasks 26–27.
+Task 28 will evaluate the behavior against labeled substantive, paraphrase,
+unchanged, missing, and conflicting fixtures.
