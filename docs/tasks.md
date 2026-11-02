@@ -202,6 +202,16 @@ references, public filtering, migrations, and the reusable API contract.
 Goal: Limit AI to evaluating the meaning of detected text differences.
 Description: Define a Pydantic schema for substantive-versus-wording-only assessment, evidence references, reasoning summary, and unresolved uncertainty. Require citations from supplied official excerpts and keep AI judgments separate from deterministic field differences.
 
+Implementation status (complete, 2026-11-02): Added a strict,
+provider-independent Pydantic contract for `substantive`, `wording_only`, and
+`needs_review` assessments. Conclusive outputs require citations from both
+supplied year-version evidence sets; unsupported, duplicate, context-only, or
+one-sided citation coverage is rejected. Unresolved results require an explicit
+uncertainty summary, confidence scores and unexpected fields are forbidden, and
+tests confirm that semantic proposals cannot mutate the authoritative
+deterministic `modified` result. The contract makes no model call, creates no
+public endpoint, and persists no AI judgment; those remain Tasks 27–28.
+
 ## 27. Implement AI semantic classification for field diffs
 Goal: Help analysts distinguish policy-relevant changes from rephrasing.
 Description: Pass the deterministic difference and verified CMS excerpts to the model, validate its structured response, and record the model/prompt version. Fall back to `needs review` on parsing errors, unsupported citations, or conflicting evidence instead of auto-approving a conclusion.

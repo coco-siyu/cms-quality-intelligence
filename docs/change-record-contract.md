@@ -3,7 +3,9 @@
 This document defines the evidence and state rules for CMS Quality Intelligence
 year-pair comparisons. It is the contract for M2 Tasks 23–25: Task 23 established
 the representation, Task 24 implemented deterministic comparison, and Task 25
-added structural evidence validation and the public projection gate.
+added structural evidence validation and the public projection gate. The
+separate Task 26 AI output boundary is documented in
+`docs/semantic-classification-contract.md`.
 
 ## Record shape
 

@@ -134,6 +134,12 @@ class ComparisonEvidenceStatus(StrEnum):
     INCOMPLETE = "incomplete"
 
 
+class SemanticClassification(StrEnum):
+    SUBSTANTIVE = "substantive"
+    WORDING_ONLY = "wording_only"
+    NEEDS_REVIEW = "needs_review"
+
+
 class AffectedField(StrEnum):
     MEASURE_SET = "measure_set"
     DEFINITION = "definition"
