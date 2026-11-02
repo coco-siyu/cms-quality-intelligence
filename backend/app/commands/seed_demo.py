@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from app.database import SessionLocal
 from app.domain import (
     AffectedField,
+    ChangeEvidenceSide,
     ChangeStatus,
     FieldAvailability,
     PublicationState,
@@ -18,6 +19,7 @@ from app.models import (
     EvidenceReference,
     Measure,
     MeasureComparison,
+    MeasureComparisonEvidence,
     MeasureComparisonField,
     MeasureVersion,
     ProgramMembership,
@@ -25,6 +27,7 @@ from app.models import (
     SourceRevision,
     SpecificationField,
 )
+from app.services.comparison_evidence import refresh_comparison_evidence_status
 
 DEMO_PREFIX = "DEMO-"
 
@@ -99,7 +102,7 @@ def _version(
         is_program_member=True,
         publication_state=PublicationState.PUBLISHED,
         verification_status=PublicVerificationStatus.PARTIALLY_VERIFIED,
-        verified_at=None,
+        verified_at=revision.last_source_check_at,
         last_source_check_at=revision.last_source_check_at,
         newer_revision_detected=False,
         fields=fields,
@@ -127,7 +130,7 @@ def seed_demo_records() -> None:
             retrieved_at=checked_at,
             last_source_check_at=checked_at,
             publication_state=PublicationState.PUBLISHED,
-            verification_status=PublicVerificationStatus.PARTIALLY_VERIFIED,
+            verification_status=PublicVerificationStatus.VERIFIED,
         )
         document.revisions.append(revision)
 
@@ -137,49 +140,57 @@ def seed_demo_records() -> None:
             description="Synthetic prototype record; not a CMS measure or verified claim.",
             is_public=True,
         )
+        versions: dict[int, MeasureVersion] = {}
         for year, definition in (
             (2025, "Fictional baseline definition for interface testing."),
             (2026, "Fictional revised definition for interface testing."),
         ):
             first.memberships.append(_membership(year))
-            first.versions.append(
-                _version(
-                    first.measure_id,
-                    year,
-                    revision,
-                    [
-                        _field(
-                            first.measure_id, year, AffectedField.DEFINITION, definition, revision
-                        ),
-                        _field(
-                            first.measure_id,
-                            year,
-                            AffectedField.DENOMINATOR,
-                            "Synthetic denominator; no patient-level data.",
-                            revision,
-                        ),
-                    ],
-                )
-            )
-        first.comparisons.append(
-            MeasureComparison(
-                program="Fictional Quality Program",
-                from_year=2025,
-                to_year=2026,
-                status=ChangeStatus.MODIFIED,
-                publication_state=PublicationState.PUBLISHED,
-                affected_fields=[
-                    MeasureComparisonField(
-                        field=AffectedField.DEFINITION,
-                        status=ChangeStatus.MODIFIED,
-                        from_availability=FieldAvailability.AVAILABLE,
-                        to_availability=FieldAvailability.AVAILABLE,
-                        from_value="Fictional baseline definition for interface testing.",
-                        to_value="Fictional revised definition for interface testing.",
-                    )
+            versions[year] = _version(
+                first.measure_id,
+                year,
+                revision,
+                [
+                    _field(
+                        first.measure_id, year, AffectedField.DEFINITION, definition, revision
+                    ),
+                    _field(
+                        first.measure_id,
+                        year,
+                        AffectedField.DENOMINATOR,
+                        "Synthetic denominator; no patient-level data.",
+                        revision,
+                    ),
                 ],
             )
+            first.versions.append(versions[year])
+        comparison_field = MeasureComparisonField(
+            field=AffectedField.DEFINITION,
+            status=ChangeStatus.MODIFIED,
+            from_availability=FieldAvailability.AVAILABLE,
+            to_availability=FieldAvailability.AVAILABLE,
+            from_value="Fictional baseline definition for interface testing.",
+            to_value="Fictional revised definition for interface testing.",
+            evidence_links=[
+                MeasureComparisonEvidence(
+                    evidence_reference=versions[2025].fields[0].evidence[0],
+                    side=ChangeEvidenceSide.FROM_VERSION,
+                ),
+                MeasureComparisonEvidence(
+                    evidence_reference=versions[2026].fields[0].evidence[0],
+                    side=ChangeEvidenceSide.TO_VERSION,
+                ),
+            ],
         )
+        comparison = MeasureComparison(
+            program="Fictional Quality Program",
+            from_year=2025,
+            to_year=2026,
+            status=ChangeStatus.MODIFIED,
+            publication_state=PublicationState.PUBLISHED,
+            affected_fields=[comparison_field],
+        )
+        first.comparisons.append(comparison)
 
         second = Measure(
             measure_id="DEMO-002",
@@ -197,6 +208,8 @@ def seed_demo_records() -> None:
             ],
         )
         session.add_all([document, first, second])
+        session.flush()
+        refresh_comparison_evidence_status(comparison)
 
 
 def _membership(year: int) -> ProgramMembership:

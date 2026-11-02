@@ -28,6 +28,7 @@ from app.models import (
     MeasureVersion,
     SpecificationField,
 )
+from app.services.comparison_evidence import refresh_comparison_evidence_status
 
 
 class DeterministicComparisonError(ValueError):
@@ -428,6 +429,7 @@ def generate_draft_comparison(
         )
     )
     if existing is not None:
+        refresh_comparison_evidence_status(existing)
         if (
             existing.publication_state == PublicationState.DRAFT
             and _stored_signature(existing) == _result_signature(result)
@@ -472,5 +474,7 @@ def generate_draft_comparison(
         )
         comparison.affected_fields.append(comparison_field)
     session.add(comparison)
+    session.flush()
+    refresh_comparison_evidence_status(comparison)
     session.flush()
     return comparison

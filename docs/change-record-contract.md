@@ -1,9 +1,9 @@
 # M2 change record contract
 
 This document defines the evidence and state rules for CMS Quality Intelligence
-year-pair comparisons. It is the contract for M2 Tasks 23–25; Task 23 establishes
-the representation only. Task 24 will implement deterministic comparison, and
-Task 25 will populate and validate comparison evidence.
+year-pair comparisons. It is the contract for M2 Tasks 23–25: Task 23 established
+the representation, Task 24 implemented deterministic comparison, and Task 25
+added structural evidence validation and the public projection gate.
 
 ## Record shape
 
@@ -99,3 +99,29 @@ year-specific roster wording does not create a false modification.
 persists all requested field results and their before/after evidence links, and
 is idempotent for an identical draft. It refuses to overwrite a different draft
 or any published comparison.
+
+## Evidence coverage and public projection
+
+Every field comparison, including an `unknown` result, requires at least one
+`from_version` and one `to_version` evidence reference. This prevents unresolved
+or absent material from being presented as verified coverage. Each linked
+reference must:
+
+- contain a nonblank literal excerpt and a section or page locator;
+- belong to the same normalized field, measure, program, collection variant,
+  and expected performance-year side as the comparison;
+- point to a published, reviewer-verified immutable source revision;
+- come from a published, reviewed, current measure version; and
+- resolve to an active source document with an HTTPS official URL.
+
+The structural result is stored as `pending`, `verified`, or `incomplete` on the
+comparison. Existing comparisons migrate as `incomplete` and must be
+revalidated; the migration does not retroactively endorse historical data.
+Structural verification does not publish a draft or replace human review.
+
+`build_public_change_record` is the sole Task 25 projection of comparison
+evidence. It returns no record unless the comparison is published, its stored
+coverage state is `verified`, and a fresh validation still finds no issues. A
+successful projection includes the evidence ID, source revision ID, source
+document title, official URL, locator, literal excerpt, and year side for every
+field. Task 29 will expose this projection through public change endpoints.

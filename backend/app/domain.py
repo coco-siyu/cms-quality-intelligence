@@ -128,6 +128,12 @@ class ChangeEvidenceSide(StrEnum):
     CONTEXT = "context"
 
 
+class ComparisonEvidenceStatus(StrEnum):
+    PENDING = "pending"
+    VERIFIED = "verified"
+    INCOMPLETE = "incomplete"
+
+
 class AffectedField(StrEnum):
     MEASURE_SET = "measure_set"
     DEFINITION = "definition"

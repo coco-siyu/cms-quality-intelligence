@@ -11,6 +11,7 @@ from app.domain import (
     ClarificationEvidenceRelation,
     ClarificationOutcome,
     CollectionType,
+    ComparisonEvidenceStatus,
     FieldAvailability,
     FieldPublicationEligibility,
     IngestionItemStage,
@@ -86,6 +87,7 @@ class PublicChangeRecord(BaseModel):
     from_year: int
     to_year: int
     status: ChangeStatus
+    evidence_status: ComparisonEvidenceStatus
     fields: list[ChangeFieldResponse]
 
 

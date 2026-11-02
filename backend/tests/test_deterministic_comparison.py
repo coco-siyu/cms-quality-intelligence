@@ -8,6 +8,7 @@ from app.domain import (
     ChangeEvidenceSide,
     ChangeStatus,
     CollectionType,
+    ComparisonEvidenceStatus,
     FieldAvailability,
     PublicationState,
     PublicVerificationStatus,
@@ -366,6 +367,7 @@ def test_generation_persists_an_idempotent_private_draft_with_evidence(
     assert comparison.publication_state == PublicationState.DRAFT
     assert comparison.status == ChangeStatus.MODIFIED
     assert comparison.collection_type == CollectionType.ECQM
+    assert comparison.evidence_status == ComparisonEvidenceStatus.VERIFIED
     assert {link.side for link in comparison.affected_fields[0].evidence_links} == {
         ChangeEvidenceSide.FROM_VERSION,
         ChangeEvidenceSide.TO_VERSION,

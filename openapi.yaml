@@ -882,6 +882,10 @@ components:
       type: string
       description: Identifies which year-version an evidence reference supports.
       enum: [from_version, to_version, context]
+    ComparisonEvidenceStatus:
+      type: string
+      description: Structural evidence coverage for a stored comparison.
+      enum: [pending, verified, incomplete]
     AffectedField:
       type: string
       enum:
@@ -1007,7 +1011,15 @@ components:
     PublicChangeRecord:
       type: object
       description: Approved, evidence-backed comparison for one measure and year pair.
-      required: [measure_id, program, collection_type, from_year, to_year, status, fields]
+      required:
+        - measure_id
+        - program
+        - collection_type
+        - from_year
+        - to_year
+        - status
+        - evidence_status
+        - fields
       properties:
         measure_id:
           type: string
@@ -1025,6 +1037,8 @@ components:
           maximum: 2100
         status:
           $ref: "#/components/schemas/ChangeStatus"
+        evidence_status:
+          $ref: "#/components/schemas/ComparisonEvidenceStatus"
         fields:
           type: array
           items:

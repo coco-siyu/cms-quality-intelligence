@@ -10,6 +10,7 @@ from sqlalchemy.pool import StaticPool
 from app.database import Base, get_db
 from app.domain import (
     AffectedField,
+    ChangeEvidenceSide,
     ChangeStatus,
     FieldAvailability,
     PublicationState,
@@ -20,6 +21,7 @@ from app.models import (
     EvidenceReference,
     Measure,
     MeasureComparison,
+    MeasureComparisonEvidence,
     MeasureComparisonField,
     MeasureVersion,
     ProgramMembership,
@@ -27,6 +29,7 @@ from app.models import (
     SourceRevision,
     SpecificationField,
 )
+from app.services.comparison_evidence import refresh_comparison_evidence_status
 
 
 @pytest.fixture
@@ -102,7 +105,7 @@ def seeded_session(session: Session) -> Session:
         retrieved_at=checked_at,
         last_source_check_at=checked_at,
         publication_state=PublicationState.PUBLISHED,
-        verification_status=PublicVerificationStatus.PARTIALLY_VERIFIED,
+        verification_status=PublicVerificationStatus.VERIFIED,
     )
     document.revisions.append(published_revision)
 
@@ -112,6 +115,7 @@ def seeded_session(session: Session) -> Session:
         description="Synthetic measure for C1 tests; not a CMS record.",
         is_public=True,
     )
+    versions: dict[int, MeasureVersion] = {}
     for year in (2025, 2026):
         public_measure.memberships.append(
             ProgramMembership(
@@ -122,26 +126,34 @@ def seeded_session(session: Session) -> Session:
                 verified_at=checked_at,
             )
         )
-        _add_version(public_measure, year, published_revision)
-    public_measure.comparisons.append(
-        MeasureComparison(
-            program="Fictional Quality Program",
-            from_year=2025,
-            to_year=2026,
-            status=ChangeStatus.MODIFIED,
-            publication_state=PublicationState.PUBLISHED,
-            affected_fields=[
-                MeasureComparisonField(
-                    field=AffectedField.DEFINITION,
-                    status=ChangeStatus.MODIFIED,
-                    from_availability=FieldAvailability.AVAILABLE,
-                    to_availability=FieldAvailability.AVAILABLE,
-                    from_value="Fictional definition for 2025.",
-                    to_value="Fictional definition for 2026.",
-                )
-            ],
-        )
+        versions[year] = _add_version(public_measure, year, published_revision)
+    comparison_field = MeasureComparisonField(
+        field=AffectedField.DEFINITION,
+        status=ChangeStatus.MODIFIED,
+        from_availability=FieldAvailability.AVAILABLE,
+        to_availability=FieldAvailability.AVAILABLE,
+        from_value="Fictional definition for 2025.",
+        to_value="Fictional definition for 2026.",
+        evidence_links=[
+            MeasureComparisonEvidence(
+                evidence_reference=versions[2025].fields[0].evidence[0],
+                side=ChangeEvidenceSide.FROM_VERSION,
+            ),
+            MeasureComparisonEvidence(
+                evidence_reference=versions[2026].fields[0].evidence[0],
+                side=ChangeEvidenceSide.TO_VERSION,
+            ),
+        ],
     )
+    comparison = MeasureComparison(
+        program="Fictional Quality Program",
+        from_year=2025,
+        to_year=2026,
+        status=ChangeStatus.MODIFIED,
+        publication_state=PublicationState.PUBLISHED,
+        affected_fields=[comparison_field],
+    )
+    public_measure.comparisons.append(comparison)
 
     unknown_measure = Measure(
         measure_id="DEMO-002",
@@ -174,6 +186,8 @@ def seeded_session(session: Session) -> Session:
     _add_version(private_measure, 2026, published_revision)
 
     session.add_all([document, public_measure, unknown_measure, private_measure])
+    session.flush()
+    refresh_comparison_evidence_status(comparison)
     session.commit()
     return session
 

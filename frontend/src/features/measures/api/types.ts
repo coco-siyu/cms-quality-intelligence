@@ -46,6 +46,7 @@ export type SpecificationField = {
 };
 
 export type ChangeEvidenceSide = "from_version" | "to_version" | "context";
+export type ComparisonEvidenceStatus = "pending" | "verified" | "incomplete";
 
 export type CollectionType =
   | "program_roster"
@@ -76,6 +77,7 @@ export type PublicChangeRecord = {
   from_year: number;
   to_year: number;
   status: ChangeStatus;
+  evidence_status: ComparisonEvidenceStatus;
   fields: ChangeField[];
 };
 

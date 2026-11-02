@@ -2,7 +2,12 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.domain import AffectedField, ChangeStatus, FieldAvailability
+from app.domain import (
+    AffectedField,
+    ChangeStatus,
+    ComparisonEvidenceStatus,
+    FieldAvailability,
+)
 from app.models import MeasureComparison, MeasureVersion, SpecificationField
 
 
@@ -88,6 +93,35 @@ def test_unresolved_field_cannot_surface_as_a_verified_change(
     assert modified.json()["items"] == []
     assert unknown.status_code == 200
     assert [item["measure_id"] for item in unknown.json()["items"]] == ["DEMO-001"]
+
+
+def test_incomplete_comparison_evidence_is_publicly_unknown(
+    client: TestClient,
+    seeded_session: Session,
+) -> None:
+    comparison = seeded_session.scalar(select(MeasureComparison))
+    assert comparison is not None
+    comparison.evidence_status = ComparisonEvidenceStatus.INCOMPLETE
+    seeded_session.commit()
+
+    response = client.get(
+        "/api/measures", params={"from_year": 2025, "to_year": 2026}
+    )
+    modified = client.get(
+        "/api/measures",
+        params={
+            "from_year": 2025,
+            "to_year": 2026,
+            "change_status": "modified",
+        },
+    )
+
+    assert response.status_code == 200
+    first = response.json()["items"][0]
+    assert first["change_status"] == "unknown"
+    assert first["affected_fields"] == []
+    assert modified.status_code == 200
+    assert modified.json()["items"] == []
 
 
 def test_measure_detail_exposes_explicit_availability_and_public_evidence(

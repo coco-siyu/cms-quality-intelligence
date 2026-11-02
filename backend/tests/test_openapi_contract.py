@@ -19,6 +19,12 @@ def test_root_openapi_contract_is_valid() -> None:
     )
     assert "PublicChangeRecord" in schemas
     assert "collection_type" in schemas["PublicChangeRecord"]["required"]
+    assert "evidence_status" in schemas["PublicChangeRecord"]["required"]
+    assert schemas["ComparisonEvidenceStatus"]["enum"] == [
+        "pending",
+        "verified",
+        "incomplete",
+    ]
 
 
 def test_runtime_openapi_exposes_contract_operation_ids_and_error_models() -> None:

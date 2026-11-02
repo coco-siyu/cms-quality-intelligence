@@ -188,6 +188,16 @@ linking, and the rule that wording-only is never inferred from text alone.
 Goal: Connect each asserted difference to official CMS material.
 Description: Store short source excerpts with document/version IDs, section or page locators when available, and official URLs for each comparison result. Test that a public change does not claim verified evidence when its source reference is absent or unresolved.
 
+Implementation status (complete, 2026-11-02): Added structural evidence states
+and validation for both year sides of every comparison field. The validator
+requires literal excerpts, locators, matching field/version identity, current
+approved measure versions, verified published source revisions, and active HTTPS
+source documents. The public projector revalidates before returning document,
+revision, locator, excerpt, and side metadata; incomplete evidence remains
+private and existing public measure summaries fall back to `unknown`. Tests
+cover absent sides, blank excerpts and locators, unverified revisions, wrong-year
+references, public filtering, migrations, and the reusable API contract.
+
 ## 26. Define structured AI semantic-classification output
 Goal: Limit AI to evaluating the meaning of detected text differences.
 Description: Define a Pydantic schema for substantive-versus-wording-only assessment, evidence references, reasoning summary, and unresolved uncertainty. Require citations from supplied official excerpts and keep AI judgments separate from deterministic field differences.

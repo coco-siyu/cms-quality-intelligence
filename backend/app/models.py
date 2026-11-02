@@ -25,6 +25,7 @@ from app.domain import (
     ClarificationEvidenceRelation,
     ClarificationOutcome,
     CollectionType,
+    ComparisonEvidenceStatus,
     FieldAvailability,
     IngestionItemStage,
     IngestionRunStatus,
@@ -102,6 +103,13 @@ comparison_to_availability_enum = Enum(
 change_evidence_side_enum = Enum(
     ChangeEvidenceSide,
     name="change_evidence_side",
+    native_enum=False,
+    create_constraint=True,
+    values_callable=lambda values: [value.value for value in values],
+)
+comparison_evidence_status_enum = Enum(
+    ComparisonEvidenceStatus,
+    name="comparison_evidence_status",
     native_enum=False,
     create_constraint=True,
     values_callable=lambda values: [value.value for value in values],
@@ -877,6 +885,11 @@ class MeasureComparison(Base):
     )
     publication_state: Mapped[PublicationState] = mapped_column(
         publication_state_enum, default=PublicationState.DRAFT, index=True
+    )
+    evidence_status: Mapped[ComparisonEvidenceStatus] = mapped_column(
+        comparison_evidence_status_enum,
+        default=ComparisonEvidenceStatus.PENDING,
+        index=True,
     )
 
     measure: Mapped[Measure] = relationship(back_populates="comparisons")

@@ -13,13 +13,13 @@ from app.domain import (
     ChangeEvidenceSide,
     ChangeStatus,
     CollectionType,
+    ComparisonEvidenceStatus,
     FieldAvailability,
     PublicationState,
 )
 from app.models import (
     Measure,
     MeasureComparison,
-    MeasureComparisonEvidence,
     MeasureComparisonField,
     MeasureVersion,
     SourceDocument,
@@ -176,29 +176,14 @@ def test_change_field_links_evidence_to_each_year_side(seeded_session: Session) 
         select(Measure).where(Measure.measure_id == "DEMO-001")
     )
     assert measure is not None
-    comparison_field = measure.comparisons[0].affected_fields[0]
-    evidence_by_year = {
-        version.performance_year: version.fields[0].evidence[0]
-        for version in measure.versions
-    }
-    comparison_field.evidence_links.extend(
-        [
-            MeasureComparisonEvidence(
-                evidence_reference=evidence_by_year[2025],
-                side=ChangeEvidenceSide.FROM_VERSION,
-            ),
-            MeasureComparisonEvidence(
-                evidence_reference=evidence_by_year[2026],
-                side=ChangeEvidenceSide.TO_VERSION,
-            ),
-        ]
-    )
-    seeded_session.commit()
+    comparison = measure.comparisons[0]
+    comparison_field = comparison.affected_fields[0]
 
     assert {link.side for link in comparison_field.evidence_links} == {
         ChangeEvidenceSide.FROM_VERSION,
         ChangeEvidenceSide.TO_VERSION,
     }
+    assert comparison.evidence_status == ComparisonEvidenceStatus.VERIFIED
 
 
 def test_initial_migration_builds_and_reverts_schema(
@@ -277,7 +262,8 @@ def test_initial_migration_builds_and_reverts_schema(
         column["name"]
         for column in inspect(engine).get_columns("measure_comparisons")
     }
-    assert "collection_type" in comparison_columns
+    assert {"collection_type", "evidence_status"}.issubset(comparison_columns)
+    assert "comparison_evidence_status" in comparison_checks
     comparison_unique_constraints = {
         frozenset(constraint["column_names"])
         for constraint in inspect(engine).get_unique_constraints("measure_comparisons")

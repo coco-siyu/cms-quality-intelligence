@@ -8,6 +8,7 @@ from app.domain import (
     AffectedField,
     ChangeStatus,
     CollectionType,
+    ComparisonEvidenceStatus,
     FieldAvailability,
     PublicationState,
     PublicVerificationStatus,
@@ -43,7 +44,11 @@ AFFECTED_CHANGE_STATUSES = (
 
 
 def _safe_comparison_status(comparison: MeasureComparison | None) -> ChangeStatus:
-    if comparison is None or comparison.status == ChangeStatus.UNKNOWN:
+    if (
+        comparison is None
+        or comparison.status == ChangeStatus.UNKNOWN
+        or comparison.evidence_status != ComparisonEvidenceStatus.VERIFIED
+    ):
         return ChangeStatus.UNKNOWN
     if any(
         field.status == ChangeStatus.UNKNOWN
@@ -222,6 +227,7 @@ def _summary(
 ) -> PublicMeasureSummary:
     versions = _versions_for_measure(session, measure.id)
     comparison = _published_comparison(session, measure.id, from_year, to_year)
+    safe_status = _safe_comparison_status(comparison)
     return PublicMeasureSummary(
         measure_id=measure.measure_id,
         name=measure.name,
@@ -229,7 +235,7 @@ def _summary(
         performance_years=sorted(
             {version.performance_year for version in versions if version.is_program_member}
         ),
-        change_status=_safe_comparison_status(comparison),
+        change_status=safe_status,
         affected_fields=(
             sorted(
                 (
@@ -239,7 +245,7 @@ def _summary(
                 ),
                 key=str,
             )
-            if comparison
+            if comparison and safe_status != ChangeStatus.UNKNOWN
             else []
         ),
         freshness=_freshness(versions),
@@ -334,6 +340,7 @@ def _filtered_measures_statement(filters: MeasureFilters) -> Select[tuple[Measur
             )
             unsafe_comparison = or_(
                 MeasureComparison.status == ChangeStatus.UNKNOWN,
+                MeasureComparison.evidence_status != ComparisonEvidenceStatus.VERIFIED,
                 unresolved_field,
                 mismatched_affected_status,
                 mismatched_unchanged_status,
