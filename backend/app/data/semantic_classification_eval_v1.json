@@ -1,0 +1,215 @@
+{
+  "fixture_version": "semantic-eval-v1-controlled-replay",
+  "description": "Fictional, controlled cases for testing semantic label scoring and evidence safeguards. These are not CMS records and are not a live-model benchmark.",
+  "cases": [
+    {
+      "case_id": "substantive_denominator_change",
+      "category": "substantive",
+      "description": "A fictional denominator changes from adults to adults aged 65 and older.",
+      "field": "denominator",
+      "deterministic_status": "modified",
+      "from_value": "All adults attributed during the performance year.",
+      "to_value": "Adults aged 65 years or older attributed during the performance year.",
+      "evidence": [
+        {
+          "evidence_id": "substantive-denominator-2025",
+          "source_revision_id": "fictional-eval-source-2025-a",
+          "document_title": "Controlled fictional 2025 evaluation source",
+          "official_url": "https://www.cms.gov/semantic-evaluation/fictional-2025-a",
+          "locator": "Fixture section A, denominator",
+          "excerpt": "The denominator includes all adults attributed during the performance year.",
+          "side": "from_version"
+        },
+        {
+          "evidence_id": "substantive-denominator-2026",
+          "source_revision_id": "fictional-eval-source-2026-a",
+          "document_title": "Controlled fictional 2026 evaluation source",
+          "official_url": "https://www.cms.gov/semantic-evaluation/fictional-2026-a",
+          "locator": "Fixture section A, denominator",
+          "excerpt": "The denominator includes attributed adults aged 65 years or older.",
+          "side": "to_version"
+        }
+      ],
+      "expected_outcome": "substantive",
+      "replay_output": {
+        "classification": "substantive",
+        "reasoning_summary": "The later fictional text adds an age threshold that changes who is included.",
+        "citations": [
+          {"evidence_id": "substantive-denominator-2025"},
+          {"evidence_id": "substantive-denominator-2026"}
+        ],
+        "uncertainty_summary": null
+      }
+    },
+    {
+      "case_id": "wording_only_attribution_paraphrase",
+      "category": "paraphrase",
+      "description": "A fictional attribution requirement is restated without changing its meaning.",
+      "field": "eligibility",
+      "deterministic_status": "modified",
+      "from_value": "Beneficiaries must be attributed to the organization for the performance year.",
+      "to_value": "Performance-year attribution to the organization is required for beneficiaries.",
+      "evidence": [
+        {
+          "evidence_id": "paraphrase-eligibility-2025",
+          "source_revision_id": "fictional-eval-source-2025-b",
+          "document_title": "Controlled fictional 2025 evaluation source",
+          "official_url": "https://www.cms.gov/semantic-evaluation/fictional-2025-b",
+          "locator": "Fixture section B, eligibility",
+          "excerpt": "Beneficiaries must be attributed to the organization for the performance year.",
+          "side": "from_version"
+        },
+        {
+          "evidence_id": "paraphrase-eligibility-2026",
+          "source_revision_id": "fictional-eval-source-2026-b",
+          "document_title": "Controlled fictional 2026 evaluation source",
+          "official_url": "https://www.cms.gov/semantic-evaluation/fictional-2026-b",
+          "locator": "Fixture section B, eligibility",
+          "excerpt": "Performance-year attribution to the organization is required for beneficiaries.",
+          "side": "to_version"
+        }
+      ],
+      "expected_outcome": "wording_only",
+      "replay_output": {
+        "classification": "wording_only",
+        "reasoning_summary": "The fictional eligibility requirement is paraphrased but retains the same condition.",
+        "citations": [
+          {"evidence_id": "paraphrase-eligibility-2025"},
+          {"evidence_id": "paraphrase-eligibility-2026"}
+        ],
+        "uncertainty_summary": null
+      }
+    },
+    {
+      "case_id": "unchanged_exact_definition",
+      "category": "unchanged",
+      "description": "An exact match is deterministically skipped instead of being sent to a provider.",
+      "field": "definition",
+      "deterministic_status": "unchanged",
+      "from_value": "A controlled fictional definition.",
+      "to_value": "A controlled fictional definition.",
+      "evidence": [],
+      "expected_outcome": "not_applicable",
+      "replay_output": null
+    },
+    {
+      "case_id": "conflicting_source_context",
+      "category": "conflicting",
+      "description": "Two fictional year excerpts do not establish whether an exception is new or relocated.",
+      "field": "exclusions",
+      "deterministic_status": "modified",
+      "from_value": "Exclude beneficiaries enrolled for fewer than 90 days.",
+      "to_value": "See the eligibility appendix for enrollment exclusions.",
+      "evidence": [
+        {
+          "evidence_id": "conflict-exclusions-2025",
+          "source_revision_id": "fictional-eval-source-2025-c",
+          "document_title": "Controlled fictional 2025 evaluation source",
+          "official_url": "https://www.cms.gov/semantic-evaluation/fictional-2025-c",
+          "locator": "Fixture section C, exclusions",
+          "excerpt": "Exclude beneficiaries enrolled for fewer than 90 days.",
+          "side": "from_version"
+        },
+        {
+          "evidence_id": "conflict-exclusions-2026",
+          "source_revision_id": "fictional-eval-source-2026-c",
+          "document_title": "Controlled fictional 2026 evaluation source",
+          "official_url": "https://www.cms.gov/semantic-evaluation/fictional-2026-c",
+          "locator": "Fixture section C, exclusions",
+          "excerpt": "See the eligibility appendix for enrollment exclusions; the appendix is not included in this fixture.",
+          "side": "to_version"
+        }
+      ],
+      "expected_outcome": "needs_review",
+      "replay_output": {
+        "classification": "needs_review",
+        "reasoning_summary": "The later excerpt points to unavailable context, so the semantic effect cannot be resolved.",
+        "citations": [
+          {"evidence_id": "conflict-exclusions-2025"},
+          {"evidence_id": "conflict-exclusions-2026"}
+        ],
+        "uncertainty_summary": "The referenced fictional appendix is absent from the supplied evidence."
+      }
+    },
+    {
+      "case_id": "missing_comparison_year_evidence",
+      "category": "missing_evidence",
+      "description": "A conclusive replay label cites only one year and must fail closed.",
+      "field": "numerator",
+      "deterministic_status": "modified",
+      "from_value": "Count completed fictional assessments.",
+      "to_value": "Count completed and signed fictional assessments.",
+      "evidence": [
+        {
+          "evidence_id": "missing-evidence-numerator-2025",
+          "source_revision_id": "fictional-eval-source-2025-d",
+          "document_title": "Controlled fictional 2025 evaluation source",
+          "official_url": "https://www.cms.gov/semantic-evaluation/fictional-2025-d",
+          "locator": "Fixture section D, numerator",
+          "excerpt": "Count completed fictional assessments.",
+          "side": "from_version"
+        }
+      ],
+      "expected_outcome": "needs_review",
+      "replay_output": {
+        "classification": "substantive",
+        "reasoning_summary": "The text appears to add a signature requirement, but the later source excerpt was not supplied.",
+        "citations": [
+          {"evidence_id": "missing-evidence-numerator-2025"}
+        ],
+        "uncertainty_summary": null
+      }
+    },
+    {
+      "case_id": "missing_field_value",
+      "category": "missing_field",
+      "description": "A missing comparison value is skipped before provider classification.",
+      "field": "calculation_logic",
+      "deterministic_status": "unknown",
+      "from_value": "Divide a fictional numerator by its fictional denominator.",
+      "to_value": null,
+      "evidence": [],
+      "expected_outcome": "not_applicable",
+      "replay_output": null
+    },
+    {
+      "case_id": "substantive_eligibility_misclassified",
+      "category": "substantive",
+      "description": "A valid but intentionally incorrect replay label tests that scoring exposes semantic errors.",
+      "field": "eligibility",
+      "deterministic_status": "modified",
+      "from_value": "Organizations with at least 1,000 fictional beneficiaries are eligible.",
+      "to_value": "Organizations with at least 5,000 fictional beneficiaries are eligible.",
+      "evidence": [
+        {
+          "evidence_id": "misclassified-eligibility-2025",
+          "source_revision_id": "fictional-eval-source-2025-e",
+          "document_title": "Controlled fictional 2025 evaluation source",
+          "official_url": "https://www.cms.gov/semantic-evaluation/fictional-2025-e",
+          "locator": "Fixture section E, eligibility",
+          "excerpt": "Organizations with at least 1,000 fictional beneficiaries are eligible.",
+          "side": "from_version"
+        },
+        {
+          "evidence_id": "misclassified-eligibility-2026",
+          "source_revision_id": "fictional-eval-source-2026-e",
+          "document_title": "Controlled fictional 2026 evaluation source",
+          "official_url": "https://www.cms.gov/semantic-evaluation/fictional-2026-e",
+          "locator": "Fixture section E, eligibility",
+          "excerpt": "Organizations with at least 5,000 fictional beneficiaries are eligible.",
+          "side": "to_version"
+        }
+      ],
+      "expected_outcome": "substantive",
+      "replay_output": {
+        "classification": "wording_only",
+        "reasoning_summary": "This intentionally incorrect replay response treats the threshold change as wording only.",
+        "citations": [
+          {"evidence_id": "misclassified-eligibility-2025"},
+          {"evidence_id": "misclassified-eligibility-2026"}
+        ],
+        "uncertainty_summary": null
+      }
+    }
+  ]
+}

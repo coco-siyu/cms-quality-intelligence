@@ -35,11 +35,11 @@
   do not publish records. Task 43 now adds deterministic, typed normalization
   from extracted source segments into private field candidates with exact
   evidence locators; ambiguous identities and incomplete fields remain
-  unresolved. M2 Tasks 23–27 now provide deterministic comparison, evidence
-  gating, and private evidence-bounded semantic proposals; Tasks 28–37 remain
-  open. Tasks 44–46 and 48–49 provide AI clarification, durable ingestion
-  progress, manual review, and the safe partial-publication slice. Task 47
-  remains open. The
+  unresolved. M2 Tasks 23–28 now provide deterministic comparison, evidence
+  gating, private evidence-bounded semantic proposals, and a repeatable semantic
+  evaluation harness; Tasks 29–37 remain open. Tasks 44–46 and 48–49 provide AI
+  clarification, durable ingestion progress, manual review, and the safe
+  partial-publication slice. Task 47 remains open. The
   dashboard change ledger, What's New feed, comparison highlighting, and AI
   Impact content remain visibly fictional prototypes and are not production-backed.
 
@@ -232,6 +232,19 @@ deterministic comparison and is disabled without explicit environment settings.
 ## 28. Build semantic-change evaluation fixtures
 Goal: Quantify whether classification respects evidence and uncertainty.
 Description: Assemble a small labeled set with paraphrases, substantive edits, unchanged records, conflicting sources, and missing fields. Create a repeatable evaluation command and report actual accuracy and evidence-validation failures without inventing performance claims.
+
+Implementation status (complete, 2026-11-02): Added a versioned seven-case,
+explicitly fictional evaluation suite covering substantive edits, paraphrases,
+unchanged values, conflicting context, missing year evidence, and missing field
+values. The repeatable command scores provider-eligible labels separately from
+deterministically skipped cases and reuses the production citation validator to
+count evidence and provider failures. Its checked-in controlled replay reports
+3/5 raw labels correct, 4/5 after fail-closed `needs_review` handling, one
+evidence-validation failure, and two correctly skipped cases. These numbers
+exercise the scorer and safeguards; they are explicitly not a live-model or
+healthcare-accuracy claim. A live OpenAI run requires both configured credentials
+and the deliberate `--confirm-live-model-call` flag, so model-specific results
+cannot be reported until such a run is authorized and preserved.
 
 ## 29. Implement public changes and comparison APIs
 Goal: Serve verified year-over-year change results to the frontend.

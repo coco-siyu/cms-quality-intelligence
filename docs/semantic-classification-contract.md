@@ -95,6 +95,40 @@ coverage become persisted `needs_review` proposals. Transport failures remain
 retryable and create no misleading assessment. A provider-declared evidence
 conflict also remains `needs_review`.
 
-No public endpoint, UI, approval, or publication path is added by Tasks 26–27.
-Task 28 will evaluate the behavior against labeled substantive, paraphrase,
-unchanged, missing, and conflicting fixtures.
+No public endpoint, UI, approval, or publication path is added by Tasks 26–28.
+
+## Task 28 evaluation harness
+
+The checked-in `semantic_classification_eval_v1.json` suite contains seven
+explicitly fictional cases: substantive edits, a paraphrase, an exact unchanged
+value, conflicting context, missing comparison-year evidence, a missing field
+value, and a deliberately misclassified substantive edit. It contains no CMS
+claim and no patient-level data.
+
+Run the offline controlled replay from `backend/`:
+
+```sh
+uv run python -m app.commands.evaluate_semantic_classification
+```
+
+The controlled replay is deterministic and makes no network or model call. Its
+outputs are intentionally mixed so tests can prove that the evaluator exposes a
+valid-but-wrong label and converts an evidence-invalid conclusive result to
+`needs_review`. The checked-in report is
+`docs/evaluations/semantic-classification-replay.md`. It is a safety-harness
+result, not a model benchmark or healthcare accuracy statement.
+
+An operator may explicitly evaluate the configured OpenAI provider and write a
+separate report:
+
+```sh
+uv run python -m app.commands.evaluate_semantic_classification \
+  --provider openai \
+  --confirm-live-model-call \
+  --output ../docs/evaluations/semantic-classification-live.md
+```
+
+The confirmation flag is mandatory because a live run sends the fictional
+fixtures to the configured provider and may incur cost. A live report applies
+only to its recorded fixture hash and provider/model configuration; it must not
+be generalized into a clinical or policy-reliability claim.

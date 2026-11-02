@@ -249,6 +249,27 @@ CMS evidence for administrator review. Semantic classification currently has no
 public endpoint or UI and cannot alter a deterministic comparison. Do not commit
 the API key.
 
+Run the semantic-classification safety harness without making a model call:
+
+```sh
+cd backend
+uv run python -m app.commands.evaluate_semantic_classification
+```
+
+The default command replays versioned fictional outputs and verifies scoring,
+deterministic skips, and fail-closed citation handling. Its percentages are not
+model accuracy. A model-specific evaluation is opt-in and may incur provider
+cost:
+
+```sh
+uv run python -m app.commands.evaluate_semantic_classification \
+  --provider openai \
+  --confirm-live-model-call
+```
+
+Preserve any live result with its fixture hash and configured model name before
+using it for a model-selection decision.
+
 To load the two explicitly fictional records into the local database, opt in
 for that command only. It refuses database names that do not contain `demo`:
 
