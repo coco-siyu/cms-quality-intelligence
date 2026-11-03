@@ -1,6 +1,6 @@
 # CMS Quality Intelligence — Implementation Backlog
 
-## Checkpoint status (November 2, 2026)
+## Checkpoint status (November 3, 2026)
 
 - Tasks 1, 2, 5–12: implemented and verified through Checkpoints A, B, C1,
   and C2.1–C2.5. The official PY2025–PY2026 roster has two-source evidence,
@@ -35,15 +35,18 @@
   do not publish records. Task 43 now adds deterministic, typed normalization
   from extracted source segments into private field candidates with exact
   evidence locators; ambiguous identities and incomplete fields remain
-  unresolved. M2 Tasks 23–30 now provide deterministic comparison, evidence
+  unresolved. M2 Tasks 23–31 now provide deterministic comparison, evidence
   gating, private evidence-bounded semantic proposals, and a repeatable semantic
-  evaluation harness, public comparison APIs, and the verified-data Change
-  Overview dashboard; Tasks 31–37 remain open. Tasks
+  evaluation harness, public comparison APIs, the verified-data Change
+  Overview dashboard, and evidence-backed side-by-side detail; Tasks 32–37
+  remain open. Tasks
   44–46 and 48–49 provide AI
   clarification, durable ingestion progress, manual review, and the safe
-  partial-publication slice. Task 47 remains open. The
-  What's New feed, side-by-side comparison highlighting, and AI Impact content
-  remain visibly fictional prototypes and are not production-backed.
+  partial-publication slice. Task 47 remains open. Task 31 now renders exact,
+  evidence-backed side-by-side comparisons when the public API has an approved
+  record, with an explicit reference-only fallback when it does not. Tasks
+  32–37 remain open; the What's New feed and AI Impact content are not yet
+  production-backed.
 
 This backlog implements the scoped 2025–2026 MSSP / APP Plus MVP in independent, one-session work items. Tasks are ordered for incremental delivery (M1–M4), but each description provides enough context for an assignee to begin without reading preceding tasks. Keep all official CMS facts source-backed, treat unverified extractions as drafts, and do not use patient-level data. **This document is planning only; no implementation code is included.**
 
@@ -283,6 +286,18 @@ responsive visual review.
 ## 31. Build side-by-side specification comparison
 Goal: Show precise 2025-versus-2026 differences on measure pages.
 Description: Implement a Changes tab with aligned fields, highlighted differences, wording-only labels, and explicit unknown states. Include source excerpts and official links without assuming both years have values for every field.
+
+Implementation status (complete, 2026-11-03): The API-mode measure Changes tab
+now requests the exact published comparison identity from
+`GET /api/changes/{measure_id}` and renders paired performance-year sheets for
+each approved field. Status styling, wording-only labels, explicit unavailable
+and unresolved states, side-labeled excerpts, locators, and official source
+links come directly from the evidence-gated public contract. A 404 preserves
+the approved version fields as clearly labeled reference material without
+inferring any change, while same-year selections and network errors have
+separate honest states. Frontend integration coverage verifies the exact query
+identity, evidence links, fallback boundary, and same-year behavior; the layout
+stacks into an evidence-first mobile reading order.
 
 ## 32. Build the What's New feed
 Goal: Surface recently published, verified changes.

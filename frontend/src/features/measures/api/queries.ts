@@ -43,12 +43,35 @@ export function useApiChanges(fromYear: number, toYear: number) {
   const parameters = {
     from_year: fromYear,
     to_year: toYear,
-    collection_type: "program_roster",
+    collection_type: "program_roster" as const,
     page_size: 100,
   };
   return useQuery({
     queryKey: ["public-changes", parameters],
     queryFn: ({ signal }) => changeApi.list(parameters, signal),
     enabled: fromYear !== toYear,
+  });
+}
+
+export function useApiMeasureComparison(
+  measureId: string,
+  program: string,
+  fromYear: number,
+  toYear: number,
+) {
+  // The current public measure summary and dashboard projection is explicitly
+  // roster-scoped. Detailed collection variants stay private until the public
+  // contract exposes a variant selector and identity on measure versions.
+  const parameters = {
+    program,
+    collection_type: "program_roster" as const,
+    from_year: fromYear,
+    to_year: toYear,
+  };
+  return useQuery({
+    queryKey: ["public-measure-comparison", measureId, parameters],
+    queryFn: ({ signal }) => changeApi.get(measureId, parameters, signal),
+    enabled: Boolean(measureId && program) && fromYear !== toYear,
+    retry: false,
   });
 }

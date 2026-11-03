@@ -43,6 +43,43 @@ const changePage = {
           to_availability: "available",
           from_value: "Fictional 2025 definition.",
           to_value: "Fictional 2026 definition.",
+          evidence: [
+            {
+              evidence_id: "DEMO-CHANGE-EVIDENCE-2025",
+              source_revision_id: "DEMO-CHANGE-REVISION-2025",
+              document_title: "Fictional 2025 Official Source",
+              official_url: "https://example.invalid/fictional-2025-source",
+              locator: "Fictional page 5",
+              excerpt: "Fictional source wording for the 2025 definition.",
+              side: "from_version",
+            },
+            {
+              evidence_id: "DEMO-CHANGE-EVIDENCE-2026",
+              source_revision_id: "DEMO-CHANGE-REVISION-2026",
+              document_title: "Fictional 2026 Official Source",
+              official_url: "https://example.invalid/fictional-2026-source",
+              locator: "Fictional page 6",
+              excerpt: "Fictional source wording for the 2026 definition.",
+              side: "to_version",
+            },
+          ],
+        },
+        {
+          field: "calculation_logic",
+          status: "wording_only",
+          from_availability: "available",
+          to_availability: "available",
+          from_value: "Fictional calculation wording for 2025.",
+          to_value: "Rephrased fictional calculation wording for 2026.",
+          evidence: [],
+        },
+        {
+          field: "numerator",
+          status: "unknown",
+          from_availability: "unavailable",
+          to_availability: "unresolved",
+          from_value: null,
+          to_value: null,
           evidence: [],
         },
       ],
@@ -172,6 +209,9 @@ function jsonResponse(value: unknown, status = 200) {
 function apiFetch(input: RequestInfo | URL) {
   const url = String(input);
   if (url.includes("/api/performance-years")) return Promise.resolve(jsonResponse(performanceYears));
+  if (url.includes(`/api/changes/${summary.measure_id}?`)) {
+    return Promise.resolve(jsonResponse(changePage.items[0]));
+  }
   if (url.includes("/api/changes?")) return Promise.resolve(jsonResponse(changePage));
   if (url.includes("/navigation")) return Promise.resolve(jsonResponse(navigation));
   if (url.includes(`/api/measures/${summary.measure_id}?`)) return Promise.resolve(jsonResponse(detail));
@@ -189,7 +229,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("C1 frontend API integration", () => {
+describe("public frontend API integration", () => {
   it("uses published API records on the redesigned dashboard", async () => {
     const fetchMock = vi.fn(apiFetch);
     vi.stubGlobal("fetch", fetchMock);
@@ -329,22 +369,43 @@ describe("C1 frontend API integration", () => {
     expect(screen.queryByText("Breast Cancer Screening")).not.toBeInTheDocument();
   });
 
-  it("loads a direct detail route with unresolved semantics and M2 boundaries", async () => {
-    vi.stubGlobal("fetch", vi.fn(apiFetch));
+  it("loads an evidence-backed side-by-side comparison on a direct detail route", async () => {
+    const fetchMock = vi.fn(apiFetch);
+    vi.stubGlobal("fetch", fetchMock);
 
     await renderApiRoute("/measures/DEMO-API-001?from=2025&to=2026");
 
     expect(
       await screen.findByRole("heading", { name: "Fictional API Contract Measure" }),
     ).toBeInTheDocument();
-    expect(screen.getByText(/unresolved in approved evidence/i)).toBeInTheDocument();
-    expect(screen.getByText("Fictional Approved Source")).toBeInTheDocument();
+    expect(await screen.findByText("Approved field comparison")).toBeInTheDocument();
+    expect(screen.getByText("Fictional 2025 definition.")).toBeInTheDocument();
+    expect(screen.getByText("Fictional 2026 definition.")).toBeInTheDocument();
+    expect(screen.getByText("Wording only")).toBeVisible();
+    expect(
+      screen.getByText("This field is explicitly unavailable in the approved public record."),
+    ).toBeVisible();
+    expect(screen.getByText("The approved evidence does not resolve this field.")).toBeVisible();
+    expect(screen.getByText("Fictional 2025 Official Source")).toHaveAttribute(
+      "href",
+      "https://example.invalid/fictional-2025-source",
+    );
+    expect(screen.getByText("Fictional 2026 Official Source")).toHaveAttribute(
+      "href",
+      "https://example.invalid/fictional-2026-source",
+    );
     expect(screen.getByText("1 of 2")).toBeInTheDocument();
     expect(
       decodeURIComponent(
         screen.getByRole("link", { name: /Next.*DEMO-API-002/i }).getAttribute("href") ?? "",
       ),
     ).toContain('from="2025"');
+
+    const comparisonUrl = requestedUrl(fetchMock, `/api/changes/${summary.measure_id}?`);
+    expect(comparisonUrl).toContain("program=Fictional+Quality+Program");
+    expect(comparisonUrl).toContain("collection_type=program_roster");
+    expect(comparisonUrl).toContain("from_year=2025");
+    expect(comparisonUrl).toContain("to_year=2026");
 
     fireEvent.mouseDown(screen.getByRole("tab", { name: "AI Impact" }), {
       button: 0,
@@ -408,6 +469,11 @@ describe("C1 frontend API integration", () => {
             }),
           );
         }
+        if (url.includes("/api/changes/001?")) {
+          return Promise.resolve(
+            jsonResponse({ code: "comparison_not_found", message: "Not found", details: [] }, 404),
+          );
+        }
         return Promise.resolve(jsonResponse(sourceBackedDetail));
       }),
     );
@@ -419,9 +485,26 @@ describe("C1 frontend API integration", () => {
         name: "Diabetes: Glycemic Status Assessment Greater Than 9%",
       }),
     ).toBeInTheDocument();
+    expect(
+      await screen.findByText("No approved comparison is public for this year pair."),
+    ).toBeVisible();
     expect(screen.getByText("Member of the PY2025 MSSP APP Plus quality measure set.")).toBeVisible();
     expect(screen.getByText("Member of the PY2026 MSSP APP Plus quality measure set.")).toBeVisible();
     expect(screen.getAllByRole("link", { name: /Open source/i })).toHaveLength(4);
     expect(screen.queryByText(/Patients 18-75/i)).not.toBeInTheDocument();
+  });
+
+  it("does not request a comparison when the selected years are the same", async () => {
+    const fetchMock = vi.fn(apiFetch);
+    vi.stubGlobal("fetch", fetchMock);
+
+    await renderApiRoute("/measures/DEMO-API-001?from=2025&to=2025");
+
+    expect(await screen.findByText("Choose two different performance years.")).toBeVisible();
+    expect(
+      fetchMock.mock.calls.some(([input]) =>
+        String(input).includes(`/api/changes/${summary.measure_id}?`),
+      ),
+    ).toBe(false);
   });
 });

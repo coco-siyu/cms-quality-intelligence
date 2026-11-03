@@ -3,11 +3,21 @@ import { Link, useParams, useSearch } from "@tanstack/react-router";
 import { AlertTriangle, ChevronLeft, ChevronRight, ExternalLink, ShieldCheck } from "lucide-react";
 
 import { ErrorState, LoadingState, SectionTitle, StatusMark } from "../components/cms/shared";
+import { PublicComparison } from "../components/cms/PublicComparison";
 import { Button } from "../components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
 import { apiSummaryToMeasure, formatApiDate, labelField } from "../features/measures/api/adapters";
-import { useApiMeasure, useApiMeasureNavigation } from "../features/measures/api/queries";
-import type { EvidenceReference, MeasureVersion } from "../features/measures/api/types";
+import { ApiClientError } from "../features/measures/api/client";
+import {
+  useApiMeasure,
+  useApiMeasureComparison,
+  useApiMeasureNavigation,
+} from "../features/measures/api/queries";
+import type {
+  EvidenceReference,
+  MeasureVersion,
+  PublicMeasureDetail,
+} from "../features/measures/api/types";
 import { parseDemoFilters } from "../features/measures/demo/filters";
 
 function valueFor(version: MeasureVersion | undefined, fieldName: string) {
@@ -52,6 +62,62 @@ function EvidenceList({ versions }: { versions: MeasureVersion[] }) {
   );
 }
 
+function VersionFieldsReference({ measure }: { measure: PublicMeasureDetail }) {
+  const availableFields = [
+    ...new Set(measure.versions.flatMap((version) => version.fields.map((field) => field.field))),
+  ];
+
+  return (
+    <>
+      <section className="comparison-section version-reference-section">
+        <SectionTitle demo={false}>Published version reference</SectionTitle>
+        <div className="m1-boundary-note">
+          <AlertTriangle size={16} />
+          <p>
+            These are approved version fields, not a published change finding. Missing text is
+            never treated as a removal, and no comparison status is inferred here.
+          </p>
+        </div>
+        <div className="comparison-table" role="table" aria-label="Published version fields">
+          <div className="comparison-row comparison-header" role="row">
+            <div role="columnheader">Field</div>
+            {measure.versions.map((version) => (
+              <div key={version.version_id} role="columnheader">
+                PY{version.performance_year}
+              </div>
+            ))}
+          </div>
+          {availableFields.map((fieldName) => (
+            <div className="comparison-row" role="row" key={fieldName}>
+              <div className="field-label" role="cell">
+                <strong>{labelField(fieldName)}</strong>
+              </div>
+              {measure.versions.map((version) => {
+                const field = valueFor(version, fieldName);
+                return (
+                  <div className="spec-text" role="cell" key={version.version_id}>
+                    <span className="mobile-year">PY{version.performance_year}</span>
+                    {field?.availability === "available" ? (
+                      field.value
+                    ) : (
+                      <span className="unavailable-text">
+                        {field
+                          ? `${field.availability} in approved evidence`
+                          : "Not represented in this version"}
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      </section>
+      <EvidenceList versions={measure.versions} />
+    </>
+  );
+}
+
 export function ApiMeasureDetailPage() {
   const params = useParams({ strict: false });
   const rawSearch = useSearch({ strict: false });
@@ -60,6 +126,16 @@ export function ApiMeasureDetailPage() {
   const [tab, setTab] = useState("changes");
   const detailQuery = useApiMeasure(measureId, filters);
   const navigationQuery = useApiMeasureNavigation(measureId, filters);
+  const comparisonProgram =
+    detailQuery.data?.versions.find(
+      (version) => version.performance_year === Number(filters.to),
+    )?.program ?? detailQuery.data?.versions[0]?.program ?? "";
+  const comparisonQuery = useApiMeasureComparison(
+    measureId,
+    comparisonProgram,
+    Number(filters.from),
+    Number(filters.to),
+  );
 
   if (detailQuery.isPending || navigationQuery.isPending) {
     return <LoadingState label="Loading approved measure evidence…" />;
@@ -77,7 +153,9 @@ export function ApiMeasureDetailPage() {
   const navigation = navigationQuery.data;
   const previousId = navigation?.previous_measure_id;
   const nextId = navigation?.next_measure_id;
-  const availableFields = [...new Set(measure.versions.flatMap((version) => version.fields.map((field) => field.field)))];
+  const sameYear = filters.from === filters.to;
+  const comparisonNotPublished =
+    comparisonQuery.error instanceof ApiClientError && comparisonQuery.error.status === 404;
 
   return (
     <div className="visual-page detail-page">
@@ -126,48 +204,43 @@ export function ApiMeasureDetailPage() {
       <Tabs value={tab} onValueChange={setTab} className="detail-tabs">
         <TabsList aria-label="Measure sections" className="measure-tabs-list">
           <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="changes">Versions</TabsTrigger>
+          <TabsTrigger value="changes">Changes</TabsTrigger>
           <TabsTrigger value="impact">AI Impact</TabsTrigger>
           <TabsTrigger value="history">Source status</TabsTrigger>
         </TabsList>
 
         <TabsContent value="changes">
-          <section className="comparison-section">
-            <SectionTitle demo={false}>Published version fields</SectionTitle>
-            <div className="m1-boundary-note">
-              <AlertTriangle size={16} />
-              <p>
-                C1 shows approved version records and availability states. Production field-level
-                change classification remains out of scope until C2; missing text is never treated
-                as a removal.
-              </p>
+          {sameYear ? (
+            <section className="comparison-empty-state">
+              <p className="card-kicker">Year-over-year comparison</p>
+              <h2>Choose two different performance years.</h2>
+              <p>The Changes view compares one approved year version with another.</p>
+            </section>
+          ) : comparisonQuery.isPending ? (
+            <LoadingState label="Loading approved comparison…" />
+          ) : comparisonQuery.data ? (
+            <PublicComparison comparison={comparisonQuery.data} />
+          ) : comparisonNotPublished ? (
+            <>
+              <section className="comparison-empty-state">
+                <p className="card-kicker">Published comparison</p>
+                <h2>No approved comparison is public for this year pair.</h2>
+                <p>
+                  The approved version records remain available below for reference. They are not
+                  classified as changed or unchanged until their comparison evidence is approved.
+                </p>
+              </section>
+              <VersionFieldsReference measure={measure} />
+            </>
+          ) : (
+            <div className="comparison-inline-error" role="alert">
+              <strong>Comparison unavailable</strong>
+              <p>{comparisonQuery.error?.message ?? "The comparison could not be loaded."}</p>
+              <Button variant="outline" onClick={() => void comparisonQuery.refetch()}>
+                Try again
+              </Button>
             </div>
-            <div className="comparison-table" role="table" aria-label="Published version fields">
-              <div className="comparison-row comparison-header" role="row">
-                <div role="columnheader">Field</div>
-                {measure.versions.map((version) => <div key={version.version_id} role="columnheader">PY{version.performance_year}</div>)}
-              </div>
-              {availableFields.map((fieldName) => (
-                <div className="comparison-row" role="row" key={fieldName}>
-                  <div className="field-label" role="cell"><strong>{labelField(fieldName)}</strong></div>
-                  {measure.versions.map((version) => {
-                    const field = valueFor(version, fieldName);
-                    return (
-                      <div className="spec-text" role="cell" key={version.version_id}>
-                        <span className="mobile-year">PY{version.performance_year}</span>
-                        {field?.availability === "available" ? field.value : (
-                          <span className="unavailable-text">
-                            {field ? `${field.availability} in approved evidence` : "Not represented in this version"}
-                          </span>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              ))}
-            </div>
-          </section>
-          <EvidenceList versions={measure.versions} />
+          )}
         </TabsContent>
 
         <TabsContent value="overview">
