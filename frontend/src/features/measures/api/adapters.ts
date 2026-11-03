@@ -1,6 +1,7 @@
 import type { DemoFilters, DemoMeasure, DemoReviewStatus } from "../demo/types";
 import type {
   AffectedField,
+  PublicChangeRecord,
   PublicMeasureSummary,
   VerificationStatus,
 } from "./types";
@@ -72,6 +73,28 @@ export function apiSummaryToMeasure(summary: PublicMeasureSummary): DemoMeasure 
     years: summary.performance_years,
     review: reviewLabels[summary.freshness.verification_status],
     verified: displayDate(summary.freshness.last_verified_at),
+    specs: [],
+    unavailable: false,
+  };
+}
+
+export function apiChangeToMeasure(
+  change: PublicChangeRecord,
+  summary?: PublicMeasureSummary,
+): DemoMeasure {
+  return {
+    id: change.measure_id,
+    name: summary?.name ?? change.measure_id,
+    description: summary?.description ?? "Published, evidence-backed comparison.",
+    status: change.status,
+    field:
+      change.fields
+        .filter((field) => field.status !== "unchanged")
+        .map((field) => fieldLabels[field.field])
+        .join(", ") || "No changed field",
+    years: [change.from_year, change.to_year],
+    review: "Approved",
+    verified: summary ? displayDate(summary.freshness.last_verified_at) : "Published",
     specs: [],
     unavailable: false,
   };

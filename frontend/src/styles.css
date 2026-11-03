@@ -2417,6 +2417,169 @@ h3 {
   font-size: 36px;
 }
 
+.ledger-empty-rail {
+  z-index: 1;
+  display: grid;
+  min-height: 90px;
+  flex: 1;
+  place-items: center;
+  padding: 18px;
+  color: var(--muted-foreground);
+  font-size: 13px;
+  text-align: center;
+}
+
+.change-register {
+  margin-top: 32px;
+  padding-top: 26px;
+  border-top: 1px solid var(--border);
+}
+
+.change-register > header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 28px;
+}
+
+.change-register h3 {
+  margin-top: 5px;
+  color: var(--navy);
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 400;
+}
+
+.change-register-search {
+  display: flex;
+  width: min(360px, 100%);
+  align-items: center;
+  gap: 9px;
+  padding: 0 2px 9px;
+  border-bottom: 1px solid var(--border-strong);
+  color: var(--muted-foreground);
+}
+
+.change-register-search:focus-within {
+  border-bottom-color: var(--navy);
+  color: var(--navy);
+}
+
+.change-register-search svg {
+  width: 17px;
+  height: 17px;
+  flex: none;
+}
+
+.change-register-search input {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--foreground);
+  font: inherit;
+}
+
+.change-register-list {
+  margin-top: 24px;
+  border-top: 1px solid var(--foreground);
+}
+
+.change-register-row {
+  display: grid;
+  grid-template-columns: 90px minmax(220px, 1.5fr) minmax(120px, 0.65fr) minmax(130px, 0.75fr) auto;
+  align-items: center;
+  gap: 18px;
+  min-height: 68px;
+  padding: 14px 8px;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.18s ease;
+}
+
+.change-register-row:hover,
+.change-register-row:focus-visible {
+  background: var(--powder-soft);
+}
+
+.change-register-id {
+  color: var(--navy);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.change-register-name {
+  color: var(--navy);
+  font-family: var(--font-display);
+  font-size: 17px;
+  line-height: 1.3;
+}
+
+.change-register-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.change-register-status svg {
+  width: 14px;
+  height: 14px;
+}
+
+.change-register-field {
+  color: var(--muted-foreground);
+  font-size: 12px;
+}
+
+.change-register-open {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--navy);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.change-register-open span {
+  transition: transform 0.18s ease;
+}
+
+.change-register-row:hover .change-register-open span {
+  transform: translateX(3px);
+}
+
+.change-register-empty {
+  margin-top: 24px;
+  padding: 28px 0 8px;
+  border-top: 1px solid var(--foreground);
+}
+
+.change-register-empty strong {
+  color: var(--navy);
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 400;
+}
+
+.change-register-empty p {
+  max-width: 680px;
+  margin-top: 8px;
+  color: var(--muted-foreground);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.change-register-empty button {
+  margin-top: 12px;
+  padding: 0 0 3px;
+  border: 0;
+  border-bottom: 1px solid currentColor;
+  background: transparent;
+  color: var(--navy);
+  font-weight: 600;
+}
+
 .dashboard-next {
   margin-top: 36px;
 }
@@ -4378,6 +4541,14 @@ h3 {
     grid-template-columns: repeat(3, 1fr);
   }
 
+  .change-register-row {
+    grid-template-columns: 72px minmax(190px, 1.4fr) minmax(110px, 0.7fr) auto;
+  }
+
+  .change-register-field {
+    display: none;
+  }
+
   .admin-metrics {
     grid-template-columns: repeat(3, 1fr);
   }
@@ -4501,6 +4672,35 @@ h3 {
 
   .home-ledger-card .summary-metric:last-child {
     grid-column: span 2;
+  }
+
+  .change-register > header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .change-register-search {
+    width: 100%;
+  }
+
+  .change-register-row {
+    grid-template-columns: 62px minmax(0, 1fr) auto;
+    gap: 12px;
+    padding: 16px 2px;
+  }
+
+  .change-register-name {
+    font-size: 16px;
+  }
+
+  .change-register-status {
+    grid-column: 2;
+  }
+
+  .change-register-open {
+    grid-column: 3;
+    grid-row: 1 / span 2;
   }
 
   .explorer-header {

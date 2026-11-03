@@ -1,6 +1,7 @@
 import type {
   ApiErrorPayload,
   PerformanceYearList,
+  PublicChangePage,
   PublicMeasureDetail,
   PublicMeasureNavigation,
   PublicMeasurePage,
@@ -53,6 +54,16 @@ export type MeasureListParameters = {
   page_size?: number;
 };
 
+export type ChangeListParameters = {
+  from_year?: number;
+  to_year?: number;
+  change_status?: string;
+  affected_field?: string;
+  collection_type?: string;
+  page?: number;
+  page_size?: number;
+};
+
 function queryString(parameters: MeasureListParameters): string {
   const search = new URLSearchParams();
   Object.entries(parameters).forEach(([key, value]) => {
@@ -85,5 +96,11 @@ export const measureApi = {
       `/api/measures/${encodeURIComponent(measureId)}/navigation${queryString(parameters)}`,
       signal,
     );
+  },
+};
+
+export const changeApi = {
+  list(parameters: ChangeListParameters, signal?: AbortSignal) {
+    return apiGet<PublicChangePage>(`/api/changes${queryString(parameters)}`, signal);
   },
 };

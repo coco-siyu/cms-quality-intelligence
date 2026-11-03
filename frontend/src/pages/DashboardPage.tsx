@@ -4,8 +4,12 @@ import { ArrowRight, Newspaper, Rows3 } from "lucide-react";
 import { ChangeLedger } from "../components/cms/ChangeLedger";
 import { HeroCollage } from "../components/cms/HeroCollage";
 import { DemoBadge, ErrorState, LoadingState } from "../components/cms/shared";
-import { apiSummaryToMeasure } from "../features/measures/api/adapters";
-import { useApiMeasureList, usePerformanceYears } from "../features/measures/api/queries";
+import { apiChangeToMeasure, apiSummaryToMeasure } from "../features/measures/api/adapters";
+import {
+  useApiChanges,
+  useApiMeasureList,
+  usePerformanceYears,
+} from "../features/measures/api/queries";
 import { getDataMode, type DataMode } from "../features/measures/dataMode";
 import { parseDemoFilters } from "../features/measures/demo/filters";
 import { useDemoMeasureList } from "../features/measures/demo/queries";
@@ -14,11 +18,13 @@ import type { DemoFilters, DemoMeasure } from "../features/measures/demo/types";
 function DashboardContent({
   filters,
   measures,
+  comparisonMeasures,
   performanceYears,
   dataMode,
 }: {
   filters: DemoFilters;
   measures: DemoMeasure[];
+  comparisonMeasures: DemoMeasure[];
   performanceYears: number[];
   dataMode: DataMode;
 }) {
@@ -103,7 +109,7 @@ function DashboardContent({
       <div className="home-ledger-card surface-card">
         <ChangeLedger
           filters={filters}
-          measures={measures}
+          measures={comparisonMeasures}
           onStatus={openStatus}
           dataMode={dataMode}
         />
@@ -149,6 +155,7 @@ function DemoDashboardPage({ filters }: { filters: DemoFilters }) {
     <DashboardContent
       filters={filters}
       measures={measureQuery.data.items}
+      comparisonMeasures={measureQuery.data.items}
       performanceYears={[2025, 2026]}
       dataMode="demo"
     />
@@ -165,27 +172,38 @@ function ApiDashboardPage({ filters }: { filters: DemoFilters }) {
     review: "all",
   });
   const performanceYearsQuery = usePerformanceYears();
+  const changeQuery = useApiChanges(Number(filters.from), Number(filters.to));
+  const sameYear = filters.from === filters.to;
 
-  if (measureQuery.isPending || performanceYearsQuery.isPending) {
+  if (measureQuery.isPending || performanceYearsQuery.isPending || (!sameYear && changeQuery.isPending)) {
     return <LoadingState label="Loading published measures…" />;
   }
-  if (measureQuery.isError || performanceYearsQuery.isError) {
-    const error = measureQuery.error ?? performanceYearsQuery.error;
+  if (measureQuery.isError || performanceYearsQuery.isError || changeQuery.isError) {
+    const error = measureQuery.error ?? performanceYearsQuery.error ?? changeQuery.error;
     return (
       <ErrorState
         message={error?.message ?? "Published measure data could not be loaded."}
         onRetry={() => {
           void measureQuery.refetch();
           void performanceYearsQuery.refetch();
+          if (!sameYear) void changeQuery.refetch();
         }}
       />
     );
   }
 
+  const summaries = new Map(measureQuery.data.items.map((item) => [item.measure_id, item]));
+  const comparisonMeasures = sameYear
+    ? []
+    : (changeQuery.data?.items ?? []).map((change) =>
+        apiChangeToMeasure(change, summaries.get(change.measure_id)),
+      );
+
   return (
     <DashboardContent
       filters={filters}
       measures={measureQuery.data.items.map(apiSummaryToMeasure)}
+      comparisonMeasures={comparisonMeasures}
       performanceYears={performanceYearsQuery.data.years}
       dataMode="api"
     />

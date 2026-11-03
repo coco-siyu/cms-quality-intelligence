@@ -75,12 +75,14 @@ documented in [`docs/m1-validation.md`](docs/m1-validation.md).
 
 The M2 backend now provides public change-list and exact side-by-side comparison
 APIs for published records that pass fresh evidence validation. The Dashboard
-visual migration to those dedicated endpoints remains Task 30. What's New shows
-an honest unavailable state in API mode, and AI Impact remains a demo-only
-prototype. The public roster baseline can be explored without presenting
-unreviewed clinical details as verified. Detailed specification review and
-formal field publication remain incomplete and are not claimed as part of the
-M1 roster release.
+now uses the change-list endpoint for its change rails, status totals, and
+searchable comparison register; it shows an explicit empty state when no
+approved comparison exists. What's New shows an honest unavailable state in API
+mode, and side-by-side specification highlighting and AI Impact remain future M2
+work. The public roster baseline can be explored without presenting unreviewed
+clinical details as verified. Detailed specification review and formal field
+publication remain incomplete and are not claimed as part of the M1 roster
+release.
 
 See `docs/checkpoint-c1.md` for schema decisions, scope boundaries, and the
 verified local workflow.

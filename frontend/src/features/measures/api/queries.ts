@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 
 import type { DemoFilters } from "../demo/types";
 import { filtersToApiFilters, filtersToApiParameters } from "./adapters";
-import { measureApi } from "./client";
+import { changeApi, measureApi } from "./client";
 
 export function useApiMeasureList(filters: DemoFilters) {
   const parameters = filtersToApiParameters(filters);
@@ -36,5 +36,19 @@ export function usePerformanceYears(enabled = true) {
     queryKey: ["performance-years"],
     queryFn: ({ signal }) => measureApi.performanceYears(signal),
     enabled,
+  });
+}
+
+export function useApiChanges(fromYear: number, toYear: number) {
+  const parameters = {
+    from_year: fromYear,
+    to_year: toYear,
+    collection_type: "program_roster",
+    page_size: 100,
+  };
+  return useQuery({
+    queryKey: ["public-changes", parameters],
+    queryFn: ({ signal }) => changeApi.list(parameters, signal),
+    enabled: fromYear !== toYear,
   });
 }

@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createMemoryHistory, RouterProvider } from "@tanstack/react-router";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createAppRouter } from "../router";
@@ -22,6 +22,32 @@ const summary = {
 
 const page = {
   items: [summary],
+  pagination: { page: 1, page_size: 100, total_items: 1, total_pages: 1 },
+};
+
+const changePage = {
+  items: [
+    {
+      measure_id: summary.measure_id,
+      program: "Fictional Quality Program",
+      collection_type: "program_roster",
+      from_year: 2025,
+      to_year: 2026,
+      status: "modified",
+      evidence_status: "verified",
+      fields: [
+        {
+          field: "definition",
+          status: "modified",
+          from_availability: "available",
+          to_availability: "available",
+          from_value: "Fictional 2025 definition.",
+          to_value: "Fictional 2026 definition.",
+          evidence: [],
+        },
+      ],
+    },
+  ],
   pagination: { page: 1, page_size: 100, total_items: 1, total_pages: 1 },
 };
 
@@ -146,6 +172,7 @@ function jsonResponse(value: unknown, status = 200) {
 function apiFetch(input: RequestInfo | URL) {
   const url = String(input);
   if (url.includes("/api/performance-years")) return Promise.resolve(jsonResponse(performanceYears));
+  if (url.includes("/api/changes?")) return Promise.resolve(jsonResponse(changePage));
   if (url.includes("/navigation")) return Promise.resolve(jsonResponse(navigation));
   if (url.includes(`/api/measures/${summary.measure_id}?`)) return Promise.resolve(jsonResponse(detail));
   return Promise.resolve(jsonResponse(page));
@@ -172,10 +199,91 @@ describe("C1 frontend API integration", () => {
     expect(await screen.findByRole("heading", { name: "Quality, decoded." })).toBeInTheDocument();
     expect(screen.getByText(/of 1 published measures in PY2026/i)).toBeInTheDocument();
     expect(screen.getByText(/Published performance-year comparison records/i)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Evidence-backed changes" })).toBeInTheDocument();
+    const changeRow = screen.getByRole("listitem");
+    expect(changeRow).toHaveTextContent("Fictional API Contract Measure");
+    expect(within(changeRow).getByRole("link")).toHaveAttribute(
+      "href",
+      expect.stringContaining("/measures/DEMO-API-001"),
+    );
+    expect(
+      within(screen.getByRole("button", { name: "View modified measures in Measure Explorer" }))
+        .getByText("1"),
+    ).toBeInTheDocument();
     expect(screen.queryByText("Fictional data")).not.toBeInTheDocument();
     expect(screen.queryByText("Breast Cancer Screening")).not.toBeInTheDocument();
     expect(requestedUrl(fetchMock, "/api/measures?")).toContain("from_year=2025");
+    const changesUrl = requestedUrl(fetchMock, "/api/changes?");
+    expect(changesUrl).toContain("collection_type=program_roster");
+    expect(changesUrl).toContain("from_year=2025");
     expect(screen.getAllByRole("option", { name: "PY2024" })).toHaveLength(2);
+
+    fireEvent.change(screen.getByRole("searchbox", { name: "Search published changes" }), {
+      target: { value: "no matching measure" },
+    });
+    expect(screen.getByText("No published changes match this search.")).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Clear search" }));
+    expect(screen.getByRole("listitem")).toHaveTextContent("Fictional API Contract Measure");
+  });
+
+  it("shows an honest dashboard state when no verified comparisons are public", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.includes("/api/performance-years")) {
+          return Promise.resolve(jsonResponse(performanceYears));
+        }
+        if (url.includes("/api/changes?")) {
+          return Promise.resolve(
+            jsonResponse({
+              items: [],
+              pagination: { page: 1, page_size: 100, total_items: 0, total_pages: 0 },
+            }),
+          );
+        }
+        return Promise.resolve(jsonResponse(page));
+      }),
+    );
+
+    await renderApiRoute("/?from=2025&to=2026");
+
+    expect(await screen.findByText("No verified change records are public yet.")).toBeVisible();
+    expect(screen.getByText(/only after both year versions and their evidence/i)).toBeVisible();
+    expect(screen.queryByText("Breast Cancer Screening")).not.toBeInTheDocument();
+  });
+
+  it("uses the API change direction without reversing added and removed statuses twice", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.includes("/api/performance-years")) {
+          return Promise.resolve(jsonResponse(performanceYears));
+        }
+        if (url.includes("/api/changes?")) {
+          return Promise.resolve(
+            jsonResponse({
+              ...changePage,
+              items: [{ ...changePage.items[0], from_year: 2026, to_year: 2025, status: "added" }],
+            }),
+          );
+        }
+        return Promise.resolve(jsonResponse(page));
+      }),
+    );
+
+    await renderApiRoute("/?from=2026&to=2025");
+    await screen.findByRole("heading", { name: "Evidence-backed changes" });
+
+    expect(
+      within(screen.getByRole("button", { name: "View added measures in Measure Explorer" }))
+        .getByText("1"),
+    ).toBeVisible();
+    expect(
+      within(screen.getByRole("button", { name: "View removed measures in Measure Explorer" }))
+        .getByText("0"),
+    ).toBeVisible();
   });
 
   it("does not fabricate a public What's New feed before the API exists", async () => {

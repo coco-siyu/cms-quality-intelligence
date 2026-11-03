@@ -35,14 +35,15 @@
   do not publish records. Task 43 now adds deterministic, typed normalization
   from extracted source segments into private field candidates with exact
   evidence locators; ambiguous identities and incomplete fields remain
-  unresolved. M2 Tasks 23–29 now provide deterministic comparison, evidence
+  unresolved. M2 Tasks 23–30 now provide deterministic comparison, evidence
   gating, private evidence-bounded semantic proposals, and a repeatable semantic
-  evaluation harness plus public comparison APIs; Tasks 30–37 remain open. Tasks
+  evaluation harness, public comparison APIs, and the verified-data Change
+  Overview dashboard; Tasks 31–37 remain open. Tasks
   44–46 and 48–49 provide AI
   clarification, durable ingestion progress, manual review, and the safe
   partial-publication slice. Task 47 remains open. The
-  dashboard change ledger, What's New feed, comparison highlighting, and AI
-  Impact content remain visibly fictional prototypes and are not production-backed.
+  What's New feed, side-by-side comparison highlighting, and AI Impact content
+  remain visibly fictional prototypes and are not production-backed.
 
 This backlog implements the scoped 2025–2026 MSSP / APP Plus MVP in independent, one-session work items. Tasks are ordered for incremental delivery (M1–M4), but each description provides enough context for an assignee to begin without reading preceding tasks. Keep all official CMS facts source-backed, treat unverified extractions as drafts, and do not use patient-level data. **This document is planning only; no implementation code is included.**
 
@@ -266,6 +267,18 @@ public/private boundaries. No UI or publication mutation was added.
 ## 30. Build the Change Overview dashboard
 Goal: Summarize APP Plus changes before users drill down.
 Description: Display counts of added, removed, modified, and unchanged measures along with a searchable change list. Link each item to its dedicated measure page and ensure counts are derived from verified data rather than mock labels.
+
+Implementation status (complete, 2026-11-02): The API-mode Dashboard now reads
+the published comparison register from `GET /api/changes`, scoped to the selected
+year pair and program-roster variant. Its change rails, status counts, and
+searchable editorial register are derived only from records that passed the
+backend public evidence gate; roster counts remain separately sourced from the
+published measure list. Register rows preserve the current filters when linking
+to measure detail, and status totals open the filtered Measure Explorer. When no
+comparison is public, the page presents an explicit empty state instead of
+falling back to Lovable fixtures. Frontend tests cover verified records, search,
+links, endpoint parameters, and the empty boundary, with desktop and 390-pixel
+responsive visual review.
 
 ## 31. Build side-by-side specification comparison
 Goal: Show precise 2025-versus-2026 differences on measure pages.
