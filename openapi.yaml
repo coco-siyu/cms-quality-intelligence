@@ -12,6 +12,7 @@ servers:
 tags:
   - name: System
   - name: Public measures
+  - name: Public changes
   - name: Admin review
   - name: Admin sources
 paths:
@@ -144,6 +145,83 @@ paths:
                     type: array
                     items:
                       $ref: "#/components/schemas/MeasureVersion"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+  /api/changes:
+    get:
+      operationId: listChanges
+      tags: [Public changes]
+      summary: List approved, evidence-backed year-over-year changes
+      description: |
+        Returns only published comparisons that still pass public evidence
+        validation. Pagination is applied after that validation so totals never
+        include stale, incomplete, private, or draft records.
+      parameters:
+        - $ref: "#/components/parameters/FromYear"
+        - $ref: "#/components/parameters/ToYear"
+        - $ref: "#/components/parameters/ChangeStatus"
+        - $ref: "#/components/parameters/AffectedField"
+        - name: collection_type
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/CollectionType"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+      responses:
+        "200":
+          description: Paginated public comparisons with field values and evidence.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicChangePage"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+  /api/changes/{measure_id}:
+    get:
+      operationId: getChange
+      tags: [Public changes]
+      summary: Get one approved side-by-side measure comparison
+      description: |
+        The complete public comparison identity is required because one stable
+        measure may have different program or collection-specific variants.
+      parameters:
+        - $ref: "#/components/parameters/MeasureId"
+        - name: program
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 120
+        - name: collection_type
+          in: query
+          required: true
+          schema:
+            $ref: "#/components/schemas/CollectionType"
+        - name: from_year
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 2000
+            maximum: 2100
+        - name: to_year
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 2000
+            maximum: 2100
+      responses:
+        "200":
+          description: Approved comparison with changed fields and official evidence.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicChangeRecord"
         "404":
           $ref: "#/components/responses/NotFound"
         "422":
@@ -1043,6 +1121,16 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ChangeField"
+    PublicChangePage:
+      type: object
+      required: [items, pagination]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicChangeRecord"
+        pagination:
+          $ref: "#/components/schemas/PaginationMeta"
     MeasureVersion:
       type: object
       required:

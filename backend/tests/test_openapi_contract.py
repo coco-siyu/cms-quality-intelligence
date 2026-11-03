@@ -18,6 +18,10 @@ def test_root_openapi_contract_is_valid() -> None:
         "/ChangeFieldEvidence"
     )
     assert "PublicChangeRecord" in schemas
+    assert "PublicChangePage" in schemas
+    assert schemas["PublicChangePage"]["properties"]["items"]["items"]["$ref"].endswith(
+        "/PublicChangeRecord"
+    )
     assert "collection_type" in schemas["PublicChangeRecord"]["required"]
     assert "evidence_status" in schemas["PublicChangeRecord"]["required"]
     assert schemas["ComparisonEvidenceStatus"]["enum"] == [
@@ -36,6 +40,8 @@ def test_runtime_openapi_exposes_contract_operation_ids_and_error_models() -> No
         "/api/measures/{measure_id}": "getMeasure",
         "/api/measures/{measure_id}/navigation": "getMeasureNavigation",
         "/api/measures/{measure_id}/versions": "listMeasureVersions",
+        "/api/changes": "listChanges",
+        "/api/changes/{measure_id}": "getChange",
     }
 
     for path, operation_id in operations.items():

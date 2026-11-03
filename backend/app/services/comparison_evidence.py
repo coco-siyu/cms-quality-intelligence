@@ -18,6 +18,13 @@ from app.schemas import (
     PublicChangeRecord,
 )
 
+AFFECTED_CHANGE_STATUSES = (
+    ChangeStatus.ADDED,
+    ChangeStatus.REMOVED,
+    ChangeStatus.MODIFIED,
+    ChangeStatus.WORDING_ONLY,
+)
+
 
 @dataclass(frozen=True)
 class ComparisonEvidenceIssue:
@@ -104,6 +111,36 @@ def comparison_evidence_issues(
         issues.append(
             ComparisonEvidenceIssue(
                 code="comparison_contains_unknown_field",
+                field=None,
+                side=None,
+            )
+        )
+    if comparison.status in AFFECTED_CHANGE_STATUSES and not any(
+        field.status == comparison.status for field in comparison.affected_fields
+    ):
+        issues.append(
+            ComparisonEvidenceIssue(
+                code="comparison_status_mismatch",
+                field=None,
+                side=None,
+            )
+        )
+    if comparison.status == ChangeStatus.UNCHANGED and any(
+        field.status != ChangeStatus.UNCHANGED for field in comparison.affected_fields
+    ):
+        issues.append(
+            ComparisonEvidenceIssue(
+                code="comparison_status_mismatch",
+                field=None,
+                side=None,
+            )
+        )
+    if comparison.status == ChangeStatus.UNKNOWN and comparison.affected_fields and all(
+        field.status != ChangeStatus.UNKNOWN for field in comparison.affected_fields
+    ):
+        issues.append(
+            ComparisonEvidenceIssue(
+                code="comparison_status_mismatch",
                 field=None,
                 side=None,
             )

@@ -73,13 +73,14 @@ Previous/Next controls retain filters while following server-side list order.
 The guarded seed-to-HTTP-to-render workflow and manual inventory checklist are
 documented in [`docs/m1-validation.md`](docs/m1-validation.md).
 
-The Dashboard comparison ledger uses published API records in API mode and does
-not label them fictional; comparison states remain unknown until the M2 backend
-is implemented. What's New shows an honest unavailable state in API mode, and AI
-Impact remains a demo-only prototype. The public roster baseline can be explored
-without presenting unreviewed clinical details as verified. Detailed
-specification review and formal field publication remain incomplete and are not
-claimed as part of the M1 roster release.
+The M2 backend now provides public change-list and exact side-by-side comparison
+APIs for published records that pass fresh evidence validation. The Dashboard
+visual migration to those dedicated endpoints remains Task 30. What's New shows
+an honest unavailable state in API mode, and AI Impact remains a demo-only
+prototype. The public roster baseline can be explored without presenting
+unreviewed clinical details as verified. Detailed specification review and
+formal field publication remain incomplete and are not claimed as part of the
+M1 roster release.
 
 See `docs/checkpoint-c1.md` for schema decisions, scope boundaries, and the
 verified local workflow.
@@ -202,7 +203,11 @@ uv run uvicorn app.main:app --reload
 The API defaults to `http://localhost:8000`. Public routes are `GET /health`,
 `GET /api/performance-years`, `GET /api/measures`,
 `GET /api/measures/{measure_id}`, and
-`GET /api/measures/{measure_id}/versions`.
+`GET /api/measures/{measure_id}/versions`. M2 adds paginated
+`GET /api/changes` and exact `GET /api/changes/{measure_id}` comparison
+operations. The exact operation requires `program`, `collection_type`,
+`from_year`, and `to_year` query parameters so program and collection variants
+cannot be conflated.
 
 Before opening the Admin workspace, generate local credentials interactively and
 copy the printed values into the repository root `.env` file. No password is

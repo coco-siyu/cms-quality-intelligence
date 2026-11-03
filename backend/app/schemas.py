@@ -120,6 +120,11 @@ class PaginationMeta(BaseModel):
     total_pages: int
 
 
+class PublicChangePage(BaseModel):
+    items: list[PublicChangeRecord]
+    pagination: PaginationMeta
+
+
 class PublicMeasurePage(BaseModel):
     items: list[PublicMeasureSummary]
     pagination: PaginationMeta
@@ -325,9 +330,7 @@ class AdminNormalizedMeasureCandidateResponse(BaseModel):
     fields: list[AdminNormalizedFieldResponse]
 
 
-class AdminSourceNormalizationDetailResponse(
-    AdminSourceNormalizationSummaryResponse
-):
+class AdminSourceNormalizationDetailResponse(AdminSourceNormalizationSummaryResponse):
     extraction_id: str
     source_id: str
     revision_id: str

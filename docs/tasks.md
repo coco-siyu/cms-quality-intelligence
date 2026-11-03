@@ -35,9 +35,10 @@
   do not publish records. Task 43 now adds deterministic, typed normalization
   from extracted source segments into private field candidates with exact
   evidence locators; ambiguous identities and incomplete fields remain
-  unresolved. M2 Tasks 23–28 now provide deterministic comparison, evidence
+  unresolved. M2 Tasks 23–29 now provide deterministic comparison, evidence
   gating, private evidence-bounded semantic proposals, and a repeatable semantic
-  evaluation harness; Tasks 29–37 remain open. Tasks 44–46 and 48–49 provide AI
+  evaluation harness plus public comparison APIs; Tasks 30–37 remain open. Tasks
+  44–46 and 48–49 provide AI
   clarification, durable ingestion progress, manual review, and the safe
   partial-publication slice. Task 47 remains open. The
   dashboard change ledger, What's New feed, comparison highlighting, and AI
@@ -249,6 +250,18 @@ cannot be reported until such a run is authorized and preserved.
 ## 29. Implement public changes and comparison APIs
 Goal: Serve verified year-over-year change results to the frontend.
 Description: Define and implement endpoints for change listing and a measure's side-by-side comparison with changed-field annotations and excerpts. Return approved/public records only and test filtering by change type, field, and year pair.
+
+Implementation status (complete, 2026-11-02): Added paginated `GET /api/changes`
+and exact `GET /api/changes/{measure_id}` operations backed by the Task 25 public
+projection gate. The list filters by year pair, overall status, changed field,
+and collection variant; the detail operation requires the complete program,
+collection, and year-pair identity so variants cannot be silently conflated.
+Both responses include explicit before/after availability and values plus
+side-labeled official excerpts. Pagination is calculated only after fresh
+evidence validation. Draft, private, incomplete, stale, mismatched, and
+internally inconsistent comparisons remain absent. The OpenAPI contract and
+HTTP tests cover filtering, pagination, exact lookup, validation errors, and
+public/private boundaries. No UI or publication mutation was added.
 
 ## 30. Build the Change Overview dashboard
 Goal: Summarize APP Plus changes before users drill down.

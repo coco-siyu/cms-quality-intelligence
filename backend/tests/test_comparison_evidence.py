@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.domain import (
     ChangeEvidenceSide,
+    ChangeStatus,
     ComparisonEvidenceStatus,
     PublicVerificationStatus,
 )
@@ -140,4 +141,18 @@ def test_evidence_from_wrong_year_version_is_rejected(
 
     assert status == ComparisonEvidenceStatus.INCOMPLETE
     assert "evidence_version_mismatch" in issue_codes
+    assert build_public_change_record(comparison) is None
+
+
+def test_overall_status_must_match_field_level_results(
+    seeded_session: Session,
+) -> None:
+    comparison = _comparison(seeded_session)
+    comparison.status = ChangeStatus.UNCHANGED
+
+    status = refresh_comparison_evidence_status(comparison)
+    issue_codes = {issue.code for issue in comparison_evidence_issues(comparison)}
+
+    assert status == ComparisonEvidenceStatus.INCOMPLETE
+    assert "comparison_status_mismatch" in issue_codes
     assert build_public_change_record(comparison) is None

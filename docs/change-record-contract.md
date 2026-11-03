@@ -62,10 +62,12 @@ hide an unresolved required field.
 
 ## API contract
 
-`openapi.yaml` defines reusable `PublicChangeRecord`, `ChangeField`, and
-`ChangeFieldEvidence` schemas. No new public endpoint is introduced by Task 23;
-Task 29 will attach these schemas to the change-list and detail operations after
-comparison generation and publication controls exist.
+`openapi.yaml` defines reusable `PublicChangeRecord`, `PublicChangePage`,
+`ChangeField`, and `ChangeFieldEvidence` schemas. Task 29 attaches them to
+`GET /api/changes` and `GET /api/changes/{measure_id}`. The list supports year,
+status, changed-field, collection-variant, and pagination parameters. Exact
+detail lookup requires program, collection variant, and both years because a
+stable measure identity may have multiple program-specific representations.
 
 The code representation uses `wording_only` for URL and JSON stability while
 the interface may display “Wording only.”
@@ -121,9 +123,12 @@ comparison. Existing comparisons migrate as `incomplete` and must be
 revalidated; the migration does not retroactively endorse historical data.
 Structural verification does not publish a draft or replace human review.
 
-`build_public_change_record` is the sole Task 25 projection of comparison
+`build_public_change_record` remains the sole public projection of comparison
 evidence. It returns no record unless the comparison is published, its stored
 coverage state is `verified`, and a fresh validation still finds no issues. A
 successful projection includes the evidence ID, source revision ID, source
 document title, official URL, locator, literal excerpt, and year side for every
-field. Task 29 will expose this projection through public change endpoints.
+field. Task 29 repositories first restrict candidates to public measures and
+published, evidence-verified comparisons, then apply this fresh projection gate
+before pagination or detail return. Overall and field-level status conflicts are
+also treated as incomplete rather than crossing the public boundary.
