@@ -1,6 +1,6 @@
 # CMS Quality Intelligence — Implementation Backlog
 
-## Checkpoint status (November 3, 2026)
+## Checkpoint status (November 4, 2026)
 
 - Tasks 1, 2, 5–12: implemented and verified through Checkpoints A, B, C1,
   and C2.1–C2.5. The official PY2025–PY2026 roster has two-source evidence,
@@ -39,7 +39,11 @@
   gating, private evidence-bounded semantic proposals, and a repeatable semantic
   evaluation harness, public comparison APIs, the verified-data Change
   Overview dashboard, and evidence-backed side-by-side detail; Tasks 32–37
-  remain open. Tasks
+  remain open. A guarded publication bridge now prepares six deterministic
+  two-year roster comparisons, requires an append-only administrator decision,
+  and keeps each record private until a separate publication action succeeds.
+  The two one-sided roster records remain explicitly skipped rather than being
+  inferred as additions or removals. Tasks
   44–46 and 48–49 provide AI
   clarification, durable ingestion progress, manual review, and the safe
   partial-publication slice. Task 47 remains open. Task 31 now renders exact,
@@ -298,6 +302,15 @@ inferring any change, while same-year selections and network errors have
 separate honest states. Frontend integration coverage verifies the exact query
 identity, evidence links, fallback boundary, and same-year behavior; the layout
 stacks into an evidence-first mobile reading order.
+
+Publication workflow update (2026-11-04): The protected comparison desk can now
+prepare idempotent program-roster comparisons from verified published year
+versions, expose paired official evidence for human review, append approval or
+revision decisions, and publish an approved comparison through a separately
+authorized action. The backend enforces the review and evidence gates; a draft
+or merely approved record still returns 404 from public change endpoints. The
+workflow intentionally skips one-sided records until explicit evidence supports
+an addition or removal, and published comparison records are immutable.
 
 ## 32. Build the What's New feed
 Goal: Surface recently published, verified changes.

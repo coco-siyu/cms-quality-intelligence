@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { AlertTriangle, ArrowRight, Database, FileCheck2, LogOut, Search, ShieldCheck } from "lucide-react";
 
 import { ErrorState, LoadingState } from "../components/cms/shared";
+import { AdminComparisonDesk } from "../components/cms/AdminComparisonDesk";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import {
@@ -140,6 +141,8 @@ function ReviewWorkspace({ username }: { username: string }) {
           </article>
         ))}
       </section>
+
+      <AdminComparisonDesk />
 
       <section className="admin-queue surface-card">
         <div className="admin-queue-heading">

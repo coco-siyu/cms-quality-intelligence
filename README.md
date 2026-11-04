@@ -82,7 +82,12 @@ mode. Measure Changes tabs now render evidence-backed side-by-side fields for an
 exact published comparison, including explicit unresolved states and official
 source excerpts; when no comparison is approved, version fields remain clearly
 labeled reference material rather than an inferred change. AI Impact remains
-future M2 work. The public roster baseline can be explored without presenting
+future M2 work. The protected Admin review desk now provides a comparison
+publication workflow: prepare deterministic two-year roster drafts, inspect
+their official evidence, record an audited approval or revision request, then
+publish through a separate guarded action. Six records have both year versions;
+the two one-sided records are skipped rather than inferred as added or removed.
+The public roster baseline can be explored without presenting
 unreviewed clinical details as verified. Detailed specification review and formal field
 publication remain incomplete and are not claimed as part of the M1 roster
 release.
@@ -178,7 +183,7 @@ The current prototype routes are:
 - `/measures` — API-backed public directory by default; explicit demo mode is available
 - `/measures/:measureId` — API-backed overview, versions, evidence, and source status
 - `/whats-new` — dedicated fictional update feed
-- `/admin` — authenticated, read-only private review queue
+- `/admin` — authenticated private review queue and comparison publication desk
 - `/admin/sources` — private CMS source registry, bounded ingestion runs, and extraction status
 - `/admin/measures/:measureId` — private variants, candidates, and source provenance
 
@@ -242,6 +247,14 @@ private review queue. **Inspect candidates** shows unresolved fields. When the
 optional provider is configured, **Clarify with AI** searches additional active
 registered CMS sources and stores a private evidence-bounded proposal. None of
 these actions approves or publishes measure data.
+
+The comparison publication desk is available at `/admin`. **Prepare comparisons**
+creates only idempotent private `program_roster` drafts for measures with verified
+versions in both selected years. Open a record's evidence, record **Approve** or
+**Needs revision**, and use the separately enabled **Publish** action only after
+review. A prepared or approved draft is never public; publication is the explicit
+boundary that enables `GET /api/changes` and exact comparison detail. One-sided
+records stay skipped until source-backed addition/removal handling is implemented.
 
 Optional AI features are disabled by default. To enable extraction clarification
 and/or semantic classification locally, set the shared API key plus the relevant

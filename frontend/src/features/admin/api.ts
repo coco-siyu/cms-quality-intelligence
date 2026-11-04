@@ -120,6 +120,57 @@ export type AdminMeasureDetail = {
   versions: AdminMeasureVersion[];
 };
 
+export type AdminComparison = {
+  comparison_id: number;
+  measure_id: string;
+  measure_name: string;
+  program: string;
+  collection_type: "program_roster";
+  from_year: number;
+  to_year: number;
+  status: "added" | "removed" | "modified" | "wording_only" | "unchanged" | "unknown";
+  evidence_status: "pending" | "verified" | "incomplete";
+  publication_state: "draft" | "published" | "withdrawn";
+  publication_eligibility:
+    | "eligible"
+    | "published"
+    | "not_approved"
+    | "incomplete_evidence"
+    | "unknown_status"
+    | "private_measure";
+  publication_blocker: string | null;
+  review_decision: "pending" | "approve" | "needs_revision";
+  reviewed_at: string | null;
+  reviewer_name: string | null;
+  reviewer_notes: string | null;
+  published_at: string | null;
+  published_by: string | null;
+  created_at: string;
+  fields: {
+    field: string;
+    status: AdminComparison["status"];
+    from_availability: "available" | "unavailable" | "unresolved";
+    to_availability: "available" | "unavailable" | "unresolved";
+    from_value: string | null;
+    to_value: string | null;
+    evidence: {
+      evidence_id: string;
+      source_revision_id: string;
+      document_title: string;
+      official_url: string;
+      locator: string | null;
+      excerpt: string;
+      side: "from_version" | "to_version" | "context";
+    }[];
+  }[];
+  review_history: {
+    decision: "approve" | "needs_revision";
+    reviewer_name: string;
+    reviewed_at: string;
+    reviewer_notes: string | null;
+  }[];
+};
+
 export type AdminSourceExtraction = {
   extraction_id: string;
   sequence: number;
@@ -355,6 +406,52 @@ export const adminApi = {
       { signal },
     );
   },
+  comparisons(fromYear: number, toYear: number, signal?: AbortSignal) {
+    const search = new URLSearchParams({
+      from_year: String(fromYear),
+      to_year: String(toYear),
+      collection_type: "program_roster",
+    });
+    return adminRequest<{ items: AdminComparison[] }>(
+      `/api/admin/comparisons?${search}`,
+      { signal },
+    );
+  },
+  prepareComparisons(fromYear: number, toYear: number) {
+    return adminRequest<{
+      prepared: number;
+      existing: number;
+      skipped_measure_ids: string[];
+    }>("/api/admin/comparisons/generate", {
+      method: "POST",
+      headers: { "X-CMSQI-Admin-Action": "prepare-comparisons" },
+      body: JSON.stringify({
+        from_year: fromYear,
+        to_year: toYear,
+        collection_type: "program_roster",
+      }),
+    });
+  },
+  reviewComparison(
+    comparisonId: number,
+    decision: "approve" | "needs_revision",
+    reviewerNotes: string | null,
+  ) {
+    return adminRequest<AdminComparison>(`/api/admin/comparisons/${comparisonId}`, {
+      method: "PATCH",
+      headers: { "X-CMSQI-Admin-Action": "review-comparison" },
+      body: JSON.stringify({ decision, reviewer_notes: reviewerNotes }),
+    });
+  },
+  publishComparison(comparisonId: number) {
+    return adminRequest<AdminComparison>(
+      `/api/admin/comparisons/${comparisonId}/publish`,
+      {
+        method: "POST",
+        headers: { "X-CMSQI-Admin-Action": "publish-comparison" },
+      },
+    );
+  },
   reviewCandidate(reviewItemId: string, decision: AdminCandidateDecision) {
     return adminRequest<AdminFieldCandidate>(
       `/api/admin/review-items/${encodeURIComponent(reviewItemId)}`,
@@ -494,6 +591,59 @@ export function useAdminMeasure(measureId: string, enabled: boolean) {
     queryFn: ({ signal }) => adminApi.measure(measureId, signal),
     enabled: enabled && Boolean(measureId),
     retry: false,
+  });
+}
+
+export function useAdminComparisons(fromYear: number, toYear: number, enabled: boolean) {
+  return useQuery({
+    queryKey: ["admin-review", "comparisons", fromYear, toYear],
+    queryFn: ({ signal }) => adminApi.comparisons(fromYear, toYear, signal),
+    enabled,
+    retry: false,
+  });
+}
+
+export function useAdminComparisonPreparation(fromYear: number, toYear: number) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => adminApi.prepareComparisons(fromYear, toYear),
+    onSuccess: () =>
+      void queryClient.invalidateQueries({
+        queryKey: ["admin-review", "comparisons", fromYear, toYear],
+      }),
+  });
+}
+
+export function useAdminComparisonReview(fromYear: number, toYear: number) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      comparisonId,
+      decision,
+      reviewerNotes,
+    }: {
+      comparisonId: number;
+      decision: "approve" | "needs_revision";
+      reviewerNotes: string | null;
+    }) => adminApi.reviewComparison(comparisonId, decision, reviewerNotes),
+    onSuccess: () =>
+      void queryClient.invalidateQueries({
+        queryKey: ["admin-review", "comparisons", fromYear, toYear],
+      }),
+  });
+}
+
+export function useAdminComparisonPublication(fromYear: number, toYear: number) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (comparisonId: number) => adminApi.publishComparison(comparisonId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: ["admin-review", "comparisons", fromYear, toYear],
+      });
+      void queryClient.invalidateQueries({ queryKey: ["changes"] });
+      void queryClient.invalidateQueries({ queryKey: ["measures"] });
+    },
   });
 }
 

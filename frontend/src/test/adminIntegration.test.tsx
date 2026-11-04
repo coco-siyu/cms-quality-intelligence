@@ -4,6 +4,7 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createAppRouter } from "../router";
+import type { AdminComparison } from "../features/admin/api";
 
 function jsonResponse(value: unknown, status = 200) {
   return new Response(JSON.stringify(value), {
@@ -93,6 +94,9 @@ describe("private admin review workspace", () => {
           }),
         );
       }
+      if (url.includes("/api/admin/comparisons?")) {
+        return Promise.resolve(jsonResponse({ items: [] }));
+      }
       return Promise.reject(new Error(`Unexpected request: ${url}`));
     });
     vi.stubGlobal("fetch", fetchMock);
@@ -115,6 +119,168 @@ describe("private admin review workspace", () => {
     expect(screen.queryByText("DEMO-001")).not.toBeInTheDocument();
     await waitFor(() => {
       expect(fetchMock.mock.calls.every((call) => call[1]?.credentials === "include")).toBe(true);
+    });
+  });
+
+  it("prepares, reviews, and publishes an evidence-backed comparison explicitly", async () => {
+    const baseComparison: AdminComparison = {
+      comparison_id: 41,
+      measure_id: "001",
+      measure_name: "Diabetes: Glycemic Status Assessment Greater Than 9%",
+      program: "Medicare Shared Savings Program — APP Plus",
+      collection_type: "program_roster",
+      from_year: 2025,
+      to_year: 2026,
+      status: "modified",
+      evidence_status: "verified",
+      publication_state: "draft",
+      publication_eligibility: "not_approved",
+      publication_blocker: "Review and approve this evidence-backed comparison before publication.",
+      review_decision: "pending",
+      reviewed_at: null,
+      reviewer_name: null,
+      reviewer_notes: null,
+      published_at: null,
+      published_by: null,
+      created_at: "2026-11-04T12:00:00Z",
+      fields: [
+        {
+          field: "measure_set",
+          status: "modified",
+          from_availability: "available",
+          to_availability: "available",
+          from_value: "Member of the PY2025 MSSP APP Plus quality measure set.",
+          to_value: "Member of the PY2026 MSSP APP Plus quality measure set.",
+          evidence: [
+            {
+              evidence_id: "CMS-001-2025",
+              source_revision_id: "CMS-APP-2025-R1",
+              document_title: "PY 2025 APP Quality Requirements",
+              official_url: "https://www.cms.gov/example/2025.pdf",
+              locator: "Page 4",
+              excerpt: "Official roster evidence.",
+              side: "from_version",
+            },
+            {
+              evidence_id: "CMS-001-2026",
+              source_revision_id: "CMS-APP-2026-R1",
+              document_title: "PY 2026 APP Quality Requirements",
+              official_url: "https://www.cms.gov/example/2026.pdf",
+              locator: "Measure table",
+              excerpt: "Official roster evidence.",
+              side: "to_version",
+            },
+          ],
+        },
+      ],
+      review_history: [],
+    };
+    let prepared = false;
+    let comparison: AdminComparison = baseComparison;
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith("/api/admin/session")) {
+        return Promise.resolve(
+          jsonResponse({ configured: true, authenticated: true, username: "reviewer" }),
+        );
+      }
+      if (url.endsWith("/api/admin/review-summary")) {
+        return Promise.resolve(
+          jsonResponse({
+            private_measures: 8,
+            draft_versions: 46,
+            pending_candidates: 352,
+            decided_candidates: 0,
+            source_revisions: 16,
+            newer_revision_flags: 0,
+          }),
+        );
+      }
+      if (url.includes("/api/admin/measures?")) {
+        return Promise.resolve(
+          jsonResponse({
+            items: [],
+            pagination: { page: 1, page_size: 100, total_items: 0, total_pages: 0 },
+          }),
+        );
+      }
+      if (url.includes("/api/admin/comparisons?") && !init?.method) {
+        return Promise.resolve(jsonResponse({ items: prepared ? [comparison] : [] }));
+      }
+      if (url.endsWith("/api/admin/comparisons/generate") && init?.method === "POST") {
+        prepared = true;
+        return Promise.resolve(
+          jsonResponse({ prepared: 1, existing: 0, skipped_measure_ids: ["113", "484"] }),
+        );
+      }
+      if (url.endsWith("/api/admin/comparisons/41") && init?.method === "PATCH") {
+        comparison = {
+          ...comparison,
+          publication_eligibility: "eligible",
+          publication_blocker: null,
+          review_decision: "approve",
+          reviewed_at: "2026-11-04T12:05:00Z",
+          reviewer_name: "reviewer",
+          reviewer_notes: "Both roster sources support this finding.",
+          review_history: [
+            {
+              decision: "approve",
+              reviewer_name: "reviewer",
+              reviewed_at: "2026-11-04T12:05:00Z",
+              reviewer_notes: "Both roster sources support this finding.",
+            },
+          ],
+        };
+        return Promise.resolve(jsonResponse(comparison));
+      }
+      if (url.endsWith("/api/admin/comparisons/41/publish") && init?.method === "POST") {
+        comparison = {
+          ...comparison,
+          publication_state: "published",
+          publication_eligibility: "published",
+          published_at: "2026-11-04T12:06:00Z",
+          published_by: "reviewer",
+        };
+        return Promise.resolve(jsonResponse(comparison));
+      }
+      return Promise.reject(new Error(`Unexpected request: ${url}`));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await renderRoute("/admin");
+    expect(await screen.findByText("No private comparisons have been prepared for this year pair."))
+      .toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Prepare comparisons" }));
+    expect(await screen.findByText("1 prepared · 0 already present · 2 one-sided records safely skipped"))
+      .toBeInTheDocument();
+    expect(await screen.findByText(baseComparison.measure_name)).toBeInTheDocument();
+    fireEvent.click(screen.getByText("Inspect values and 2 evidence links"));
+    expect(screen.getByRole("link", { name: /PY 2025 APP Quality Requirements/ }))
+      .toHaveAttribute("href", "https://www.cms.gov/example/2025.pdf");
+
+    fireEvent.click(screen.getByRole("button", { name: "Review comparison 001" }));
+    fireEvent.change(screen.getByLabelText(/Reviewer notes/), {
+      target: { value: "Both roster sources support this finding." },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save comparison review" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+
+    const reviewCall = fetchMock.mock.calls.find(
+      ([input, init]) => String(input).endsWith("/api/admin/comparisons/41") && init?.method === "PATCH",
+    );
+    expect(reviewCall?.[1]?.headers).toMatchObject({
+      "X-CMSQI-Admin-Action": "review-comparison",
+    });
+    expect(screen.getByRole("button", { name: "Publish comparison 001" })).toBeEnabled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Publish comparison 001" }));
+    expect(await screen.findByText("Published", { selector: "button" })).toBeDisabled();
+    const publishCall = fetchMock.mock.calls.find(
+      ([input]) => String(input).endsWith("/api/admin/comparisons/41/publish"),
+    );
+    expect(publishCall?.[1]?.headers).toMatchObject({
+      "X-CMSQI-Admin-Action": "publish-comparison",
     });
   });
 
