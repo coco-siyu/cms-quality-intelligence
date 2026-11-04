@@ -215,6 +215,7 @@ def test_initial_migration_builds_and_reverts_schema(
         "measure_comparisons",
         "measure_comparison_fields",
         "measure_comparison_evidence",
+            "measure_comparison_reviews",
         "semantic_classification_proposals",
         "semantic_classification_citations",
         "source_checks",
@@ -264,8 +265,23 @@ def test_initial_migration_builds_and_reverts_schema(
         column["name"]
         for column in inspect(engine).get_columns("measure_comparisons")
     }
-    assert {"collection_type", "evidence_status"}.issubset(comparison_columns)
+    assert {
+        "collection_type",
+        "evidence_status",
+        "review_decision",
+        "reviewed_at",
+        "reviewer_name",
+        "reviewer_notes",
+        "published_at",
+        "published_by",
+        "created_at",
+    }.issubset(comparison_columns)
     assert "comparison_evidence_status" in comparison_checks
+    assert {
+        "comparison_review_decision",
+        "ck_comparison_review_state",
+        "ck_comparison_publication_state",
+    }.issubset(comparison_checks)
     comparison_unique_constraints = {
         frozenset(constraint["column_names"])
         for constraint in inspect(engine).get_unique_constraints("measure_comparisons")

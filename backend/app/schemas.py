@@ -12,6 +12,8 @@ from app.domain import (
     ClarificationOutcome,
     CollectionType,
     ComparisonEvidenceStatus,
+    ComparisonPublicationEligibility,
+    ComparisonReviewDecision,
     FieldAvailability,
     FieldPublicationEligibility,
     IngestionItemStage,
@@ -123,6 +125,58 @@ class PaginationMeta(BaseModel):
 class PublicChangePage(BaseModel):
     items: list[PublicChangeRecord]
     pagination: PaginationMeta
+
+
+class AdminComparisonReviewResponse(BaseModel):
+    decision: ComparisonReviewDecision
+    reviewer_name: str
+    reviewed_at: datetime
+    reviewer_notes: str | None
+
+
+class AdminComparisonResponse(BaseModel):
+    comparison_id: int
+    measure_id: str
+    measure_name: str
+    program: str
+    collection_type: CollectionType
+    from_year: int
+    to_year: int
+    status: ChangeStatus
+    evidence_status: ComparisonEvidenceStatus
+    publication_state: PublicationState
+    publication_eligibility: ComparisonPublicationEligibility
+    publication_blocker: str | None
+    review_decision: ComparisonReviewDecision
+    reviewed_at: datetime | None
+    reviewer_name: str | None
+    reviewer_notes: str | None
+    published_at: datetime | None
+    published_by: str | None
+    created_at: datetime
+    fields: list[ChangeFieldResponse]
+    review_history: list[AdminComparisonReviewResponse]
+
+
+class AdminComparisonPage(BaseModel):
+    items: list[AdminComparisonResponse]
+
+
+class AdminComparisonGenerationRequest(BaseModel):
+    from_year: int = Field(ge=2000, le=2100)
+    to_year: int = Field(ge=2000, le=2100)
+    collection_type: Literal["program_roster"] = "program_roster"
+
+
+class AdminComparisonGenerationResponse(BaseModel):
+    prepared: int
+    existing: int
+    skipped_measure_ids: list[str]
+
+
+class AdminComparisonDecisionRequest(BaseModel):
+    decision: Literal["approve", "needs_revision"]
+    reviewer_notes: str | None = Field(default=None, max_length=4_000)
 
 
 class PublicMeasurePage(BaseModel):

@@ -26,6 +26,7 @@ from app.domain import (
     ClarificationOutcome,
     CollectionType,
     ComparisonEvidenceStatus,
+    ComparisonReviewDecision,
     FieldAvailability,
     IngestionItemStage,
     IngestionRunStatus,
@@ -111,6 +112,13 @@ change_evidence_side_enum = Enum(
 comparison_evidence_status_enum = Enum(
     ComparisonEvidenceStatus,
     name="comparison_evidence_status",
+    native_enum=False,
+    create_constraint=True,
+    values_callable=lambda values: [value.value for value in values],
+)
+comparison_review_decision_enum = Enum(
+    ComparisonReviewDecision,
+    name="comparison_review_decision",
     native_enum=False,
     create_constraint=True,
     values_callable=lambda values: [value.value for value in values],
@@ -877,6 +885,21 @@ class MeasureComparison(Base):
         ),
         CheckConstraint("from_year >= 2000 AND from_year <= 2100"),
         CheckConstraint("to_year >= 2000 AND to_year <= 2100"),
+        CheckConstraint(
+            "(review_decision = 'pending' AND reviewed_at IS NULL "
+            "AND reviewer_name IS NULL) OR "
+            "(review_decision != 'pending' AND reviewed_at IS NOT NULL "
+            "AND reviewer_name IS NOT NULL)",
+            name="ck_comparison_review_state",
+        ),
+        CheckConstraint(
+            "(publication_state = 'draft' AND published_at IS NULL "
+            "AND published_by IS NULL) OR "
+            "(publication_state IN ('published', 'withdrawn') "
+            "AND published_at IS NOT NULL AND published_by IS NOT NULL "
+            "AND review_decision = 'approve')",
+            name="ck_comparison_publication_state",
+        ),
         Index("ix_comparison_year_pair", "from_year", "to_year"),
     )
 
@@ -899,11 +922,50 @@ class MeasureComparison(Base):
         default=ComparisonEvidenceStatus.PENDING,
         index=True,
     )
+    review_decision: Mapped[ComparisonReviewDecision] = mapped_column(
+        comparison_review_decision_enum,
+        default=ComparisonReviewDecision.PENDING,
+        index=True,
+    )
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    reviewer_name: Mapped[str | None] = mapped_column(String(200))
+    reviewer_notes: Mapped[str | None] = mapped_column(Text)
+    published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    published_by: Mapped[str | None] = mapped_column(String(200))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
     measure: Mapped[Measure] = relationship(back_populates="comparisons")
     affected_fields: Mapped[list["MeasureComparisonField"]] = relationship(
         back_populates="comparison", cascade="all, delete-orphan"
     )
+    reviews: Mapped[list["MeasureComparisonReview"]] = relationship(
+        back_populates="comparison", cascade="all, delete-orphan"
+    )
+
+
+class MeasureComparisonReview(Base):
+    __tablename__ = "measure_comparison_reviews"
+    __table_args__ = (
+        CheckConstraint(
+            "decision != 'pending'",
+            name="ck_comparison_review_event_is_decided",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    event_key: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    comparison_id: Mapped[int] = mapped_column(
+        ForeignKey("measure_comparisons.id", ondelete="CASCADE")
+    )
+    decision: Mapped[ComparisonReviewDecision] = mapped_column(
+        comparison_review_decision_enum, index=True
+    )
+    reviewer_name: Mapped[str] = mapped_column(String(200))
+    reviewed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    reviewer_notes: Mapped[str | None] = mapped_column(Text)
+    recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+    comparison: Mapped[MeasureComparison] = relationship(back_populates="reviews")
 
 
 class MeasureComparisonField(Base):

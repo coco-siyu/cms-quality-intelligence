@@ -134,6 +134,21 @@ class ComparisonEvidenceStatus(StrEnum):
     INCOMPLETE = "incomplete"
 
 
+class ComparisonReviewDecision(StrEnum):
+    PENDING = "pending"
+    APPROVE = "approve"
+    NEEDS_REVISION = "needs_revision"
+
+
+class ComparisonPublicationEligibility(StrEnum):
+    ELIGIBLE = "eligible"
+    PUBLISHED = "published"
+    NOT_APPROVED = "not_approved"
+    INCOMPLETE_EVIDENCE = "incomplete_evidence"
+    UNKNOWN_STATUS = "unknown_status"
+    PRIVATE_MEASURE = "private_measure"
+
+
 class SemanticClassification(StrEnum):
     SUBSTANTIVE = "substantive"
     WORDING_ONLY = "wording_only"

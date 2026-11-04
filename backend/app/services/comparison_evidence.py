@@ -8,6 +8,7 @@ from app.domain import (
     ChangeEvidenceSide,
     ChangeStatus,
     ComparisonEvidenceStatus,
+    ComparisonReviewDecision,
     PublicationState,
     PublicVerificationStatus,
 )
@@ -205,6 +206,9 @@ def build_public_change_record(
 
     if (
         comparison.publication_state != PublicationState.PUBLISHED
+        or comparison.review_decision != ComparisonReviewDecision.APPROVE
+        or comparison.published_at is None
+        or not comparison.published_by
         or comparison.evidence_status != ComparisonEvidenceStatus.VERIFIED
         or comparison_evidence_issues(comparison)
     ):

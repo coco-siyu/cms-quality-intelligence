@@ -9,6 +9,7 @@ from app.domain import (
     ChangeStatus,
     CollectionType,
     ComparisonEvidenceStatus,
+    ComparisonReviewDecision,
     FieldAvailability,
     PublicationState,
     PublicVerificationStatus,
@@ -374,6 +375,11 @@ def test_generation_persists_an_idempotent_private_draft_with_evidence(
     }
 
     comparison.publication_state = PublicationState.PUBLISHED
+    comparison.review_decision = ComparisonReviewDecision.APPROVE
+    comparison.reviewed_at = CHECKED_AT
+    comparison.reviewer_name = "fixture-reviewer"
+    comparison.published_at = CHECKED_AT
+    comparison.published_by = "fixture-reviewer"
     session.flush()
     with pytest.raises(DeterministicComparisonError) as error:
         generate_draft_comparison(

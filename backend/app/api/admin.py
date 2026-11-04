@@ -15,7 +15,18 @@ from app.auth import (
 )
 from app.config import Settings, get_settings
 from app.database import get_db
-from app.domain import CandidateReviewDecision, PublicationState
+from app.domain import (
+    CandidateReviewDecision,
+    CollectionType,
+    ComparisonReviewDecision,
+    PublicationState,
+)
+from app.repositories.admin_comparisons import (
+    admin_comparison_response,
+    get_admin_comparison,
+    list_admin_comparisons,
+    prepare_roster_comparisons,
+)
 from app.repositories.admin_reviews import (
     candidate_response,
     get_private_candidate,
@@ -25,6 +36,11 @@ from app.repositories.admin_reviews import (
 )
 from app.schemas import (
     AdminCandidateDecisionRequest,
+    AdminComparisonDecisionRequest,
+    AdminComparisonGenerationRequest,
+    AdminComparisonGenerationResponse,
+    AdminComparisonPage,
+    AdminComparisonResponse,
     AdminFieldCandidateResponse,
     AdminLoginRequest,
     AdminMeasureDetail,
@@ -32,6 +48,11 @@ from app.schemas import (
     AdminReviewSummary,
     AdminSessionResponse,
     ApiError,
+)
+from app.services.comparison_publication import (
+    ComparisonPublicationError,
+    publish_approved_comparison,
+    record_comparison_review,
 )
 from app.services.publication import FieldPublicationError, publish_approved_field
 from app.services.reviews import record_candidate_review
@@ -77,6 +98,41 @@ def require_field_publication_header(
 
 
 FieldPublicationHeader = Annotated[None, Depends(require_field_publication_header)]
+
+
+def _require_comparison_action(expected: str, action: str) -> None:
+    if not hmac.compare_digest(action, expected):
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "code": "invalid_admin_action_header",
+                "message": "The required administrator action header is invalid.",
+                "details": [],
+            },
+        )
+
+
+def require_comparison_prepare_header(
+    action: Annotated[str, Header(alias="X-CMSQI-Admin-Action")],
+) -> None:
+    _require_comparison_action("prepare-comparisons", action)
+
+
+def require_comparison_review_header(
+    action: Annotated[str, Header(alias="X-CMSQI-Admin-Action")],
+) -> None:
+    _require_comparison_action("review-comparison", action)
+
+
+def require_comparison_publish_header(
+    action: Annotated[str, Header(alias="X-CMSQI-Admin-Action")],
+) -> None:
+    _require_comparison_action("publish-comparison", action)
+
+
+ComparisonPrepareHeader = Annotated[None, Depends(require_comparison_prepare_header)]
+ComparisonReviewHeader = Annotated[None, Depends(require_comparison_review_header)]
+ComparisonPublishHeader = Annotated[None, Depends(require_comparison_publish_header)]
 
 
 def _session_response(request: Request, settings: Settings) -> AdminSessionResponse:
@@ -211,6 +267,163 @@ def admin_measure_detail(
             },
         )
     return result
+
+
+@router.get(
+    "/comparisons",
+    response_model=AdminComparisonPage,
+    operation_id="listAdminComparisons",
+    responses=auth_responses,
+)
+def admin_comparisons(
+    session: DatabaseSession,
+    _admin: AuthenticatedAdmin,
+    from_year: Annotated[int, Query(ge=2000, le=2100)] = 2025,
+    to_year: Annotated[int, Query(ge=2000, le=2100)] = 2026,
+    collection_type: CollectionType = CollectionType.PROGRAM_ROSTER,
+) -> AdminComparisonPage:
+    if from_year == to_year:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "code": "invalid_year_pair",
+                "message": "Comparison years must be different.",
+                "details": [],
+            },
+        )
+    return list_admin_comparisons(
+        session,
+        from_year=from_year,
+        to_year=to_year,
+        collection_type=collection_type,
+    )
+
+
+@router.post(
+    "/comparisons/generate",
+    response_model=AdminComparisonGenerationResponse,
+    operation_id="generateAdminComparisons",
+    responses={
+        **auth_responses,
+        403: {"model": ApiError, "description": "The admin action header is invalid."},
+        422: {"model": ApiError, "description": "The comparison request is invalid."},
+    },
+)
+def generate_admin_comparisons(
+    session: DatabaseSession,
+    _admin: AuthenticatedAdmin,
+    _action: ComparisonPrepareHeader,
+    request: AdminComparisonGenerationRequest,
+) -> AdminComparisonGenerationResponse:
+    if request.from_year == request.to_year:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "code": "invalid_year_pair",
+                "message": "Comparison years must be different.",
+                "details": [],
+            },
+        )
+    result = prepare_roster_comparisons(
+        session,
+        from_year=request.from_year,
+        to_year=request.to_year,
+    )
+    session.commit()
+    return result
+
+
+@router.patch(
+    "/comparisons/{comparison_id}",
+    response_model=AdminComparisonResponse,
+    operation_id="reviewAdminComparison",
+    responses={
+        **auth_responses,
+        403: {"model": ApiError, "description": "The admin action header is invalid."},
+        404: {"model": ApiError, "description": "The comparison was not found."},
+        409: {"model": ApiError, "description": "The review cannot be recorded."},
+    },
+)
+def review_admin_comparison(
+    session: DatabaseSession,
+    admin: AuthenticatedAdmin,
+    _action: ComparisonReviewHeader,
+    comparison_id: Annotated[int, Path(ge=1)],
+    request: AdminComparisonDecisionRequest,
+) -> AdminComparisonResponse:
+    comparison = get_admin_comparison(session, comparison_id)
+    if comparison is None:
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "code": "not_found",
+                "message": f"Comparison '{comparison_id}' was not found.",
+                "details": [],
+            },
+        )
+    notes = request.reviewer_notes.strip() if request.reviewer_notes else None
+    try:
+        record_comparison_review(
+            comparison,
+            decision=ComparisonReviewDecision(request.decision),
+            reviewer_name=admin.username,
+            reviewer_notes=notes,
+        )
+    except ComparisonPublicationError as error:
+        session.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail={"code": error.code, "message": error.message, "details": []},
+        ) from error
+    session.commit()
+    refreshed = get_admin_comparison(session, comparison_id)
+    assert refreshed is not None
+    return admin_comparison_response(refreshed)
+
+
+@router.post(
+    "/comparisons/{comparison_id}/publish",
+    response_model=AdminComparisonResponse,
+    operation_id="publishAdminComparison",
+    responses={
+        **auth_responses,
+        403: {"model": ApiError, "description": "The admin action header is invalid."},
+        404: {"model": ApiError, "description": "The comparison was not found."},
+        409: {"model": ApiError, "description": "The comparison is not publishable."},
+    },
+)
+def publish_admin_comparison(
+    session: DatabaseSession,
+    admin: AuthenticatedAdmin,
+    _action: ComparisonPublishHeader,
+    comparison_id: Annotated[int, Path(ge=1)],
+) -> AdminComparisonResponse:
+    comparison = get_admin_comparison(session, comparison_id)
+    if comparison is None:
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "code": "not_found",
+                "message": f"Comparison '{comparison_id}' was not found.",
+                "details": [],
+            },
+        )
+    try:
+        publish_approved_comparison(
+            session,
+            comparison,
+            publisher_name=admin.username,
+        )
+    except ComparisonPublicationError as error:
+        session.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail={"code": error.code, "message": error.message, "details": []},
+        ) from error
+    session.commit()
+    refreshed = get_admin_comparison(session, comparison_id)
+    assert refreshed is not None
+    return admin_comparison_response(refreshed)
 
 
 @router.patch(

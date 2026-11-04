@@ -336,6 +336,146 @@ paths:
           $ref: "#/components/responses/AdminUnauthorized"
         "404":
           $ref: "#/components/responses/NotFound"
+  /api/admin/comparisons:
+    get:
+      operationId: listAdminComparisons
+      tags: [Admin review]
+      summary: List private comparisons prepared for evidence review
+      security:
+        - AdminSessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/FromYear"
+        - $ref: "#/components/parameters/ToYear"
+        - name: collection_type
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/CollectionType"
+            default: program_roster
+      responses:
+        "200":
+          description: Private comparisons with evidence, review state, and publication eligibility.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminComparisonPage"
+        "401":
+          $ref: "#/components/responses/AdminUnauthorized"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+  /api/admin/comparisons/generate:
+    post:
+      operationId: generateAdminComparisons
+      tags: [Admin review]
+      summary: Prepare deterministic private roster comparisons
+      description: |
+        Compares only verified, published year-specific roster versions that exist
+        for both years. One-sided records remain skipped; absence is never inferred
+        as an addition or removal. Repeating this request is idempotent.
+      security:
+        - AdminSessionCookie: []
+      parameters:
+        - name: X-CMSQI-Admin-Action
+          in: header
+          required: true
+          schema:
+            type: string
+            const: prepare-comparisons
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminComparisonGenerationRequest"
+      responses:
+        "200":
+          description: Counts for prepared, existing, and safely skipped comparisons.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminComparisonGenerationResponse"
+        "401":
+          $ref: "#/components/responses/AdminUnauthorized"
+        "403":
+          $ref: "#/components/responses/AdminActionForbidden"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+  /api/admin/comparisons/{comparison_id}:
+    patch:
+      operationId: reviewAdminComparison
+      tags: [Admin review]
+      summary: Record an audited private comparison review
+      description: Approval requires complete current evidence and a resolved comparison status.
+      security:
+        - AdminSessionCookie: []
+      parameters:
+        - name: comparison_id
+          in: path
+          required: true
+          schema: {type: integer, minimum: 1}
+        - name: X-CMSQI-Admin-Action
+          in: header
+          required: true
+          schema:
+            type: string
+            const: review-comparison
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminComparisonDecisionRequest"
+      responses:
+        "200":
+          description: Updated comparison with append-only review history.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminComparison"
+        "401":
+          $ref: "#/components/responses/AdminUnauthorized"
+        "403":
+          $ref: "#/components/responses/AdminActionForbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /api/admin/comparisons/{comparison_id}/publish:
+    post:
+      operationId: publishAdminComparison
+      tags: [Admin review]
+      summary: Publish one approved evidence-backed comparison
+      description: |
+        Publication is explicit and idempotent. Draft, unapproved, incomplete,
+        unresolved, or private-measure comparisons cannot cross the public boundary.
+      security:
+        - AdminSessionCookie: []
+      parameters:
+        - name: comparison_id
+          in: path
+          required: true
+          schema: {type: integer, minimum: 1}
+        - name: X-CMSQI-Admin-Action
+          in: header
+          required: true
+          schema:
+            type: string
+            const: publish-comparison
+      responses:
+        "200":
+          description: Published comparison, including publisher and publication time.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminComparison"
+        "401":
+          $ref: "#/components/responses/AdminUnauthorized"
+        "403":
+          $ref: "#/components/responses/AdminActionForbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
   /api/admin/review-items/{review_item_id}:
     patch:
       operationId: reviewAdminFieldCandidate
@@ -1334,6 +1474,125 @@ components:
             $ref: "#/components/schemas/AdminMeasureSummary"
         pagination:
           $ref: "#/components/schemas/PaginationMeta"
+    ComparisonReviewDecision:
+      type: string
+      enum: [pending, approve, needs_revision]
+    ComparisonPublicationEligibility:
+      type: string
+      enum:
+        - eligible
+        - published
+        - not_approved
+        - incomplete_evidence
+        - unknown_status
+        - private_measure
+    AdminComparisonReview:
+      type: object
+      required: [decision, reviewer_name, reviewed_at, reviewer_notes]
+      properties:
+        decision:
+          $ref: "#/components/schemas/ComparisonReviewDecision"
+        reviewer_name: {type: string}
+        reviewed_at: {type: string, format: date-time}
+        reviewer_notes: {type: [string, "null"]}
+    AdminComparison:
+      type: object
+      required:
+        - comparison_id
+        - measure_id
+        - measure_name
+        - program
+        - collection_type
+        - from_year
+        - to_year
+        - status
+        - evidence_status
+        - publication_state
+        - publication_eligibility
+        - publication_blocker
+        - review_decision
+        - reviewed_at
+        - reviewer_name
+        - reviewer_notes
+        - published_at
+        - published_by
+        - created_at
+        - fields
+        - review_history
+      properties:
+        comparison_id: {type: integer, minimum: 1}
+        measure_id: {type: string}
+        measure_name: {type: string}
+        program: {type: string}
+        collection_type:
+          $ref: "#/components/schemas/CollectionType"
+        from_year: {type: integer, minimum: 2000, maximum: 2100}
+        to_year: {type: integer, minimum: 2000, maximum: 2100}
+        status:
+          $ref: "#/components/schemas/ChangeStatus"
+        evidence_status:
+          $ref: "#/components/schemas/ComparisonEvidenceStatus"
+        publication_state:
+          $ref: "#/components/schemas/PublicationState"
+        publication_eligibility:
+          $ref: "#/components/schemas/ComparisonPublicationEligibility"
+        publication_blocker: {type: [string, "null"]}
+        review_decision:
+          $ref: "#/components/schemas/ComparisonReviewDecision"
+        reviewed_at: {type: [string, "null"], format: date-time}
+        reviewer_name: {type: [string, "null"]}
+        reviewer_notes: {type: [string, "null"]}
+        published_at: {type: [string, "null"], format: date-time}
+        published_by: {type: [string, "null"]}
+        created_at: {type: string, format: date-time}
+        fields:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChangeField"
+        review_history:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminComparisonReview"
+    AdminComparisonPage:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminComparison"
+    AdminComparisonGenerationRequest:
+      type: object
+      additionalProperties: false
+      required: [from_year, to_year]
+      properties:
+        from_year: {type: integer, minimum: 2000, maximum: 2100}
+        to_year: {type: integer, minimum: 2000, maximum: 2100}
+        collection_type:
+          type: string
+          const: program_roster
+          default: program_roster
+    AdminComparisonGenerationResponse:
+      type: object
+      required: [prepared, existing, skipped_measure_ids]
+      properties:
+        prepared: {type: integer, minimum: 0}
+        existing: {type: integer, minimum: 0}
+        skipped_measure_ids:
+          type: array
+          items: {type: string}
+          uniqueItems: true
+    AdminComparisonDecisionRequest:
+      type: object
+      additionalProperties: false
+      required: [decision]
+      properties:
+        decision:
+          type: string
+          enum: [approve, needs_revision]
+        reviewer_notes:
+          type: [string, "null"]
+          maxLength: 4000
     PublicationState:
       type: string
       enum: [draft, published, withdrawn]

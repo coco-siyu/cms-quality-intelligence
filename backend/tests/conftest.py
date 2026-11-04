@@ -12,6 +12,7 @@ from app.domain import (
     AffectedField,
     ChangeEvidenceSide,
     ChangeStatus,
+    ComparisonReviewDecision,
     FieldAvailability,
     PublicationState,
     PublicVerificationStatus,
@@ -151,6 +152,11 @@ def seeded_session(session: Session) -> Session:
         to_year=2026,
         status=ChangeStatus.MODIFIED,
         publication_state=PublicationState.PUBLISHED,
+        review_decision=ComparisonReviewDecision.APPROVE,
+        reviewed_at=checked_at,
+        reviewer_name="fixture-reviewer",
+        published_at=checked_at,
+        published_by="fixture-reviewer",
         affected_fields=[comparison_field],
     )
     public_measure.comparisons.append(comparison)

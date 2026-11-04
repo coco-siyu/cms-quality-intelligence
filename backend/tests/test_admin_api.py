@@ -36,6 +36,7 @@ from app.services.ai_clarification import (
     ProviderResult,
 )
 from app.services.publication import build_public_explanation_context
+from app.services.roster_publication import publish_verified_roster_baseline
 
 
 @pytest.fixture
@@ -185,6 +186,102 @@ def _login_admin(admin_client: TestClient) -> None:
         json={"username": "reviewer", "password": "correct horse battery staple"},
     )
     assert response.status_code == 200
+
+
+def test_comparison_publication_requires_evidence_review_and_explicit_publish(
+    admin_client: TestClient,
+    session: Session,
+) -> None:
+    publication = publish_verified_roster_baseline(session)
+    session.commit()
+    assert publication.published_measures == 8
+
+    assert admin_client.get("/api/admin/comparisons").status_code == 401
+    _login_admin(admin_client)
+
+    missing_action = admin_client.post(
+        "/api/admin/comparisons/generate",
+        json={"from_year": 2025, "to_year": 2026},
+    )
+    prepared = admin_client.post(
+        "/api/admin/comparisons/generate",
+        headers={"X-CMSQI-Admin-Action": "prepare-comparisons"},
+        json={"from_year": 2025, "to_year": 2026},
+    )
+
+    assert missing_action.status_code == 422
+    assert prepared.status_code == 200
+    assert prepared.json() == {
+        "prepared": 6,
+        "existing": 0,
+        "skipped_measure_ids": ["113", "484"],
+    }
+
+    repeated = admin_client.post(
+        "/api/admin/comparisons/generate",
+        headers={"X-CMSQI-Admin-Action": "prepare-comparisons"},
+        json={"from_year": 2025, "to_year": 2026},
+    )
+    assert repeated.json()["prepared"] == 0
+    assert repeated.json()["existing"] == 6
+
+    listing = admin_client.get(
+        "/api/admin/comparisons",
+        params={"from_year": 2025, "to_year": 2026},
+    )
+    assert listing.status_code == 200
+    assert len(listing.json()["items"]) == 6
+    comparison = listing.json()["items"][0]
+    assert comparison["publication_state"] == "draft"
+    assert comparison["review_decision"] == "pending"
+    assert comparison["evidence_status"] == "verified"
+    assert comparison["publication_eligibility"] == "not_approved"
+    assert comparison["fields"][0]["field"] == "measure_set"
+    assert len(comparison["fields"][0]["evidence"]) >= 4
+
+    detail_params = {
+        "program": comparison["program"],
+        "collection_type": comparison["collection_type"],
+        "from_year": comparison["from_year"],
+        "to_year": comparison["to_year"],
+    }
+    private_before_publish = admin_client.get(
+        f"/api/changes/{comparison['measure_id']}", params=detail_params
+    )
+    premature_publish = admin_client.post(
+        f"/api/admin/comparisons/{comparison['comparison_id']}/publish",
+        headers={"X-CMSQI-Admin-Action": "publish-comparison"},
+    )
+    assert private_before_publish.status_code == 404
+    assert premature_publish.status_code == 409
+    assert premature_publish.json()["code"] == "comparison_publication_not_approved"
+
+    approved = admin_client.patch(
+        f"/api/admin/comparisons/{comparison['comparison_id']}",
+        headers={"X-CMSQI-Admin-Action": "review-comparison"},
+        json={
+            "decision": "approve",
+            "reviewer_notes": "Evidence supports both roster memberships.",
+        },
+    )
+    assert approved.status_code == 200
+    assert approved.json()["review_decision"] == "approve"
+    assert approved.json()["publication_eligibility"] == "eligible"
+    assert approved.json()["review_history"][0]["reviewer_name"] == "reviewer"
+
+    published = admin_client.post(
+        f"/api/admin/comparisons/{comparison['comparison_id']}/publish",
+        headers={"X-CMSQI-Admin-Action": "publish-comparison"},
+    )
+    assert published.status_code == 200
+    assert published.json()["publication_state"] == "published"
+    assert published.json()["published_by"] == "reviewer"
+
+    public_after_publish = admin_client.get(
+        f"/api/changes/{comparison['measure_id']}", params=detail_params
+    )
+    assert public_after_publish.status_code == 200
+    assert public_after_publish.json()["measure_id"] == comparison["measure_id"]
 
 
 def test_admin_source_registry_is_private_validated_and_reversible(

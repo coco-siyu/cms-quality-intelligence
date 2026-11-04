@@ -11,6 +11,7 @@ from app.domain import (
     AffectedField,
     ChangeEvidenceSide,
     ChangeStatus,
+    ComparisonReviewDecision,
     FieldAvailability,
     PublicationState,
     PublicVerificationStatus,
@@ -188,6 +189,11 @@ def seed_demo_records() -> None:
             to_year=2026,
             status=ChangeStatus.MODIFIED,
             publication_state=PublicationState.PUBLISHED,
+            review_decision=ComparisonReviewDecision.APPROVE,
+            reviewed_at=checked_at,
+            reviewer_name="fictional-demo-seed",
+            published_at=checked_at,
+            published_by="fictional-demo-seed",
             affected_fields=[comparison_field],
         )
         first.comparisons.append(comparison)

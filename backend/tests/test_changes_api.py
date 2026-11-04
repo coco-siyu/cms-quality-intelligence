@@ -128,6 +128,9 @@ def test_draft_or_incomplete_comparison_never_crosses_public_api(
     comparison = seeded_session.scalar(select(MeasureComparison))
     assert comparison is not None
     comparison.publication_state = publication_state
+    if publication_state == PublicationState.DRAFT:
+        comparison.published_at = None
+        comparison.published_by = None
     comparison.evidence_status = evidence_status
     seeded_session.commit()
 
