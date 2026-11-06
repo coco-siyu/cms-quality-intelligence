@@ -3529,8 +3529,21 @@ h3 {
 
 .admin-comparison-sources {
   display: grid;
-  gap: 6px;
+  gap: 14px;
   padding: 0 0 14px;
+}
+
+.admin-comparison-source-group {
+  display: grid;
+  gap: 6px;
+}
+
+.admin-comparison-source-group > p {
+  color: var(--olive);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
 }
 
 .admin-comparison-sources a {
@@ -3564,6 +3577,8 @@ h3 {
 .admin-comparison-sources small {
   color: var(--muted-foreground);
   font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .admin-comparison-sources svg {

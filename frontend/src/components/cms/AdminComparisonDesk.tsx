@@ -27,6 +27,19 @@ function humanize(value: string) {
   return value.replaceAll("_", " ");
 }
 
+function conciseEvidenceLocator(locator: string | null, officialUrl: string) {
+  const value = locator ?? "";
+  const isPdf = /^pdf\b/i.test(value) || /\.pdf(?:$|[?#])/i.test(officialUrl);
+  const format = isPdf ? "PDF" : "HTML";
+  const pageMatch = value.match(/pages?\s+(\d+)(?:\s*[-–]\s*(\d+))?/i);
+  const tableMatch = value.match(/table\s+(\d+)/i);
+  const pageLabel = pageMatch
+    ? `${pageMatch[2] ? "pp." : "p."} ${pageMatch[1]}${pageMatch[2] ? `–${pageMatch[2]}` : ""}`
+    : null;
+  const tableLabel = tableMatch ? `Table ${tableMatch[1]}` : null;
+  return [format, pageLabel, tableLabel].filter(Boolean).join(" · ");
+}
+
 function ComparisonReviewDialog({
   comparison,
   onClose,
@@ -116,6 +129,23 @@ function ComparisonEvidence({ comparison }: { comparison: AdminComparison }) {
     [comparison.fields],
   );
   const sources = [...new Map(evidence.map((item) => [item.evidence_id, item])).values()];
+  const sourceGroups = [
+    {
+      side: "from_version",
+      label: `PY${comparison.from_year}`,
+      sources: sources.filter((source) => source.side === "from_version"),
+    },
+    {
+      side: "to_version",
+      label: `PY${comparison.to_year}`,
+      sources: sources.filter((source) => source.side === "to_version"),
+    },
+    {
+      side: "context",
+      label: "Context",
+      sources: sources.filter((source) => source.side === "context"),
+    },
+  ].filter((group) => group.sources.length > 0);
 
   return (
     <details className="admin-comparison-evidence">
@@ -134,19 +164,28 @@ function ComparisonEvidence({ comparison }: { comparison: AdminComparison }) {
         </div>
       ))}
       <div className="admin-comparison-sources">
-        {sources.map((source) => (
-          <a
-            key={source.evidence_id}
-            href={source.official_url}
-            target="_blank"
-            rel="noreferrer"
-          >
-            <span>
-              <strong>{source.document_title}</strong>
-              <small>{source.locator ?? source.source_revision_id}</small>
-            </span>
-            <ExternalLink aria-hidden="true" />
-          </a>
+        {sourceGroups.map((group) => (
+          <section className="admin-comparison-source-group" key={group.side}>
+            <p>
+              {group.label} · {group.sources.length} official {group.sources.length === 1 ? "source" : "sources"}
+            </p>
+            {group.sources.map((source) => (
+              <a
+                key={source.evidence_id}
+                href={source.official_url}
+                target="_blank"
+                rel="noreferrer"
+              >
+                <span>
+                  <strong>{source.document_title}</strong>
+                  <small title={source.locator ?? source.source_revision_id}>
+                    {conciseEvidenceLocator(source.locator, source.official_url)}
+                  </small>
+                </span>
+                <ExternalLink aria-hidden="true" />
+              </a>
+            ))}
+          </section>
         ))}
       </div>
     </details>

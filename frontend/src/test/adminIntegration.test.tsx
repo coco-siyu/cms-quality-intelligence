@@ -156,8 +156,8 @@ describe("private admin review workspace", () => {
               evidence_id: "CMS-001-2025",
               source_revision_id: "CMS-APP-2025-R1",
               document_title: "PY 2025 APP Quality Requirements",
-              official_url: "https://www.cms.gov/example/2025.pdf",
-              locator: "Page 4",
+              official_url: "https://www.cms.gov/example/2025-app",
+              locator: "HTML section 'APP Plus Quality Measure Set'; Table 1 rows for 2025",
               excerpt: "Official roster evidence.",
               side: "from_version",
             },
@@ -166,7 +166,7 @@ describe("private admin review workspace", () => {
               source_revision_id: "CMS-APP-2026-R1",
               document_title: "PY 2026 APP Quality Requirements",
               official_url: "https://www.cms.gov/example/2026.pdf",
-              locator: "Measure table",
+              locator: "PDF pages 3-4; Table 1 'APP Plus Quality Measure Set for PY 2026'",
               excerpt: "Official roster evidence.",
               side: "to_version",
             },
@@ -257,7 +257,12 @@ describe("private admin review workspace", () => {
     expect(await screen.findByText(baseComparison.measure_name)).toBeInTheDocument();
     fireEvent.click(screen.getByText("Inspect values and 2 evidence links"));
     expect(screen.getByRole("link", { name: /PY 2025 APP Quality Requirements/ }))
-      .toHaveAttribute("href", "https://www.cms.gov/example/2025.pdf");
+      .toHaveAttribute("href", "https://www.cms.gov/example/2025-app");
+    expect(screen.getByText("PY2025 · 1 official source")).toBeInTheDocument();
+    expect(screen.getByText("PY2026 · 1 official source")).toBeInTheDocument();
+    expect(screen.getByText("HTML · Table 1")).toBeInTheDocument();
+    expect(screen.getByText("PDF · pp. 3–4 · Table 1")).toBeInTheDocument();
+    expect(screen.queryByText(/HTML section 'APP Plus/)).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Review comparison 001" }));
     fireEvent.change(screen.getByLabelText(/Reviewer notes/), {
