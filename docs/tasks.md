@@ -40,7 +40,8 @@
   evaluation harness, public comparison APIs, the verified-data Change
   Overview dashboard, evidence-backed side-by-side detail, and a chronological
   approved-change feed, plus a source-revision timeline that keeps CMS
-  publication, applicability, and effective dates distinct; Tasks 34–37 remain
+  publication, applicability, and effective dates distinct. Task 34 adds the
+  strict paired AI Impact output contract; Tasks 35–37 remain
   open. A guarded publication bridge now prepares six deterministic
   two-year roster comparisons, requires an append-only administrator decision,
   and keeps each record private until a separate publication action succeeds.
@@ -51,7 +52,8 @@
   partial-publication slice. Task 47 remains open. Task 31 now renders exact,
   evidence-backed side-by-side comparisons when the public API has an approved
   record, with an explicit reference-only fallback when it does not. Tasks
-  34–37 remain open; AI Impact content is not yet production-backed.
+  35–37 remain open; AI Impact generation, evaluation, and display are not yet
+  production-backed.
 
 This backlog implements the scoped 2025–2026 MSSP / APP Plus MVP in independent, one-session work items. Tasks are ordered for incremental delivery (M1–M4), but each description provides enough context for an assignee to begin without reading preceding tasks. Keep all official CMS facts source-backed, treat unverified extractions as drafts, and do not use patient-level data. **This document is planning only; no implementation code is included.**
 
@@ -344,6 +346,19 @@ visually checked against the existing editorial design system.
 ## 34. Define role-specific AI impact output contracts
 Goal: Make AI explanations consistent for two user roles.
 Description: Define structured sections for plain-language change summary, Data Analyst technical implications, ACO Quality Manager operational implications, citations, and uncertainty caveats. Exclude production SQL generation, severity scoring, and unsupported regulatory conclusions.
+
+Implementation status (complete, 2026-11-06): Added a strict,
+provider-independent paired output contract with an evidence-backed
+plain-language summary, bounded Data Analyst technical and validation
+considerations, ACO Quality Manager operational and coordination
+considerations, and explicit uncertainty caveats. Every factual or role-specific
+statement carries exact supplied evidence IDs; factual summaries require both
+year sides, while organizational implications must remain labeled as possible
+impacts. Unexpected severity, confidence, SQL, and regulatory-conclusion fields
+are rejected, as are fenced or common executable SQL forms, unsupported
+citations, duplicate evidence, and one-sided factual summaries. The reusable OpenAPI components and
+`docs/impact-explanation-contract.md` document the boundary. No provider call,
+database model, endpoint, approval, or public display was added.
 
 ## 35. Implement grounded explanation generation
 Goal: Produce two evidence-backed perspectives on an approved change.

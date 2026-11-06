@@ -34,6 +34,24 @@ def test_root_openapi_contract_is_valid() -> None:
         "verified",
         "incomplete",
     ]
+    assert schemas["ImpactStatementType"]["enum"] == [
+        "source_fact",
+        "possible_impact",
+    ]
+    impact_output = schemas["ImpactExplanationOutput"]
+    assert impact_output["additionalProperties"] is False
+    assert set(impact_output["required"]) == {
+        "plain_language_summary",
+        "data_analyst",
+        "aco_quality_manager",
+        "uncertainty_caveats",
+    }
+    assert impact_output["properties"]["data_analyst"]["$ref"].endswith(
+        "/DataAnalystImpact"
+    )
+    assert impact_output["properties"]["aco_quality_manager"]["$ref"].endswith(
+        "/ACOQualityManagerImpact"
+    )
 
 
 def test_runtime_openapi_exposes_contract_operation_ids_and_error_models() -> None:
