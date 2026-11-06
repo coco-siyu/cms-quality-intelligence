@@ -53,6 +53,7 @@ const changePage = {
               document_title: "Fictional 2025 Official Source",
               official_url: "https://example.invalid/fictional-2025-source",
               publication_date: "2025-01-15",
+              effective_date: "2025-01-01",
               locator: "Fictional page 5",
               excerpt: "Fictional source wording for the 2025 definition.",
               side: "from_version",
@@ -63,6 +64,7 @@ const changePage = {
               document_title: "Fictional 2026 Official Source",
               official_url: "https://example.invalid/fictional-2026-source",
               publication_date: "2026-01-20",
+              effective_date: "2026-01-01",
               locator: "Fictional page 6",
               excerpt: "Fictional source wording for the 2026 definition.",
               side: "to_version",
@@ -111,6 +113,31 @@ const detail = {
   ...summary,
   versions: [
     {
+      version_id: "DEMO-VERSION-API-001-2025",
+      performance_year: 2025,
+      program: "Fictional Quality Program",
+      is_program_member: true,
+      fields: [
+        {
+          field: "definition",
+          availability: "unresolved",
+          value: null,
+          evidence: [
+            {
+              evidence_id: "DEMO-EVIDENCE-API-2025",
+              source_revision_id: "DEMO-REVISION-API-2025",
+              document_title: "Fictional 2025 Source Published Later",
+              official_url: "https://example.invalid/demo-source-2025",
+              publication_date: "2026-02-10",
+              effective_date: "2025-01-01",
+              locator: "Fictional section 2025",
+              excerpt: "Synthetic 2025 evidence excerpt for testing only.",
+            },
+          ],
+        },
+      ],
+    },
+    {
       version_id: "DEMO-VERSION-API-001-2026",
       performance_year: 2026,
       program: "Fictional Quality Program",
@@ -122,10 +149,12 @@ const detail = {
           value: null,
           evidence: [
             {
-              evidence_id: "DEMO-EVIDENCE-API-001",
-              source_revision_id: "DEMO-REVISION-API-001",
-              document_title: "Fictional Approved Source",
-              official_url: "https://example.invalid/demo-source",
+              evidence_id: "DEMO-EVIDENCE-API-2026",
+              source_revision_id: "DEMO-REVISION-API-2026",
+              document_title: "Fictional 2026 Source Published Earlier",
+              official_url: "https://example.invalid/demo-source-2026",
+              publication_date: "2025-11-15",
+              effective_date: "2026-01-01",
               locator: "Fictional section 1",
               excerpt: "Synthetic evidence excerpt for testing only.",
             },
@@ -143,6 +172,8 @@ const rosterEvidence = [
     document_title: "CY 2025 PFS Final Rule — Shared Savings Program Provisions",
     official_url:
       "https://www.cms.gov/newsroom/fact-sheets/calendar-year-cy-2025-medicare-physician-fee-schedule-final-rule-cms-1807-f-medicare-shared-savings",
+    publication_date: "2024-11-01",
+    effective_date: null,
     locator: "Table 1",
     excerpt: "Official cross-year roster evidence for Quality ID 001.",
   },
@@ -152,6 +183,8 @@ const rosterEvidence = [
     document_title: "PY 2025 Quality Performance Standard",
     official_url:
       "https://www.cms.gov/files/document/performance-year-2025-40th-percentile-mips-quality-performance-category-score.pdf",
+    publication_date: "2025-01-08",
+    effective_date: null,
     locator: "PY2025 measure roster",
     excerpt: "Official year-specific roster evidence for Quality ID 001.",
   },
@@ -449,6 +482,37 @@ describe("public frontend API integration", () => {
     expect(navigationUrl).toContain("q=follow-up");
     expect(navigationUrl).toContain("change_status=unknown");
     expect(navigationUrl).toContain("performance_year=2026");
+  });
+
+  it("orders the source timeline by CMS publication date without conflating applicability", async () => {
+    vi.stubGlobal("fetch", vi.fn(apiFetch));
+
+    await renderApiRoute("/measures/DEMO-API-001?from=2025&to=2026");
+    expect(
+      await screen.findByRole("heading", { name: "Fictional API Contract Measure" }),
+    ).toBeInTheDocument();
+
+    fireEvent.mouseDown(screen.getByRole("tab", { name: "Source status" }), {
+      button: 0,
+      ctrlKey: false,
+    });
+
+    const timeline = await screen.findByRole("list", {
+      name: "CMS source publication timeline",
+    });
+    const entries = within(timeline).getAllByRole("listitem");
+    expect(entries).toHaveLength(2);
+    expect(entries[0]).toHaveTextContent("Fictional 2025 Source Published Later");
+    expect(entries[0]).toHaveTextContent("Feb 10, 2026");
+    expect(entries[0]).toHaveTextContent("Applies toPY2025");
+    expect(entries[0]).toHaveTextContent("Effective dateJan 1, 2025");
+    expect(entries[1]).toHaveTextContent("Fictional 2026 Source Published Earlier");
+    expect(entries[1]).toHaveTextContent("Nov 15, 2025");
+    expect(entries[1]).toHaveTextContent("Applies toPY2026");
+    expect(within(entries[0]).getByRole("link", { name: "Open official source" })).toHaveAttribute(
+      "href",
+      "https://example.invalid/demo-source-2025",
+    );
   });
 
   it("reconciles unsupported direct-route years to API defaults", async () => {

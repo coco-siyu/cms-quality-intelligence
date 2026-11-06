@@ -158,6 +158,8 @@ export type AdminComparison = {
       source_revision_id: string;
       document_title: string;
       official_url: string;
+      publication_date: string | null;
+      effective_date: string | null;
       locator: string | null;
       excerpt: string;
       side: "from_version" | "to_version" | "context";

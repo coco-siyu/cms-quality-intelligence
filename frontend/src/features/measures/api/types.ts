@@ -28,6 +28,7 @@ export type EvidenceReference = {
   document_title: string;
   official_url: string;
   publication_date: string | null;
+  effective_date: string | null;
   locator: string | null;
   excerpt: string;
 };

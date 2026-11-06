@@ -40,6 +40,7 @@ def test_change_list_returns_only_public_evidence_backed_comparisons(
     assert record["published_at"] == "2026-10-01T12:00:00Z"
     assert record["fields"][0]["field"] == "definition"
     assert record["fields"][0]["evidence"][0]["publication_date"] == "2026-09-01"
+    assert record["fields"][0]["evidence"][0]["effective_date"] == "2026-09-01"
     assert {item["side"] for item in record["fields"][0]["evidence"]} == {
         "from_version",
         "to_version",

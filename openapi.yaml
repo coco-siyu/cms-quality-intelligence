@@ -1142,7 +1142,7 @@ components:
         default_to_year: 2026
     EvidenceReference:
       type: object
-      required: [evidence_id, source_revision_id, document_title, official_url, publication_date, excerpt]
+      required: [evidence_id, source_revision_id, document_title, official_url, publication_date, effective_date, excerpt]
       properties:
         evidence_id:
           type: string
@@ -1158,6 +1158,10 @@ components:
           type: [string, "null"]
           format: date
           description: Date CMS published or revised this source, when documented.
+        effective_date:
+          type: [string, "null"]
+          format: date
+          description: Effective or applicability date documented by CMS, when available.
         locator:
           type: [string, "null"]
           description: Page, section, or another stable locator when available.

@@ -82,8 +82,11 @@ same approved records, keeping CMS source dates, internal approval time, and
 public publication time visibly distinct. Measure Changes tabs now render evidence-backed side-by-side fields for an
 exact published comparison, including explicit unresolved states and official
 source excerpts; when no comparison is approved, version fields remain clearly
-labeled reference material rather than an inferred change. AI Impact remains
-future M2 work. The protected Admin review desk now provides a comparison
+labeled reference material rather than an inferred change. Measure Source
+status tabs provide a newest-first CMS source-revision timeline that keeps
+publication dates, performance-year applicability, and effective dates as
+separate facts, while retaining undated revisions as explicitly undocumented.
+AI Impact remains future M2 work. The protected Admin review desk now provides a comparison
 publication workflow: prepare deterministic two-year roster drafts, inspect
 their official evidence, record an audited approval or revision request, then
 publish through a separate guarded action. Six records have both year versions;

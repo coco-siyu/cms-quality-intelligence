@@ -51,6 +51,7 @@ class EvidenceReferenceResponse(BaseModel):
     document_title: str
     official_url: HttpUrl
     publication_date: date | None
+    effective_date: date | None
     locator: str | None
     excerpt: str
 

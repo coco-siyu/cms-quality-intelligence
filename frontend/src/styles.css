@@ -1591,6 +1591,111 @@ h3 {
   line-height: 1.6;
 }
 
+.source-timeline-section {
+  margin-top: 52px;
+}
+
+.source-timeline-section > .section-subtext {
+  max-width: 720px;
+  margin-top: 12px;
+}
+
+.source-publication-timeline {
+  padding: 0;
+  margin: 30px 0 0;
+  border-top: 1px solid var(--foreground);
+  list-style: none;
+}
+
+.source-publication-timeline > li {
+  display: grid;
+  grid-template-columns: 176px minmax(0, 1fr);
+  gap: 40px;
+  padding: 30px 0 34px;
+  border-bottom: 1px solid var(--border);
+}
+
+.source-publication-date {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding-left: 13px;
+  border-left: 2px solid var(--olive);
+}
+
+.source-publication-date > span {
+  color: var(--muted-foreground);
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.source-publication-date time,
+.source-publication-date strong {
+  color: var(--navy);
+  font-family: var(--font-display);
+  font-size: 21px;
+  font-weight: 400;
+  line-height: 1.2;
+}
+
+.source-publication-timeline article > header {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+
+.source-publication-timeline article > header > span {
+  color: var(--olive);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.8;
+}
+
+.source-publication-timeline h3 {
+  color: var(--navy);
+  font-size: 24px;
+  font-weight: 400;
+  line-height: 1.25;
+}
+
+.source-publication-timeline dl {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.4fr) repeat(2, minmax(120px, 0.7fr));
+  gap: 18px;
+  margin: 22px 0 0 44px;
+}
+
+.source-publication-timeline dt {
+  margin-bottom: 4px;
+  color: var(--muted-foreground);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.source-publication-timeline dd {
+  margin: 0;
+  color: var(--foreground);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.source-publication-timeline article > a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 22px 0 0 44px;
+  color: var(--navy);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.source-publication-timeline article > a svg {
+  width: 12px;
+}
+
 @media (min-width: 1600px) {
   .page-sheet {
     padding: 56px 64px 32px;
@@ -5210,6 +5315,25 @@ h3 {
 @media (max-width: 780px) {
   .site-layout {
     display: block;
+  }
+
+  .source-publication-timeline > li {
+    grid-template-columns: 1fr;
+    gap: 22px;
+    padding: 26px 0 30px;
+  }
+
+  .source-publication-timeline dl {
+    grid-template-columns: 1fr 1fr;
+    margin-left: 0;
+  }
+
+  .source-publication-timeline dl > div:first-child {
+    grid-column: 1 / -1;
+  }
+
+  .source-publication-timeline article > a {
+    margin-left: 0;
   }
 
   .site-sidebar {

@@ -164,6 +164,7 @@ def _field_response(field: SpecificationField) -> SpecificationFieldResponse | N
                 document_title=revision.source_document.title,
                 official_url=revision.source_document.official_url,
                 publication_date=revision.publication_date,
+                effective_date=revision.effective_date,
                 locator=reference.locator,
                 excerpt=reference.excerpt,
             )

@@ -4,6 +4,7 @@ import { AlertTriangle, ChevronLeft, ChevronRight, ExternalLink, ShieldCheck } f
 
 import { ErrorState, LoadingState, SectionTitle, StatusMark } from "../components/cms/shared";
 import { PublicComparison } from "../components/cms/PublicComparison";
+import { SourceTimeline } from "../components/cms/SourceTimeline";
 import { Button } from "../components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
 import { apiSummaryToMeasure, formatApiDate, labelField } from "../features/measures/api/adapters";
@@ -268,7 +269,7 @@ export function ApiMeasureDetailPage() {
         </TabsContent>
 
         <TabsContent value="history">
-          <section className="history-section">
+          <section className="history-section source-status-section">
             <SectionTitle demo={false}>Public source status</SectionTitle>
             <dl className="overview-facts">
               <div><dt>Verification state</dt><dd>{measure.freshness.verification_status.replaceAll("_", " ")}</dd></div>
@@ -278,6 +279,7 @@ export function ApiMeasureDetailPage() {
             </dl>
             <p className="section-subtext">Internal review notes and draft workflow metadata are intentionally excluded.</p>
           </section>
+          <SourceTimeline versions={measure.versions} />
         </TabsContent>
       </Tabs>
     </div>

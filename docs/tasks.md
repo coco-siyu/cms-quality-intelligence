@@ -39,7 +39,9 @@
   gating, private evidence-bounded semantic proposals, and a repeatable semantic
   evaluation harness, public comparison APIs, the verified-data Change
   Overview dashboard, evidence-backed side-by-side detail, and a chronological
-  approved-change feed; Tasks 33–37 remain open. A guarded publication bridge now prepares six deterministic
+  approved-change feed, plus a source-revision timeline that keeps CMS
+  publication, applicability, and effective dates distinct; Tasks 34–37 remain
+  open. A guarded publication bridge now prepares six deterministic
   two-year roster comparisons, requires an append-only administrator decision,
   and keeps each record private until a separate publication action succeeds.
   The two one-sided roster records remain explicitly skipped rather than being
@@ -49,8 +51,7 @@
   partial-publication slice. Task 47 remains open. Task 31 now renders exact,
   evidence-backed side-by-side comparisons when the public API has an approved
   record, with an explicit reference-only fallback when it does not. Tasks
-  33–37 remain open; the CMS publication timeline and AI Impact content are not
-  yet production-backed.
+  34–37 remain open; AI Impact content is not yet production-backed.
 
 This backlog implements the scoped 2025–2026 MSSP / APP Plus MVP in independent, one-session work items. Tasks are ordered for incremental delivery (M1–M4), but each description provides enough context for an assignee to begin without reading preceding tasks. Keep all official CMS facts source-backed, treat unverified extractions as drafts, and do not use patient-level data. **This document is planning only; no implementation code is included.**
 
@@ -329,6 +330,16 @@ verifies the date labels, query scope, and detail navigation.
 ## 33. Build the CMS publication timeline
 Goal: Separate when CMS announced a change from the year it applies.
 Description: Render a simple source publication/revision timeline using documented dates and links. Test that performance years, publication dates, and effective dates are not conflated in labels or sorting.
+
+Implementation status (complete, 2026-11-06): The public measure Source status
+tab now renders a source-revision timeline ordered by documented CMS
+publication date, with undated revisions retained explicitly at the end. Each
+entry labels CMS publication date, applicable performance year(s), effective
+date, revision identity, and official source link separately. The public
+evidence contract now carries source effective dates alongside publication
+dates, and integration tests verify that sorting follows publication dates
+rather than performance years. Desktop and 390-by-844 mobile layouts were
+visually checked against the existing editorial design system.
 
 ## 34. Define role-specific AI impact output contracts
 Goal: Make AI explanations consistent for two user roles.
