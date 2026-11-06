@@ -431,6 +431,13 @@ describe("public frontend API integration", () => {
     expect(await screen.findByText("Approved field comparison")).toBeInTheDocument();
     expect(screen.getByText("Fictional 2025 definition.")).toBeInTheDocument();
     expect(screen.getByText("Fictional 2026 definition.")).toBeInTheDocument();
+    expect(screen.getAllByText("1 official source")).toHaveLength(2);
+    const evidenceDetails = screen.getAllByText("View evidence")[0].closest("details");
+    expect(evidenceDetails).not.toHaveAttribute("open");
+    expect(screen.getByText("Fictional source wording for the 2025 definition.")).not.toBeVisible();
+    fireEvent.click(within(evidenceDetails!).getByText("View evidence"));
+    expect(evidenceDetails).toHaveAttribute("open");
+    expect(screen.getByText("Fictional source wording for the 2025 definition.")).toBeVisible();
     expect(screen.getByText("Wording only")).toBeVisible();
     expect(
       screen.getByText("This field is explicitly unavailable in the approved public record."),

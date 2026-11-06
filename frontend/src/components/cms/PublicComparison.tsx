@@ -1,4 +1,4 @@
-import { ArrowRight, ExternalLink, FileText } from "lucide-react";
+import { ArrowRight, ChevronDown, ExternalLink, FileText } from "lucide-react";
 
 import type {
   ChangeField,
@@ -10,19 +10,42 @@ import { labelField } from "../../features/measures/api/adapters";
 import { StatusMark } from "./shared";
 
 function availabilityLabel(availability: FieldAvailability) {
-  if (availability === "available") return "Approved value";
-  if (availability === "unavailable") return "Explicitly unavailable";
-  return "Unresolved evidence";
+  if (availability === "available") return "Approved";
+  if (availability === "unavailable") return "Unavailable";
+  return "Unresolved";
 }
 
-function fieldValue(value: string | null, availability: FieldAvailability) {
+function fieldValue(
+  field: ChangeField["field"],
+  value: string | null,
+  availability: FieldAvailability,
+) {
   if (availability === "unavailable") {
     return "This field is explicitly unavailable in the approved public record.";
   }
   if (availability === "unresolved") {
     return "The approved evidence does not resolve this field.";
   }
+  if (
+    field === "measure_set" &&
+    value?.startsWith("Member of the PY") &&
+    value.includes("MSSP APP Plus quality measure set")
+  ) {
+    return "Included in the APP Plus measure set.";
+  }
   return value ?? "No approved public value was supplied.";
+}
+
+function conciseSourceLabel(evidence: ChangeFieldEvidence) {
+  if (/physician fee schedule final rule/i.test(evidence.document_title)) {
+    const year = evidence.document_title.match(/(?:CY|Calendar Year(?: \(CY\))?)\s*(20\d{2})/i)?.[1];
+    return year ? `${year} Final Rule` : "CMS Final Rule";
+  }
+  if (/quality performance standard/i.test(evidence.document_title)) {
+    const year = evidence.document_title.match(/performance year\s*(20\d{2})/i)?.[1];
+    return year ? `PY${year} Measure Table` : "CMS Measure Table";
+  }
+  return evidence.document_title;
 }
 
 function EvidenceExcerpt({ evidence }: { evidence: ChangeFieldEvidence }) {
@@ -33,8 +56,13 @@ function EvidenceExcerpt({ evidence }: { evidence: ChangeFieldEvidence }) {
         <blockquote>{evidence.excerpt}</blockquote>
         <p>
           <span>{evidence.locator ?? "Locator unavailable"}</span>
-          <a href={evidence.official_url} target="_blank" rel="noreferrer">
-            {evidence.document_title} <ExternalLink aria-hidden="true" />
+          <a
+            href={evidence.official_url}
+            target="_blank"
+            rel="noreferrer"
+            title={evidence.document_title}
+          >
+            {conciseSourceLabel(evidence)} <ExternalLink aria-hidden="true" />
           </a>
         </p>
       </div>
@@ -48,13 +76,17 @@ function ValueSheet({
   availability,
   evidence,
   side,
+  field,
 }: {
   year: number;
   value: string | null;
   availability: FieldAvailability;
   evidence: ChangeFieldEvidence[];
   side: "from" | "to";
+  field: ChangeField["field"];
 }) {
+  const sourceLabel = `${evidence.length} official ${evidence.length === 1 ? "source" : "sources"}`;
+
   return (
     <section className={`comparison-value-sheet comparison-value-${side}`}>
       <header>
@@ -62,14 +94,27 @@ function ValueSheet({
         <span>{availabilityLabel(availability)}</span>
       </header>
       <p className={availability === "available" ? "" : "unavailable-text"}>
-        {fieldValue(value, availability)}
+        {fieldValue(field, value, availability)}
       </p>
       {evidence.length > 0 && (
-        <div className="comparison-evidence-stack" aria-label={`PY${year} evidence`}>
-          {evidence.map((reference) => (
-            <EvidenceExcerpt key={`${reference.evidence_id}-${reference.side}`} evidence={reference} />
-          ))}
-        </div>
+        <details className="comparison-evidence-details">
+          <summary>
+            <span>{sourceLabel}</span>
+            <span className="comparison-evidence-toggle">
+              <span className="comparison-evidence-toggle-closed">View evidence</span>
+              <span className="comparison-evidence-toggle-open">Hide evidence</span>
+              <ChevronDown aria-hidden="true" />
+            </span>
+          </summary>
+          <div className="comparison-evidence-stack" aria-label={`PY${year} evidence`}>
+            {evidence.map((reference) => (
+              <EvidenceExcerpt
+                key={`${reference.evidence_id}-${reference.side}`}
+                evidence={reference}
+              />
+            ))}
+          </div>
+        </details>
       )}
     </section>
   );
@@ -101,6 +146,7 @@ function ComparisonField({
           availability={field.from_availability}
           evidence={fromEvidence}
           side="from"
+          field={field.field}
         />
         <ArrowRight className="comparison-direction" aria-hidden="true" />
         <ValueSheet
@@ -109,6 +155,7 @@ function ComparisonField({
           availability={field.to_availability}
           evidence={toEvidence}
           side="to"
+          field={field.field}
         />
       </div>
       {contextEvidence.length > 0 && (
