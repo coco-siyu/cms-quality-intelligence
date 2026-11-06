@@ -50,6 +50,7 @@ class EvidenceReferenceResponse(BaseModel):
     source_revision_id: str
     document_title: str
     official_url: HttpUrl
+    publication_date: date | None
     locator: str | None
     excerpt: str
 
@@ -84,12 +85,15 @@ class ChangeFieldResponse(BaseModel):
 
 class PublicChangeRecord(BaseModel):
     measure_id: str
+    measure_name: str
     program: str
     collection_type: CollectionType
     from_year: int
     to_year: int
     status: ChangeStatus
     evidence_status: ComparisonEvidenceStatus
+    approved_at: datetime
+    published_at: datetime
     fields: list[ChangeFieldResponse]
 
 

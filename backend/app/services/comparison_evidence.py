@@ -1,6 +1,7 @@
 """Structural validation and public projection for comparison evidence."""
 
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from urllib.parse import urlparse
 
 from app.domain import (
@@ -25,6 +26,10 @@ AFFECTED_CHANGE_STATUSES = (
     ChangeStatus.MODIFIED,
     ChangeStatus.WORDING_ONLY,
 )
+
+
+def _as_utc(value: datetime) -> datetime:
+    return value.replace(tzinfo=UTC) if value.tzinfo is None else value.astimezone(UTC)
 
 
 @dataclass(frozen=True)
@@ -193,6 +198,7 @@ def _evidence_response(
         source_revision_id=revision.revision_id,
         document_title=document.title,
         official_url=document.official_url,
+        publication_date=revision.publication_date,
         locator=reference.locator,
         excerpt=reference.excerpt,
         side=link.side,
@@ -207,6 +213,7 @@ def build_public_change_record(
     if (
         comparison.publication_state != PublicationState.PUBLISHED
         or comparison.review_decision != ComparisonReviewDecision.APPROVE
+        or comparison.reviewed_at is None
         or comparison.published_at is None
         or not comparison.published_by
         or comparison.evidence_status != ComparisonEvidenceStatus.VERIFIED
@@ -238,11 +245,14 @@ def build_public_change_record(
     ]
     return PublicChangeRecord(
         measure_id=comparison.measure.measure_id,
+        measure_name=comparison.measure.name,
         program=comparison.program,
         collection_type=comparison.collection_type,
         from_year=comparison.from_year,
         to_year=comparison.to_year,
         status=comparison.status,
         evidence_status=comparison.evidence_status,
+        approved_at=_as_utc(comparison.reviewed_at),
+        published_at=_as_utc(comparison.published_at),
         fields=fields,
     )

@@ -140,9 +140,11 @@ def test_measure_detail_exposes_explicit_availability_and_public_evidence(
         "source_revision_id",
         "document_title",
         "official_url",
+        "publication_date",
         "locator",
         "excerpt",
     }
+    assert field["evidence"][0]["publication_date"] == "2026-09-01"
 
 
 def test_measure_versions_can_be_selected_by_year(client: TestClient) -> None:

@@ -27,6 +27,7 @@ export type EvidenceReference = {
   source_revision_id: string;
   document_title: string;
   official_url: string;
+  publication_date: string | null;
   locator: string | null;
   excerpt: string;
 };
@@ -72,12 +73,15 @@ export type ChangeField = {
 
 export type PublicChangeRecord = {
   measure_id: string;
+  measure_name: string;
   program: string;
   collection_type: CollectionType;
   from_year: number;
   to_year: number;
   status: ChangeStatus;
   evidence_status: ComparisonEvidenceStatus;
+  approved_at: string;
+  published_at: string;
   fields: ChangeField[];
 };
 

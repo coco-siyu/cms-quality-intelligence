@@ -1142,7 +1142,7 @@ components:
         default_to_year: 2026
     EvidenceReference:
       type: object
-      required: [evidence_id, source_revision_id, document_title, official_url, excerpt]
+      required: [evidence_id, source_revision_id, document_title, official_url, publication_date, excerpt]
       properties:
         evidence_id:
           type: string
@@ -1154,6 +1154,10 @@ components:
           type: string
           format: uri
           pattern: "^https://"
+        publication_date:
+          type: [string, "null"]
+          format: date
+          description: Date CMS published or revised this source, when documented.
         locator:
           type: [string, "null"]
           description: Page, section, or another stable locator when available.
@@ -1231,15 +1235,20 @@ components:
       description: Approved, evidence-backed comparison for one measure and year pair.
       required:
         - measure_id
+        - measure_name
         - program
         - collection_type
         - from_year
         - to_year
         - status
         - evidence_status
+        - approved_at
+        - published_at
         - fields
       properties:
         measure_id:
+          type: string
+        measure_name:
           type: string
         program:
           type: string
@@ -1257,6 +1266,14 @@ components:
           $ref: "#/components/schemas/ChangeStatus"
         evidence_status:
           $ref: "#/components/schemas/ComparisonEvidenceStatus"
+        approved_at:
+          type: string
+          format: date-time
+          description: Time the internal human review approved this comparison.
+        published_at:
+          type: string
+          format: date-time
+          description: Time the approved comparison became public in this application.
         fields:
           type: array
           items:

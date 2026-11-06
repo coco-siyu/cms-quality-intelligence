@@ -29,12 +29,15 @@ const changePage = {
   items: [
     {
       measure_id: summary.measure_id,
+      measure_name: summary.name,
       program: "Fictional Quality Program",
       collection_type: "program_roster",
       from_year: 2025,
       to_year: 2026,
       status: "modified",
       evidence_status: "verified",
+      approved_at: "2026-10-14T12:00:00Z",
+      published_at: "2026-10-16T12:00:00Z",
       fields: [
         {
           field: "definition",
@@ -49,6 +52,7 @@ const changePage = {
               source_revision_id: "DEMO-CHANGE-REVISION-2025",
               document_title: "Fictional 2025 Official Source",
               official_url: "https://example.invalid/fictional-2025-source",
+              publication_date: "2025-01-15",
               locator: "Fictional page 5",
               excerpt: "Fictional source wording for the 2025 definition.",
               side: "from_version",
@@ -58,6 +62,7 @@ const changePage = {
               source_revision_id: "DEMO-CHANGE-REVISION-2026",
               document_title: "Fictional 2026 Official Source",
               official_url: "https://example.invalid/fictional-2026-source",
+              publication_date: "2026-01-20",
               locator: "Fictional page 6",
               excerpt: "Fictional source wording for the 2026 definition.",
               side: "to_version",
@@ -326,17 +331,29 @@ describe("public frontend API integration", () => {
     ).toBeVisible();
   });
 
-  it("does not fabricate a public What's New feed before the API exists", async () => {
+  it("renders a chronological public What's New feed with distinct source and approval dates", async () => {
     const fetchMock = vi.fn(apiFetch);
     vi.stubGlobal("fetch", fetchMock);
 
     await renderApiRoute("/whats-new?from=2025&to=2026");
 
-    expect(await screen.findByText(/public update feed is being prepared/i)).toBeInTheDocument();
-    expect(screen.getByText(/No fictional CMS events have been substituted/i)).toBeInTheDocument();
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(
+      await screen.findByRole("heading", {
+        name: "Approved changes published for Fictional API Contract Measure",
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("CMS source dates")).toBeInTheDocument();
+    expect(screen.getByText("Jan 15, 2025 · Jan 20, 2026")).toBeInTheDocument();
+    expect(screen.getByText("Internal approval")).toBeInTheDocument();
+    expect(screen.getByText("Oct 14, 2026")).toBeInTheDocument();
+    expect(screen.getByText("Public update")).toBeInTheDocument();
+    expect(screen.getByText("Oct 16, 2026")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /View approved comparison/ })).toHaveAttribute(
+      "href",
+      expect.stringContaining(`/measures/${summary.measure_id}`),
+    );
     expect(requestedUrl(fetchMock, "/api/performance-years")).toContain("performance-years");
-    expect(fetchMock.mock.calls.some(([input]) => String(input).includes("/api/measures"))).toBe(false);
+    expect(requestedUrl(fetchMock, "/api/changes?")).toContain("from_year=2025");
   });
 
   it("loads the Measure Explorer from the public API with URL filters", async () => {

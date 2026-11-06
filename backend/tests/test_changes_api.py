@@ -32,10 +32,14 @@ def test_change_list_returns_only_public_evidence_backed_comparisons(
     }
     assert [item["measure_id"] for item in payload["items"]] == ["DEMO-001"]
     record = payload["items"][0]
+    assert record["measure_name"] == "Fictional Follow-up Measure"
     assert record["status"] == "modified"
     assert record["evidence_status"] == "verified"
     assert record["collection_type"] == "program_roster"
+    assert record["approved_at"] == "2026-10-01T12:00:00Z"
+    assert record["published_at"] == "2026-10-01T12:00:00Z"
     assert record["fields"][0]["field"] == "definition"
+    assert record["fields"][0]["evidence"][0]["publication_date"] == "2026-09-01"
     assert {item["side"] for item in record["fields"][0]["evidence"]} == {
         "from_version",
         "to_version",

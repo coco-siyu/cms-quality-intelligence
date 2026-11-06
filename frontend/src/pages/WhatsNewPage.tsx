@@ -1,8 +1,9 @@
 import { Link, useSearch } from "@tanstack/react-router";
 import { ArrowRight, ShieldCheck } from "lucide-react";
 
-import { NewsFeed } from "../components/cms/NewsFeed";
-import { DemoBadge, LoadingState } from "../components/cms/shared";
+import { NewsFeed, PublishedNewsFeed } from "../components/cms/NewsFeed";
+import { DemoBadge, ErrorState, LoadingState } from "../components/cms/shared";
+import { useApiChanges } from "../features/measures/api/queries";
 import { getDataMode } from "../features/measures/dataMode";
 import { parseDemoFilters } from "../features/measures/demo/filters";
 import { useDemoNews } from "../features/measures/demo/queries";
@@ -10,6 +11,22 @@ import { useDemoNews } from "../features/measures/demo/queries";
 function PublicWhatsNewPage() {
   const rawSearch = useSearch({ from: "/whats-new" });
   const filters = parseDemoFilters(rawSearch);
+  const sameYear = filters.from === filters.to;
+  const changeQuery = useApiChanges(Number(filters.from), Number(filters.to));
+
+  if (!sameYear && changeQuery.isPending) {
+    return <LoadingState label="Loading published updates…" />;
+  }
+  if (changeQuery.isError) {
+    return (
+      <ErrorState
+        message={changeQuery.error.message}
+        onRetry={() => void changeQuery.refetch()}
+      />
+    );
+  }
+
+  const items = changeQuery.data?.items ?? [];
 
   return (
     <div className="visual-page news-page">
@@ -21,20 +38,28 @@ function PublicWhatsNewPage() {
           comparison.
         </p>
       </header>
-      <article className="news-awaiting-card">
-        <ShieldCheck aria-hidden="true" />
-        <div>
-          <p className="card-kicker">Published data only</p>
-          <h2>The public update feed is being prepared.</h2>
-          <p>
-            The current API does not yet publish a chronological update feed. No fictional CMS
-            events have been substituted. Approved measures remain available in the directory.
-          </p>
-          <Link to="/measures" search={filters}>
-            Open Measure Explorer <ArrowRight aria-hidden="true" />
-          </Link>
-        </div>
-      </article>
+      {items.length ? (
+        <PublishedNewsFeed items={items} filters={filters} />
+      ) : (
+        <article className="news-awaiting-card">
+          <ShieldCheck aria-hidden="true" />
+          <div>
+            <p className="card-kicker">Published data only</p>
+            <h2>
+              {sameYear
+                ? "Choose two different years to view updates."
+                : "No approved updates are published for this year pair."}
+            </h2>
+            <p>
+              Pending and rejected comparisons remain private. No fictional CMS events have been
+              substituted.
+            </p>
+            <Link to="/measures" search={filters}>
+              Open Measure Explorer <ArrowRight aria-hidden="true" />
+            </Link>
+          </div>
+        </article>
+      )}
     </div>
   );
 }

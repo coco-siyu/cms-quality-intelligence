@@ -38,8 +38,8 @@
   unresolved. M2 Tasks 23–31 now provide deterministic comparison, evidence
   gating, private evidence-bounded semantic proposals, and a repeatable semantic
   evaluation harness, public comparison APIs, the verified-data Change
-  Overview dashboard, and evidence-backed side-by-side detail; Tasks 32–37
-  remain open. A guarded publication bridge now prepares six deterministic
+  Overview dashboard, evidence-backed side-by-side detail, and a chronological
+  approved-change feed; Tasks 33–37 remain open. A guarded publication bridge now prepares six deterministic
   two-year roster comparisons, requires an append-only administrator decision,
   and keeps each record private until a separate publication action succeeds.
   The two one-sided roster records remain explicitly skipped rather than being
@@ -49,8 +49,8 @@
   partial-publication slice. Task 47 remains open. Task 31 now renders exact,
   evidence-backed side-by-side comparisons when the public API has an approved
   record, with an explicit reference-only fallback when it does not. Tasks
-  32–37 remain open; the What's New feed and AI Impact content are not yet
-  production-backed.
+  33–37 remain open; the CMS publication timeline and AI Impact content are not
+  yet production-backed.
 
 This backlog implements the scoped 2025–2026 MSSP / APP Plus MVP in independent, one-session work items. Tasks are ordered for incremental delivery (M1–M4), but each description provides enough context for an assignee to begin without reading preceding tasks. Keep all official CMS facts source-backed, treat unverified extractions as drafts, and do not use patient-level data. **This document is planning only; no implementation code is included.**
 
@@ -315,6 +315,16 @@ an addition or removal, and published comparison records are immutable.
 ## 32. Build the What's New feed
 Goal: Surface recently published, verified changes.
 Description: Add a chronological feed of newly approved changes with CMS publication dates and internal approval dates clearly distinguished. Link each feed item to its measure page and exclude pending or rejected items.
+
+Implementation status (complete, 2026-11-06): API-mode What's New now reads
+only published comparisons that pass the existing public evidence gate, ordered
+by public publication time. Feed entries link to the preserved year-pair measure
+view and display CMS source publication dates separately from internal approval
+and public publication times. The shared public contract now exposes the measure
+name, review/publication timestamps, and per-evidence source publication date;
+draft, incomplete, rejected, or stale comparisons remain absent. Empty and
+same-year states never substitute fictional events, and integration coverage
+verifies the date labels, query scope, and detail navigation.
 
 ## 33. Build the CMS publication timeline
 Goal: Separate when CMS announced a change from the year it applies.

@@ -77,8 +77,9 @@ The M2 backend now provides public change-list and exact side-by-side comparison
 APIs for published records that pass fresh evidence validation. The Dashboard
 now uses the change-list endpoint for its change rails, status totals, and
 searchable comparison register; it shows an explicit empty state when no
-approved comparison exists. What's New shows an honest unavailable state in API
-mode. Measure Changes tabs now render evidence-backed side-by-side fields for an
+approved comparison exists. What's New now renders a chronological feed from the
+same approved records, keeping CMS source dates, internal approval time, and
+public publication time visibly distinct. Measure Changes tabs now render evidence-backed side-by-side fields for an
 exact published comparison, including explicit unresolved states and official
 source excerpts; when no comparison is approved, version fields remain clearly
 labeled reference material rather than an inferred change. AI Impact remains

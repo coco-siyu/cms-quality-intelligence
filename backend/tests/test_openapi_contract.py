@@ -24,6 +24,10 @@ def test_root_openapi_contract_is_valid() -> None:
     )
     assert "collection_type" in schemas["PublicChangeRecord"]["required"]
     assert "evidence_status" in schemas["PublicChangeRecord"]["required"]
+    assert "measure_name" in schemas["PublicChangeRecord"]["required"]
+    assert "approved_at" in schemas["PublicChangeRecord"]["required"]
+    assert "published_at" in schemas["PublicChangeRecord"]["required"]
+    assert "publication_date" in schemas["EvidenceReference"]["required"]
     assert schemas["ComparisonEvidenceStatus"]["enum"] == [
         "pending",
         "verified",

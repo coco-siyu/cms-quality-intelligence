@@ -824,6 +824,21 @@ h3 {
   margin: 10px 0 0;
 }
 
+.update-rail .publication-clocks {
+  gap: 0;
+  width: 100%;
+  padding-left: 11px;
+  border-left: 1px solid var(--olive);
+}
+
+.publication-clocks > div {
+  padding: 7px 0;
+}
+
+.publication-clocks > div + div {
+  border-top: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
+}
+
 .update-rail dl > div {
   display: grid;
   gap: 2px;
@@ -2812,6 +2827,14 @@ h3 {
 .featured-update .update-rail dt,
 .featured-update .update-rail dd {
   color: #b9bab6;
+}
+
+.featured-update .update-rail .publication-clocks {
+  border-left-color: var(--butter);
+}
+
+.featured-update .publication-clocks > div + div {
+  border-top-color: #494946;
 }
 
 .featured-update .measure-link {

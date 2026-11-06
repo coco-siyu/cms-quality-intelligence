@@ -93,6 +93,7 @@ def _project_public_changes(
 ) -> list[PublicChangeRecord]:
     comparisons = session.scalars(
         statement.order_by(
+            MeasureComparison.published_at.desc(),
             Measure.measure_id,
             MeasureComparison.from_year,
             MeasureComparison.to_year,
