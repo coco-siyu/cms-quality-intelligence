@@ -1166,28 +1166,49 @@ h3 {
 
 .measure-tabs-list {
   display: flex;
-  width: 100%;
+  width: max-content;
+  max-width: 100%;
   height: auto;
   justify-content: flex-start;
-  gap: 32px;
-  padding: 0;
-  border-bottom: 1px solid var(--border);
-  border-radius: 0;
-  background: transparent;
+  gap: 4px;
+  padding: 5px;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--card);
+  box-shadow: var(--sheet-shadow);
 }
 
 .measure-tabs-list button {
-  padding: 12px 0;
-  border-bottom: 2px solid transparent;
-  border-radius: 0;
+  min-height: 42px;
+  padding: 10px 17px;
+  border: 1px solid transparent;
+  border-radius: 7px;
   background: transparent !important;
   box-shadow: none !important;
   color: var(--muted-foreground);
+  cursor: pointer;
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease;
+}
+
+.measure-tabs-list button:hover:not([data-state="active"]) {
+  border-color: var(--border);
+  background: var(--muted) !important;
+  color: var(--navy);
+}
+
+.measure-tabs-list button:focus-visible {
+  outline: 2px solid var(--navy);
+  outline-offset: 2px;
 }
 
 .measure-tabs-list button[data-state="active"] {
-  border-color: var(--primary);
-  color: var(--foreground);
+  border-color: var(--navy);
+  background: var(--navy) !important;
+  color: var(--primary-foreground);
   font-weight: 600;
 }
 
@@ -2099,11 +2120,12 @@ h3 {
   .measure-tabs-list {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 0 20px;
+    width: 100%;
+    gap: 5px;
   }
 
   .measure-tabs-list button {
-    justify-content: flex-start;
+    justify-content: center;
     font-size: 12px;
   }
 
@@ -3533,7 +3555,7 @@ h3 {
 
 .measure-tabs-list button[data-state="active"] {
   border-color: var(--navy);
-  color: var(--navy);
+  color: var(--primary-foreground);
 }
 
 .changed-row {
