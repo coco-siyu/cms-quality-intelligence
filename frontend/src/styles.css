@@ -1166,24 +1166,26 @@ h3 {
 
 .measure-tabs-list {
   display: flex;
-  width: max-content;
+  width: 100%;
   max-width: 100%;
   height: auto;
   justify-content: flex-start;
-  gap: 4px;
-  padding: 5px;
+  gap: 8px;
+  padding: 0;
   overflow-x: auto;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--card);
-  box-shadow: var(--sheet-shadow);
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .measure-tabs-list button {
   min-height: 42px;
-  padding: 10px 17px;
-  border: 1px solid transparent;
-  border-radius: 7px;
+  padding: 10px 14px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 6px 6px 0 0;
+  margin-bottom: -1px;
   background: transparent !important;
   box-shadow: none !important;
   color: var(--muted-foreground);
@@ -1195,8 +1197,7 @@ h3 {
 }
 
 .measure-tabs-list button:hover:not([data-state="active"]) {
-  border-color: var(--border);
-  background: var(--muted) !important;
+  background: color-mix(in srgb, var(--navy) 5%, transparent) !important;
   color: var(--navy);
 }
 
@@ -1206,9 +1207,9 @@ h3 {
 }
 
 .measure-tabs-list button[data-state="active"] {
-  border-color: var(--navy);
-  background: var(--navy) !important;
-  color: var(--primary-foreground);
+  border-bottom-color: var(--navy);
+  background: color-mix(in srgb, var(--navy) 7%, transparent) !important;
+  color: var(--navy);
   font-weight: 600;
 }
 
@@ -3554,8 +3555,8 @@ h3 {
 }
 
 .measure-tabs-list button[data-state="active"] {
-  border-color: var(--navy);
-  color: var(--primary-foreground);
+  border-bottom-color: var(--navy);
+  color: var(--navy);
 }
 
 .changed-row {
