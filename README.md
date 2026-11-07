@@ -86,10 +86,18 @@ labeled reference material rather than an inferred change. Measure Source
 status tabs provide a newest-first CMS source-revision timeline that keeps
 publication dates, performance-year applicability, and effective dates as
 separate facts, while retaining undated revisions as explicitly undocumented.
-The AI Impact output shape is now defined as a strict, claim-level cited pair
-for Data Analysts and ACO Quality Managers in
-[`docs/impact-explanation-contract.md`](docs/impact-explanation-contract.md);
-generation, evaluation, approval, and public display remain future M2 work. The protected Admin review desk now provides a comparison
+The AI Impact workflow now defines a strict, claim-level cited pair for Data
+Analysts and ACO Quality Managers and can generate immutable private drafts
+from approved, currently verified comparisons. Drafts are validated against
+the exact supplied evidence set and are visible only through an authenticated
+admin API. A versioned fictional replay suite records schema and citation
+safeguard outcomes in
+[`docs/evaluations/impact-explanation-replay.md`](docs/evaluations/impact-explanation-replay.md).
+Human approval and public display remain Task 37 work; no generated explanation
+is public yet. See
+[`docs/impact-explanation-contract.md`](docs/impact-explanation-contract.md) and
+[`docs/impact-generation-evaluation.md`](docs/impact-generation-evaluation.md).
+The protected Admin review desk now provides a comparison
 publication workflow: prepare deterministic two-year roster drafts, inspect
 their official evidence, record an audited approval or revision request, then
 publish through a separate guarded action. Six records have both year versions;

@@ -34,6 +34,8 @@ class Settings(BaseSettings):
     ai_clarification_max_input_chars: int = 12_000
     ai_semantic_model: str | None = None
     ai_semantic_timeout_seconds: float = 45.0
+    ai_impact_model: str | None = None
+    ai_impact_timeout_seconds: float = 60.0
 
 
 @lru_cache

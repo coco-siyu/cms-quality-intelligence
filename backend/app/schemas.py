@@ -27,6 +27,7 @@ from app.domain import (
     SourceExtractionStatus,
     SourceNormalizationStatus,
 )
+from app.services.impact_explanation import ImpactExplanationOutput
 
 
 class HealthResponse(BaseModel):
@@ -165,6 +166,24 @@ class AdminComparisonResponse(BaseModel):
 
 class AdminComparisonPage(BaseModel):
     items: list[AdminComparisonResponse]
+
+
+class AdminImpactExplanationDraftResponse(BaseModel):
+    draft_id: str
+    comparison_id: int
+    provider: str
+    model: str
+    prompt_version: str
+    input_digest: str
+    output: ImpactExplanationOutput
+    cited_evidence_ids: list[str]
+    provider_response_id: str | None
+    created_at: datetime
+    created_by: str
+
+
+class AdminImpactExplanationDraftPage(BaseModel):
+    items: list[AdminImpactExplanationDraftResponse]
 
 
 class AdminComparisonGenerationRequest(BaseModel):

@@ -27,6 +27,10 @@ from app.repositories.admin_comparisons import (
     list_admin_comparisons,
     prepare_roster_comparisons,
 )
+from app.repositories.admin_impact_explanations import (
+    impact_draft_response,
+    list_impact_explanation_drafts,
+)
 from app.repositories.admin_reviews import (
     candidate_response,
     get_private_candidate,
@@ -42,12 +46,22 @@ from app.schemas import (
     AdminComparisonPage,
     AdminComparisonResponse,
     AdminFieldCandidateResponse,
+    AdminImpactExplanationDraftPage,
+    AdminImpactExplanationDraftResponse,
     AdminLoginRequest,
     AdminMeasureDetail,
     AdminMeasurePage,
     AdminReviewSummary,
     AdminSessionResponse,
     ApiError,
+)
+from app.services.ai_impact_explanation import (
+    ImpactGenerationError,
+    ImpactProviderError,
+    generate_impact_explanation,
+)
+from app.services.ai_impact_explanation import (
+    provider_from_settings as impact_provider_from_settings,
 )
 from app.services.comparison_publication import (
     ComparisonPublicationError,
@@ -130,9 +144,16 @@ def require_comparison_publish_header(
     _require_comparison_action("publish-comparison", action)
 
 
+def require_impact_generation_header(
+    action: Annotated[str, Header(alias="X-CMSQI-Admin-Action")],
+) -> None:
+    _require_comparison_action("generate-impact-explanation", action)
+
+
 ComparisonPrepareHeader = Annotated[None, Depends(require_comparison_prepare_header)]
 ComparisonReviewHeader = Annotated[None, Depends(require_comparison_review_header)]
 ComparisonPublishHeader = Annotated[None, Depends(require_comparison_publish_header)]
+ImpactGenerationHeader = Annotated[None, Depends(require_impact_generation_header)]
 
 
 def _session_response(request: Request, settings: Settings) -> AdminSessionResponse:
@@ -297,6 +318,87 @@ def admin_comparisons(
         to_year=to_year,
         collection_type=collection_type,
     )
+
+
+@router.get(
+    "/comparisons/{comparison_id}/impact-explanations",
+    response_model=AdminImpactExplanationDraftPage,
+    operation_id="listAdminImpactExplanationDrafts",
+    responses={
+        **auth_responses,
+        404: {"model": ApiError, "description": "The comparison was not found."},
+    },
+)
+def admin_impact_explanation_drafts(
+    session: DatabaseSession,
+    _admin: AuthenticatedAdmin,
+    comparison_id: Annotated[int, Path(ge=1)],
+) -> AdminImpactExplanationDraftPage:
+    if get_admin_comparison(session, comparison_id) is None:
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "code": "not_found",
+                "message": f"Comparison '{comparison_id}' was not found.",
+                "details": [],
+            },
+        )
+    return list_impact_explanation_drafts(session, comparison_id=comparison_id)
+
+
+@router.post(
+    "/comparisons/{comparison_id}/impact-explanations/generate",
+    response_model=AdminImpactExplanationDraftResponse,
+    operation_id="generateAdminImpactExplanationDraft",
+    responses={
+        **auth_responses,
+        403: {"model": ApiError, "description": "The admin action header is invalid."},
+        404: {"model": ApiError, "description": "The comparison was not found."},
+        409: {"model": ApiError, "description": "The comparison is not eligible."},
+        502: {"model": ApiError, "description": "The provider request failed."},
+        503: {"model": ApiError, "description": "Impact generation is not configured."},
+    },
+)
+def generate_admin_impact_explanation_draft(
+    session: DatabaseSession,
+    admin: AuthenticatedAdmin,
+    settings: ApplicationSettings,
+    _action: ImpactGenerationHeader,
+    comparison_id: Annotated[int, Path(ge=1)],
+) -> AdminImpactExplanationDraftResponse:
+    comparison = get_admin_comparison(session, comparison_id)
+    if comparison is None:
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "code": "not_found",
+                "message": f"Comparison '{comparison_id}' was not found.",
+                "details": [],
+            },
+        )
+    try:
+        provider = impact_provider_from_settings(settings)
+        draft = generate_impact_explanation(
+            session,
+            comparison,
+            provider=provider,
+            created_by=admin.username,
+        )
+    except ImpactGenerationError as error:
+        session.rollback()
+        status_code = 503 if error.code == "impact_provider_not_configured" else 409
+        raise HTTPException(
+            status_code=status_code,
+            detail={"code": error.code, "message": error.message, "details": []},
+        ) from error
+    except ImpactProviderError as error:
+        session.rollback()
+        raise HTTPException(
+            status_code=502,
+            detail={"code": error.code, "message": error.message, "details": []},
+        ) from error
+    session.commit()
+    return impact_draft_response(draft)
 
 
 @router.post(

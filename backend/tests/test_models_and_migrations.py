@@ -218,6 +218,8 @@ def test_initial_migration_builds_and_reverts_schema(
             "measure_comparison_reviews",
         "semantic_classification_proposals",
         "semantic_classification_citations",
+        "impact_explanation_drafts",
+        "impact_explanation_citations",
         "source_checks",
         "source_extractions",
         "source_text_segments",
@@ -305,6 +307,20 @@ def test_initial_migration_builds_and_reverts_schema(
         "validation_error_code",
         "provider_response_id",
     }.issubset(semantic_columns)
+    impact_columns = {
+        column["name"] for column in inspect(engine).get_columns("impact_explanation_drafts")
+    }
+    assert {
+        "comparison_id",
+        "provider",
+        "model",
+        "prompt_version",
+        "input_digest",
+        "output_payload",
+        "provider_response_id",
+        "created_at",
+        "created_by",
+    }.issubset(impact_columns)
 
     command.downgrade(config, "base")
     assert inspect(engine).get_table_names() == ["alembic_version"]

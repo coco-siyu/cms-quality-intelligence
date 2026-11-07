@@ -364,9 +364,32 @@ database model, endpoint, approval, or public display was added.
 Goal: Produce two evidence-backed perspectives on an approved change.
 Description: Generate and validate Data Analyst and ACO Quality Manager explanations using only approved change records and official source excerpts. Store the generated pair as an admin-reviewable draft rather than publishing it automatically without approval.
 
+Implementation status (complete, 2026-11-06): Added an optional OpenAI
+structured-output provider plus a provider-independent generation service that
+accepts only an approved comparison with currently verified evidence. Every
+result is revalidated against the exact supplied evidence IDs before it is
+stored. Valid results are retained as immutable, input-digested private drafts
+with relational links to their cited comparison evidence; repeat generation
+for the same provider, model, prompt, and source input is idempotent. Invalid
+citations, one-sided factual summaries, schema failures, and provider failures
+do not create a draft. Authenticated administrators can explicitly request a
+provider call using a guarded action header and list the resulting drafts
+through the private API, but no endpoint approves or publishes them and no
+public API returns them. No live model call was made as part of this checkpoint.
+
 ## 36. Evaluate AI impact explanations
 Goal: Verify citations, scope, and practical usefulness before publication.
 Description: Create representative test cases for calculation changes, additions/removals, wording-only edits, and insufficient evidence. Check schema validity, source-reference accuracy, unsupported claims, and role relevance, and record actual outcomes.
+
+Implementation status (complete, 2026-11-06): Added a versioned, explicitly
+fictional seven-case replay suite covering calculation, roster addition and removal,
+wording-only, insufficient-evidence, unsupported-citation, and role-label
+scenarios. The deterministic run passed all 7 expected safeguard outcomes:
+four accepted structured pairs, two evidence-boundary rejections, and one
+schema rejection. The checked-in report records the exact fixture digest and
+outcomes. This replay verifies contract enforcement, not model accuracy or
+healthcare correctness; factual accuracy, practical role relevance, and
+usefulness still require human review before Task 37 publication.
 
 ## 37. Display approved role-specific explanations
 Goal: Let public users switch analytical perspectives without new model calls.

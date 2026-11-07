@@ -1,0 +1,119 @@
+{
+  "fixture_version": "fictional-impact-eval-v1",
+  "description": "Fictional replay cases for impact schema, citation, and role-label safeguards.",
+  "cases": [
+    {
+      "case_id": "calculation-change",
+      "category": "calculation_change",
+      "description": "A fictional calculation threshold changes between years.",
+      "evidence": [
+        {"evidence_id":"CALC-2025","source_revision_id":"FIX-CALC-R1","document_title":"Fictional calculation fixture","official_url":"https://example.invalid/impact-eval/calculation","locator":"PY2025 section","excerpt":"The fictional 2025 threshold is 70 percent.","side":"from_version"},
+        {"evidence_id":"CALC-2026","source_revision_id":"FIX-CALC-R2","document_title":"Fictional calculation fixture","official_url":"https://example.invalid/impact-eval/calculation","locator":"PY2026 section","excerpt":"The fictional 2026 threshold is 75 percent.","side":"to_version"}
+      ],
+      "replay_output": {
+        "plain_language_summary":{"statement":"The fictional threshold changes from 70 percent to 75 percent.","statement_type":"source_fact","citations":[{"evidence_id":"CALC-2025"},{"evidence_id":"CALC-2026"}]},
+        "data_analyst":{"technical_implications":[{"statement":"Analysts may need to confirm that threshold logic is parameterized by performance year.","statement_type":"possible_impact","citations":[{"evidence_id":"CALC-2025"},{"evidence_id":"CALC-2026"}]}],"validation_considerations":[{"statement":"A year-specific boundary test may help validate the changed threshold.","statement_type":"possible_impact","citations":[{"evidence_id":"CALC-2025"},{"evidence_id":"CALC-2026"}]}]},
+        "aco_quality_manager":{"operational_implications":[{"statement":"Quality teams may need to communicate the fictional threshold change.","statement_type":"possible_impact","citations":[{"evidence_id":"CALC-2025"},{"evidence_id":"CALC-2026"}]}],"coordination_considerations":[{"statement":"The team may wish to confirm which reporting materials mention the prior threshold.","statement_type":"possible_impact","citations":[{"evidence_id":"CALC-2025"},{"evidence_id":"CALC-2026"}]}]},
+        "uncertainty_caveats":[]
+      },
+      "expected_result":"accepted",
+      "expected_error_code":null
+    },
+    {
+      "case_id":"membership-change",
+      "category":"membership_change",
+      "description":"A fictional measure is explicitly added to a roster.",
+      "evidence":[
+        {"evidence_id":"MEM-2025","source_revision_id":"FIX-MEM-R1","document_title":"Fictional membership fixture","official_url":"https://example.invalid/impact-eval/membership","locator":"PY2025 table","excerpt":"The fictional measure is not a roster member in 2025.","side":"from_version"},
+        {"evidence_id":"MEM-2026","source_revision_id":"FIX-MEM-R2","document_title":"Fictional membership fixture","official_url":"https://example.invalid/impact-eval/membership","locator":"PY2026 table","excerpt":"The fictional measure is a roster member in 2026.","side":"to_version"}
+      ],
+      "replay_output":{
+        "plain_language_summary":{"statement":"The fictional measure is added to the 2026 roster.","statement_type":"source_fact","citations":[{"evidence_id":"MEM-2025"},{"evidence_id":"MEM-2026"}]},
+        "data_analyst":{"technical_implications":[{"statement":"Analysts may need to include the measure in year-specific roster mappings.","statement_type":"possible_impact","citations":[{"evidence_id":"MEM-2025"},{"evidence_id":"MEM-2026"}]}],"validation_considerations":[{"statement":"A roster-membership check may help prevent applying the 2026 state to 2025.","statement_type":"possible_impact","citations":[{"evidence_id":"MEM-2025"},{"evidence_id":"MEM-2026"}]}]},
+        "aco_quality_manager":{"operational_implications":[{"statement":"The quality team may need to assess readiness for the added fictional measure.","statement_type":"possible_impact","citations":[{"evidence_id":"MEM-2025"},{"evidence_id":"MEM-2026"}]}],"coordination_considerations":[{"statement":"The team may wish to confirm ownership for the new roster item.","statement_type":"possible_impact","citations":[{"evidence_id":"MEM-2026"}]}]},
+        "uncertainty_caveats":[]
+      },
+      "expected_result":"accepted","expected_error_code":null
+    },
+    {
+      "case_id":"membership-removal",
+      "category":"membership_change",
+      "description":"A fictional measure is explicitly removed from a roster.",
+      "evidence":[
+        {"evidence_id":"REM-2025","source_revision_id":"FIX-REM-R1","document_title":"Fictional removal fixture","official_url":"https://example.invalid/impact-eval/removal","locator":"PY2025 table","excerpt":"The fictional measure is a roster member in 2025.","side":"from_version"},
+        {"evidence_id":"REM-2026","source_revision_id":"FIX-REM-R2","document_title":"Fictional removal fixture","official_url":"https://example.invalid/impact-eval/removal","locator":"PY2026 table","excerpt":"The fictional measure is explicitly not a roster member in 2026.","side":"to_version"}
+      ],
+      "replay_output":{
+        "plain_language_summary":{"statement":"The fictional measure is removed from the 2026 roster.","statement_type":"source_fact","citations":[{"evidence_id":"REM-2025"},{"evidence_id":"REM-2026"}]},
+        "data_analyst":{"technical_implications":[{"statement":"Analysts may need to exclude the measure from 2026 roster mappings.","statement_type":"possible_impact","citations":[{"evidence_id":"REM-2025"},{"evidence_id":"REM-2026"}]}],"validation_considerations":[{"statement":"A year-specific roster test may help prevent applying the 2025 state to 2026.","statement_type":"possible_impact","citations":[{"evidence_id":"REM-2025"},{"evidence_id":"REM-2026"}]}]},
+        "aco_quality_manager":{"operational_implications":[{"statement":"The quality team may need to retire workflows used only for this fictional roster item.","statement_type":"possible_impact","citations":[{"evidence_id":"REM-2025"},{"evidence_id":"REM-2026"}]}],"coordination_considerations":[{"statement":"The team may wish to confirm that the explicit removal applies to the selected program and year.","statement_type":"possible_impact","citations":[{"evidence_id":"REM-2026"}]}]},
+        "uncertainty_caveats":[]
+      },
+      "expected_result":"accepted","expected_error_code":null
+    },
+    {
+      "case_id":"wording-only",
+      "category":"wording_only",
+      "description":"Fictional text changes wording without changing the supplied meaning.",
+      "evidence":[
+        {"evidence_id":"WORD-2025","source_revision_id":"FIX-WORD-R1","document_title":"Fictional wording fixture","official_url":"https://example.invalid/impact-eval/wording","locator":"PY2025 definition","excerpt":"Submit the fictional report annually.","side":"from_version"},
+        {"evidence_id":"WORD-2026","source_revision_id":"FIX-WORD-R2","document_title":"Fictional wording fixture","official_url":"https://example.invalid/impact-eval/wording","locator":"PY2026 definition","excerpt":"Submit the fictional report once each year.","side":"to_version"}
+      ],
+      "replay_output":{
+        "plain_language_summary":{"statement":"The supplied fictional text changes from annually to once each year.","statement_type":"source_fact","citations":[{"evidence_id":"WORD-2025"},{"evidence_id":"WORD-2026"}]},
+        "data_analyst":{"technical_implications":[{"statement":"Analysts may find no implementation change after confirming semantic equivalence.","statement_type":"possible_impact","citations":[{"evidence_id":"WORD-2025"},{"evidence_id":"WORD-2026"}]}],"validation_considerations":[{"statement":"A reviewer may still compare downstream labels for wording consistency.","statement_type":"possible_impact","citations":[{"evidence_id":"WORD-2025"},{"evidence_id":"WORD-2026"}]}]},
+        "aco_quality_manager":{"operational_implications":[{"statement":"Quality managers may treat this as editorial after human confirmation.","statement_type":"possible_impact","citations":[{"evidence_id":"WORD-2025"},{"evidence_id":"WORD-2026"}]}],"coordination_considerations":[{"statement":"No workflow change may be needed if the meaning is confirmed unchanged.","statement_type":"possible_impact","citations":[{"evidence_id":"WORD-2025"},{"evidence_id":"WORD-2026"}]}]},
+        "uncertainty_caveats":[]
+      },
+      "expected_result":"accepted","expected_error_code":null
+    },
+    {
+      "case_id":"insufficient-evidence",
+      "category":"insufficient_evidence",
+      "description":"The factual summary cites only one comparison side.",
+      "evidence":[
+        {"evidence_id":"MISS-2025","source_revision_id":"FIX-MISS-R1","document_title":"Fictional incomplete fixture","official_url":"https://example.invalid/impact-eval/incomplete","locator":"PY2025 section","excerpt":"A fictional 2025 statement is available.","side":"from_version"},
+        {"evidence_id":"MISS-2026","source_revision_id":"FIX-MISS-R2","document_title":"Fictional incomplete fixture","official_url":"https://example.invalid/impact-eval/incomplete","locator":"PY2026 section","excerpt":"A fictional 2026 statement is available.","side":"to_version"}
+      ],
+      "replay_output":{
+        "plain_language_summary":{"statement":"Only one side supports this summary.","statement_type":"source_fact","citations":[{"evidence_id":"MISS-2025"}]},
+        "data_analyst":{"technical_implications":[{"statement":"Analysts may need more evidence.","statement_type":"possible_impact","citations":[{"evidence_id":"MISS-2025"}]}],"validation_considerations":[{"statement":"Human review may be required.","statement_type":"possible_impact","citations":[{"evidence_id":"MISS-2025"}]}]},
+        "aco_quality_manager":{"operational_implications":[{"statement":"Managers may need more evidence.","statement_type":"possible_impact","citations":[{"evidence_id":"MISS-2025"}]}],"coordination_considerations":[{"statement":"Publication may need to wait.","statement_type":"possible_impact","citations":[{"evidence_id":"MISS-2025"}]}]},
+        "uncertainty_caveats":[{"statement":"The second side was not used.","citations":[]}]
+      },
+      "expected_result":"rejected","expected_error_code":"impact_summary_citation_coverage_incomplete"
+    },
+    {
+      "case_id":"unsupported-citation",
+      "category":"unsupported_citation",
+      "description":"The output cites an evidence ID outside the supplied set.",
+      "evidence":[
+        {"evidence_id":"CITE-2025","source_revision_id":"FIX-CITE-R1","document_title":"Fictional citation fixture","official_url":"https://example.invalid/impact-eval/citation","locator":"PY2025","excerpt":"Fictional 2025 evidence.","side":"from_version"},
+        {"evidence_id":"CITE-2026","source_revision_id":"FIX-CITE-R2","document_title":"Fictional citation fixture","official_url":"https://example.invalid/impact-eval/citation","locator":"PY2026","excerpt":"Fictional 2026 evidence.","side":"to_version"}
+      ],
+      "replay_output":{
+        "plain_language_summary":{"statement":"A fabricated source is cited.","statement_type":"source_fact","citations":[{"evidence_id":"CITE-2025"},{"evidence_id":"NOT-SUPPLIED"}]},
+        "data_analyst":{"technical_implications":[{"statement":"Analysts may inspect evidence.","statement_type":"possible_impact","citations":[{"evidence_id":"CITE-2025"}]}],"validation_considerations":[{"statement":"Citation validation may reject this output.","statement_type":"possible_impact","citations":[{"evidence_id":"CITE-2025"}]}]},
+        "aco_quality_manager":{"operational_implications":[{"statement":"Managers may require source review.","statement_type":"possible_impact","citations":[{"evidence_id":"CITE-2025"}]}],"coordination_considerations":[{"statement":"The draft may remain private.","statement_type":"possible_impact","citations":[{"evidence_id":"CITE-2025"}]}]},
+        "uncertainty_caveats":[]
+      },
+      "expected_result":"rejected","expected_error_code":"impact_citation_unsupported"
+    },
+    {
+      "case_id":"role-relevance-label",
+      "category":"role_relevance",
+      "description":"A role implication is incorrectly labeled as a source fact.",
+      "evidence":[
+        {"evidence_id":"ROLE-2025","source_revision_id":"FIX-ROLE-R1","document_title":"Fictional role fixture","official_url":"https://example.invalid/impact-eval/role","locator":"PY2025","excerpt":"Fictional 2025 evidence.","side":"from_version"},
+        {"evidence_id":"ROLE-2026","source_revision_id":"FIX-ROLE-R2","document_title":"Fictional role fixture","official_url":"https://example.invalid/impact-eval/role","locator":"PY2026","excerpt":"Fictional 2026 evidence.","side":"to_version"}
+      ],
+      "replay_output":{
+        "plain_language_summary":{"statement":"Both fictional sides are present.","statement_type":"source_fact","citations":[{"evidence_id":"ROLE-2025"},{"evidence_id":"ROLE-2026"}]},
+        "data_analyst":{"technical_implications":[{"statement":"Analysts will certainly rebuild every system.","statement_type":"source_fact","citations":[{"evidence_id":"ROLE-2025"},{"evidence_id":"ROLE-2026"}]}],"validation_considerations":[{"statement":"A check may be useful.","statement_type":"possible_impact","citations":[{"evidence_id":"ROLE-2026"}]}]},
+        "aco_quality_manager":{"operational_implications":[{"statement":"Managers may review the change.","statement_type":"possible_impact","citations":[{"evidence_id":"ROLE-2026"}]}],"coordination_considerations":[{"statement":"Teams may coordinate review.","statement_type":"possible_impact","citations":[{"evidence_id":"ROLE-2026"}]}]},
+        "uncertainty_caveats":[]
+      },
+      "expected_result":"rejected","expected_error_code":"impact_schema_invalid"
+    }
+  ]
+}

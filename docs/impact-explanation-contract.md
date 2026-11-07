@@ -1,9 +1,10 @@
 # M2 role-specific impact explanation contract
 
 Task 34 defines the provider-independent output shape for a paired Data Analyst
-and ACO Quality Manager explanation. It does not call a model, persist a draft,
-approve content, add an endpoint, or change the public AI Impact tab. Those
-behaviors remain Tasks 35–37.
+and ACO Quality Manager explanation. Tasks 35 and 36 use that shape for private,
+evidence-bounded generation and deterministic safety evaluation. They do not
+approve content or change the public AI Impact tab; approval and display remain
+Task 37.
 
 ## Output sections
 
@@ -38,14 +39,15 @@ support each statement.
   cannot be presented as established CMS facts.
 - Fenced code and common executable SQL forms are rejected. Discussion of
   mapping, calculation, dashboard, or validation considerations remains
-  allowed. Task 36 must still evaluate prose for unsupported technical content.
+  allowed. Human review must still evaluate prose for unsupported technical content.
 - Numerical confidence, severity, production SQL, and regulatory-conclusion
   fields are absent and rejected as unexpected input.
 
 Schema validation cannot determine whether prose is clinically or legally
-correct. Task 35 must construct inputs only from approved comparisons and
-official excerpts, and Task 36 must evaluate unsupported claims and role
-usefulness before any publication workflow is added.
+correct. Generation therefore uses only approved comparisons and official
+excerpts, and the Task 36 replay tests the enforceable schema and citation
+boundary. Human reviewers must still evaluate factual accuracy, unsupported
+claims, and role usefulness before Task 37 publication.
 
 ## Fictional example
 

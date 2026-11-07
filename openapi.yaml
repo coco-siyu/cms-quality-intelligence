@@ -440,6 +440,83 @@ paths:
           $ref: "#/components/responses/NotFound"
         "409":
           $ref: "#/components/responses/Conflict"
+  /api/admin/comparisons/{comparison_id}/impact-explanations:
+    get:
+      operationId: listAdminImpactExplanationDrafts
+      tags: [Admin review]
+      summary: List private generated impact-explanation drafts
+      description: |
+        Returns immutable structured generation results for administrator review.
+        This endpoint does not approve or publish an explanation, and there is no
+        corresponding public endpoint until Task 37 adds an explicit workflow.
+      security:
+        - AdminSessionCookie: []
+      parameters:
+        - name: comparison_id
+          in: path
+          required: true
+          schema: {type: integer, minimum: 1}
+      responses:
+        "200":
+          description: Private, versioned impact-explanation drafts.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminImpactExplanationDraftPage"
+        "401":
+          $ref: "#/components/responses/AdminUnauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /api/admin/comparisons/{comparison_id}/impact-explanations/generate:
+    post:
+      operationId: generateAdminImpactExplanationDraft
+      tags: [Admin review]
+      summary: Generate or reuse a private impact-explanation draft
+      description: |
+        Calls the configured structured-output provider only after an explicit
+        administrator action. The approved comparison and exact official
+        excerpts form the complete input. A valid result remains private and
+        repeating the same provider/model/prompt/input combination is idempotent.
+      security:
+        - AdminSessionCookie: []
+      parameters:
+        - name: comparison_id
+          in: path
+          required: true
+          schema: {type: integer, minimum: 1}
+        - name: X-CMSQI-Admin-Action
+          in: header
+          required: true
+          schema:
+            type: string
+            const: generate-impact-explanation
+      responses:
+        "200":
+          description: A validated private draft; this may be an idempotently reused draft.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminImpactExplanationDraft"
+        "401":
+          $ref: "#/components/responses/AdminUnauthorized"
+        "403":
+          $ref: "#/components/responses/AdminActionForbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "502":
+          description: The configured structured-output provider request failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "503":
+          description: Impact generation is not configured.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
   /api/admin/comparisons/{comparison_id}/publish:
     post:
       operationId: publishAdminComparison
@@ -1689,6 +1766,45 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/AdminComparison"
+    AdminImpactExplanationDraft:
+      type: object
+      additionalProperties: false
+      required:
+        - draft_id
+        - comparison_id
+        - provider
+        - model
+        - prompt_version
+        - input_digest
+        - output
+        - cited_evidence_ids
+        - provider_response_id
+        - created_at
+        - created_by
+      properties:
+        draft_id: {type: string}
+        comparison_id: {type: integer, minimum: 1}
+        provider: {type: string}
+        model: {type: string}
+        prompt_version: {type: string}
+        input_digest: {type: string, minLength: 64, maxLength: 128}
+        output:
+          $ref: "#/components/schemas/ImpactExplanationOutput"
+        cited_evidence_ids:
+          type: array
+          items: {type: string}
+          uniqueItems: true
+        provider_response_id: {type: [string, "null"]}
+        created_at: {type: string, format: date-time}
+        created_by: {type: string}
+    AdminImpactExplanationDraftPage:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminImpactExplanationDraft"
     AdminComparisonGenerationRequest:
       type: object
       additionalProperties: false

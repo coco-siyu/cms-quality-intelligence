@@ -1,6 +1,7 @@
 from datetime import UTC, date, datetime
 
 from sqlalchemy import (
+    JSON,
     Boolean,
     CheckConstraint,
     Date,
@@ -941,6 +942,9 @@ class MeasureComparison(Base):
     reviews: Mapped[list["MeasureComparisonReview"]] = relationship(
         back_populates="comparison", cascade="all, delete-orphan"
     )
+    impact_explanation_drafts: Mapped[list["ImpactExplanationDraft"]] = relationship(
+        back_populates="comparison", cascade="all, delete-orphan"
+    )
 
 
 class MeasureComparisonReview(Base):
@@ -1039,6 +1043,9 @@ class MeasureComparisonEvidence(Base):
     semantic_citations: Mapped[list["SemanticClassificationCitation"]] = relationship(
         back_populates="comparison_evidence"
     )
+    impact_citations: Mapped[list["ImpactExplanationCitation"]] = relationship(
+        back_populates="comparison_evidence"
+    )
 
 
 class SemanticClassificationProposal(Base):
@@ -1110,4 +1117,57 @@ class SemanticClassificationCitation(Base):
     )
     comparison_evidence: Mapped[MeasureComparisonEvidence] = relationship(
         back_populates="semantic_citations"
+    )
+
+
+class ImpactExplanationDraft(Base):
+    """One immutable, private generation result for an approved comparison."""
+
+    __tablename__ = "impact_explanation_drafts"
+    __table_args__ = (
+        UniqueConstraint(
+            "comparison_id",
+            "provider",
+            "model",
+            "prompt_version",
+            "input_digest",
+            name="uq_impact_explanation_input",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    draft_id: Mapped[str] = mapped_column(String(120), unique=True, index=True)
+    comparison_id: Mapped[int] = mapped_column(
+        ForeignKey("measure_comparisons.id", ondelete="CASCADE")
+    )
+    provider: Mapped[str] = mapped_column(String(80))
+    model: Mapped[str] = mapped_column(String(160))
+    prompt_version: Mapped[str] = mapped_column(String(120))
+    input_digest: Mapped[str] = mapped_column(String(128))
+    output_payload: Mapped[dict[str, object]] = mapped_column(JSON)
+    provider_response_id: Mapped[str | None] = mapped_column(String(200))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    created_by: Mapped[str] = mapped_column(String(200))
+
+    comparison: Mapped[MeasureComparison] = relationship(back_populates="impact_explanation_drafts")
+    citations: Mapped[list["ImpactExplanationCitation"]] = relationship(
+        back_populates="draft", cascade="all, delete-orphan"
+    )
+
+
+class ImpactExplanationCitation(Base):
+    __tablename__ = "impact_explanation_citations"
+    __table_args__ = (UniqueConstraint("impact_explanation_draft_id", "comparison_evidence_id"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    impact_explanation_draft_id: Mapped[int] = mapped_column(
+        ForeignKey("impact_explanation_drafts.id", ondelete="CASCADE")
+    )
+    comparison_evidence_id: Mapped[int] = mapped_column(
+        ForeignKey("measure_comparison_evidence.id", ondelete="CASCADE")
+    )
+
+    draft: Mapped[ImpactExplanationDraft] = relationship(back_populates="citations")
+    comparison_evidence: Mapped[MeasureComparisonEvidence] = relationship(
+        back_populates="impact_citations"
     )
