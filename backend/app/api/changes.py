@@ -6,7 +6,8 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.domain import AffectedField, ChangeStatus, CollectionType
 from app.repositories.changes import ChangeFilters, get_public_change, list_public_changes
-from app.schemas import ApiError, PublicChangePage, PublicChangeRecord
+from app.repositories.public_impact_explanations import get_public_impact_explanation
+from app.schemas import ApiError, PublicChangePage, PublicChangeRecord, PublicImpactExplanation
 
 router = APIRouter(prefix="/api/changes", tags=["Public changes"])
 DatabaseSession = Annotated[Session, Depends(get_db)]
@@ -97,6 +98,41 @@ def change_detail(
             detail={
                 "code": "not_found",
                 "message": f"Public comparison for '{measure_id}' was not found.",
+                "details": [],
+            },
+        )
+    return result
+
+
+@router.get(
+    "/{measure_id}/impact-explanation",
+    response_model=PublicImpactExplanation,
+    operation_id="getImpactExplanation",
+    responses=resource_responses,
+)
+def impact_explanation_detail(
+    session: DatabaseSession,
+    measure_id: Annotated[str, Path(min_length=1)],
+    program: Annotated[str, Query(min_length=1, max_length=120)],
+    collection_type: CollectionType,
+    from_year: Annotated[int, Query(ge=2000, le=2100)],
+    to_year: Annotated[int, Query(ge=2000, le=2100)],
+) -> PublicImpactExplanation:
+    _validate_year_pair(from_year, to_year)
+    result = get_public_impact_explanation(
+        session,
+        measure_id=measure_id,
+        program=program,
+        collection_type=collection_type,
+        from_year=from_year,
+        to_year=to_year,
+    )
+    if result is None:
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "code": "not_found",
+                "message": f"Public impact explanation for '{measure_id}' was not found.",
                 "details": [],
             },
         )

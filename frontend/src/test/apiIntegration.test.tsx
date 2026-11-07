@@ -95,6 +95,66 @@ const changePage = {
   pagination: { page: 1, page_size: 100, total_items: 1, total_pages: 1 },
 };
 
+const impactExplanation = {
+  measure_id: summary.measure_id,
+  measure_name: summary.name,
+  program: "Fictional Quality Program",
+  collection_type: "program_roster",
+  from_year: 2025,
+  to_year: 2026,
+  approved_at: "2026-11-06T12:00:00Z",
+  published_at: "2026-11-06T13:00:00Z",
+  output: {
+    plain_language_summary: {
+      statement: "The approved fictional definition differs between years.",
+      statement_type: "source_fact",
+      citations: [
+        { evidence_id: "DEMO-CHANGE-EVIDENCE-2025" },
+        { evidence_id: "DEMO-CHANGE-EVIDENCE-2026" },
+      ],
+    },
+    data_analyst: {
+      technical_implications: [
+        {
+          statement: "Analysts may need to inspect year-specific mappings.",
+          statement_type: "possible_impact",
+          citations: [{ evidence_id: "DEMO-CHANGE-EVIDENCE-2025" }],
+        },
+      ],
+      validation_considerations: [
+        {
+          statement: "Analysts may need to rerun representative validation cases.",
+          statement_type: "possible_impact",
+          citations: [{ evidence_id: "DEMO-CHANGE-EVIDENCE-2026" }],
+        },
+      ],
+    },
+    aco_quality_manager: {
+      operational_implications: [
+        {
+          statement: "Quality teams may need to review reporting workflows.",
+          statement_type: "possible_impact",
+          citations: [{ evidence_id: "DEMO-CHANGE-EVIDENCE-2025" }],
+        },
+      ],
+      coordination_considerations: [
+        {
+          statement: "Managers may need to coordinate a cross-team review.",
+          statement_type: "possible_impact",
+          citations: [{ evidence_id: "DEMO-CHANGE-EVIDENCE-2026" }],
+        },
+      ],
+    },
+    uncertainty_caveats: [
+      {
+        statement: "This is a possible impact, not CMS policy.",
+        citations: [{ evidence_id: "DEMO-CHANGE-EVIDENCE-2026" }],
+      },
+    ],
+  },
+  evidence: changePage.items[0].fields[0].evidence,
+};
+
 const performanceYears = {
   years: [2024, 2025, 2026],
   default_from_year: 2025,
@@ -247,6 +307,9 @@ function jsonResponse(value: unknown, status = 200) {
 function apiFetch(input: RequestInfo | URL) {
   const url = String(input);
   if (url.includes("/api/performance-years")) return Promise.resolve(jsonResponse(performanceYears));
+  if (url.includes(`/api/changes/${summary.measure_id}/impact-explanation?`)) {
+    return Promise.resolve(jsonResponse(impactExplanation));
+  }
   if (url.includes(`/api/changes/${summary.measure_id}?`)) {
     return Promise.resolve(jsonResponse(changePage.items[0]));
   }
@@ -468,7 +531,20 @@ describe("public frontend API integration", () => {
       button: 0,
       ctrlKey: false,
     });
-    expect(await screen.findByText(/C1 does not call an AI service/i)).toBeVisible();
+    expect(await screen.findByText("Potential impact, by role")).toBeVisible();
+    expect(screen.getByText("Analysts may need to inspect year-specific mappings.")).toBeVisible();
+
+    const impactRequestsBeforeSwitch = fetchMock.mock.calls.filter(([input]) =>
+      String(input).includes("/impact-explanation?"),
+    ).length;
+    fireEvent.click(screen.getByRole("button", { name: "ACO Quality Manager" }));
+    expect(screen.getByText("Quality teams may need to review reporting workflows.")).toBeVisible();
+    expect(screen.queryByText("Analysts may need to inspect year-specific mappings.")).not.toBeInTheDocument();
+    expect(
+      fetchMock.mock.calls.filter(([input]) =>
+        String(input).includes("/impact-explanation?"),
+      ),
+    ).toHaveLength(impactRequestsBeforeSwitch);
   });
 
   it("keeps list filters in server-authoritative detail navigation", async () => {
@@ -489,6 +565,33 @@ describe("public frontend API integration", () => {
     expect(navigationUrl).toContain("q=follow-up");
     expect(navigationUrl).toContain("change_status=unknown");
     expect(navigationUrl).toContain("performance_year=2026");
+  });
+
+  it("shows an honest AI Impact empty state when no approved pair is public", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.includes("/impact-explanation?")) {
+          return Promise.resolve(
+            jsonResponse({ code: "not_found", message: "Not found", details: [] }, 404),
+          );
+        }
+        return apiFetch(input);
+      }),
+    );
+
+    await renderApiRoute("/measures/DEMO-API-001?from=2025&to=2026");
+    await screen.findByRole("heading", { name: "Fictional API Contract Measure" });
+    fireEvent.mouseDown(screen.getByRole("tab", { name: "AI Impact" }), {
+      button: 0,
+      ctrlKey: false,
+    });
+
+    expect(
+      await screen.findByText("No approved impact explanation is public for this year pair."),
+    ).toBeVisible();
+    expect(screen.getByText("The published comparison remains available in the Changes tab.")).toBeVisible();
   });
 
   it("orders the source timeline by CMS publication date without conflating applicability", async () => {
@@ -560,6 +663,11 @@ describe("public frontend API integration", () => {
         if (url.includes("/api/changes/001?")) {
           return Promise.resolve(
             jsonResponse({ code: "comparison_not_found", message: "Not found", details: [] }, 404),
+          );
+        }
+        if (url.includes("/api/changes/001/impact-explanation?")) {
+          return Promise.resolve(
+            jsonResponse({ code: "not_found", message: "Not found", details: [] }, 404),
           );
         }
         return Promise.resolve(jsonResponse(sourceBackedDetail));

@@ -4,6 +4,7 @@ import { AlertTriangle, ChevronLeft, ChevronRight, ExternalLink, ShieldCheck } f
 
 import { ErrorState, LoadingState, SectionTitle, StatusMark } from "../components/cms/shared";
 import { PublicComparison } from "../components/cms/PublicComparison";
+import { PublicImpactReader } from "../components/cms/PublicImpactReader";
 import { SourceTimeline } from "../components/cms/SourceTimeline";
 import { Button } from "../components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
@@ -11,6 +12,7 @@ import { apiSummaryToMeasure, formatApiDate, labelField } from "../features/meas
 import { ApiClientError } from "../features/measures/api/client";
 import {
   useApiMeasure,
+  useApiImpactExplanation,
   useApiMeasureComparison,
   useApiMeasureNavigation,
 } from "../features/measures/api/queries";
@@ -132,6 +134,12 @@ export function ApiMeasureDetailPage() {
       (version) => version.performance_year === Number(filters.to),
     )?.program ?? detailQuery.data?.versions[0]?.program ?? "";
   const comparisonQuery = useApiMeasureComparison(
+    measureId,
+    comparisonProgram,
+    Number(filters.from),
+    Number(filters.to),
+  );
+  const impactQuery = useApiImpactExplanation(
     measureId,
     comparisonProgram,
     Number(filters.from),
@@ -259,13 +267,31 @@ export function ApiMeasureDetailPage() {
         </TabsContent>
 
         <TabsContent value="impact">
-          <section className="impact-section demo-only-panel">
-            <SectionTitle>AI impact prototype not connected</SectionTitle>
-            <p>
-              This interaction is an M2 prototype. C1 does not call an AI service or generate
-              production guidance from the public API record.
-            </p>
-          </section>
+          {sameYear ? (
+            <section className="comparison-empty-state">
+              <p className="card-kicker">Role-specific impact</p>
+              <h2>Choose two different performance years.</h2>
+              <p>Impact explanations are tied to one approved year-over-year comparison.</p>
+            </section>
+          ) : impactQuery.isPending ? (
+            <LoadingState label="Loading approved impact explanation…" />
+          ) : impactQuery.data ? (
+            <PublicImpactReader explanation={impactQuery.data} />
+          ) : impactQuery.error instanceof ApiClientError && impactQuery.error.status === 404 ? (
+            <section className="comparison-empty-state impact-empty-state">
+              <p className="card-kicker">Human-reviewed interpretation</p>
+              <h2>No approved impact explanation is public for this year pair.</h2>
+              <p>The published comparison remains available in the Changes tab.</p>
+            </section>
+          ) : (
+            <div className="comparison-inline-error" role="alert">
+              <strong>Impact explanation unavailable</strong>
+              <p>{impactQuery.error?.message ?? "The approved explanation could not be loaded."}</p>
+              <Button variant="outline" onClick={() => void impactQuery.refetch()}>
+                Try again
+              </Button>
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="history">

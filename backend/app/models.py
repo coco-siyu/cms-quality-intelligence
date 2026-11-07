@@ -29,6 +29,7 @@ from app.domain import (
     ComparisonEvidenceStatus,
     ComparisonReviewDecision,
     FieldAvailability,
+    ImpactExplanationReviewDecision,
     IngestionItemStage,
     IngestionRunStatus,
     NormalizedFieldStatus,
@@ -211,6 +212,13 @@ ingestion_run_status_enum = Enum(
 ingestion_item_stage_enum = Enum(
     IngestionItemStage,
     name="ingestion_item_stage",
+    native_enum=False,
+    create_constraint=True,
+    values_callable=lambda values: [value.value for value in values],
+)
+impact_explanation_review_decision_enum = Enum(
+    ImpactExplanationReviewDecision,
+    name="impact_explanation_review_decision",
     native_enum=False,
     create_constraint=True,
     values_callable=lambda values: [value.value for value in values],
@@ -1133,6 +1141,23 @@ class ImpactExplanationDraft(Base):
             "input_digest",
             name="uq_impact_explanation_input",
         ),
+        CheckConstraint(
+            "(review_decision = 'pending' AND reviewed_at IS NULL "
+            "AND reviewed_by IS NULL AND approved_output_payload IS NULL) OR "
+            "(review_decision = 'approve' AND reviewed_at IS NOT NULL "
+            "AND reviewed_by IS NOT NULL AND approved_output_payload IS NOT NULL) OR "
+            "(review_decision = 'reject' AND reviewed_at IS NOT NULL "
+            "AND reviewed_by IS NOT NULL AND approved_output_payload IS NULL)",
+            name="ck_impact_explanation_review_state",
+        ),
+        CheckConstraint(
+            "(publication_state = 'draft' AND published_at IS NULL "
+            "AND published_by IS NULL) OR "
+            "(publication_state IN ('published', 'withdrawn') "
+            "AND published_at IS NOT NULL AND published_by IS NOT NULL "
+            "AND review_decision = 'approve')",
+            name="ck_impact_explanation_publication_state",
+        ),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -1145,6 +1170,20 @@ class ImpactExplanationDraft(Base):
     prompt_version: Mapped[str] = mapped_column(String(120))
     input_digest: Mapped[str] = mapped_column(String(128))
     output_payload: Mapped[dict[str, object]] = mapped_column(JSON)
+    review_decision: Mapped[ImpactExplanationReviewDecision] = mapped_column(
+        impact_explanation_review_decision_enum,
+        default=ImpactExplanationReviewDecision.PENDING,
+        index=True,
+    )
+    approved_output_payload: Mapped[dict[str, object] | None] = mapped_column(JSON)
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    reviewed_by: Mapped[str | None] = mapped_column(String(200))
+    publication_state: Mapped[PublicationState] = mapped_column(
+        publication_state_enum, default=PublicationState.DRAFT, index=True
+    )
+    published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    published_by: Mapped[str | None] = mapped_column(String(200))
+    outdated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
     provider_response_id: Mapped[str | None] = mapped_column(String(200))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
     created_by: Mapped[str] = mapped_column(String(200))

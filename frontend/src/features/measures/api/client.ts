@@ -4,6 +4,7 @@ import type {
   PerformanceYearList,
   PublicChangePage,
   PublicChangeRecord,
+  PublicImpactExplanation,
   PublicMeasureDetail,
   PublicMeasureNavigation,
   PublicMeasurePage,
@@ -115,6 +116,12 @@ export const changeApi = {
   get(measureId: string, parameters: ChangeDetailParameters, signal?: AbortSignal) {
     return apiGet<PublicChangeRecord>(
       `/api/changes/${encodeURIComponent(measureId)}${queryString(parameters)}`,
+      signal,
+    );
+  },
+  impact(measureId: string, parameters: ChangeDetailParameters, signal?: AbortSignal) {
+    return apiGet<PublicImpactExplanation>(
+      `/api/changes/${encodeURIComponent(measureId)}/impact-explanation${queryString(parameters)}`,
       signal,
     );
   },

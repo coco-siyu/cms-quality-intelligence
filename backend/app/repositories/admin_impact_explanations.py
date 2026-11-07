@@ -26,6 +26,18 @@ def impact_draft_response(
         prompt_version=draft.prompt_version,
         input_digest=draft.input_digest,
         output=ImpactExplanationOutput.model_validate(draft.output_payload),
+        review_decision=draft.review_decision,
+        approved_output=(
+            ImpactExplanationOutput.model_validate(draft.approved_output_payload)
+            if draft.approved_output_payload is not None
+            else None
+        ),
+        reviewed_at=draft.reviewed_at,
+        reviewed_by=draft.reviewed_by,
+        publication_state=draft.publication_state,
+        published_at=draft.published_at,
+        published_by=draft.published_by,
+        outdated_at=draft.outdated_at,
         cited_evidence_ids=sorted(
             citation.comparison_evidence.evidence_reference.evidence_id
             for citation in draft.citations

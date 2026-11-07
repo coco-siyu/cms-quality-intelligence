@@ -160,7 +160,7 @@ def _comparison_payload(comparison: ImpactComparisonInput) -> dict[str, object]:
     }
 
 
-def _generation_input(
+def build_impact_generation_input(
     comparison: MeasureComparison,
 ) -> tuple[
     ImpactComparisonInput,
@@ -237,7 +237,7 @@ def _generation_input(
     return approved, excerpts, links_by_evidence_id
 
 
-def _input_digest(
+def compute_impact_input_digest(
     comparison: ImpactComparisonInput,
     evidence: list[SemanticEvidenceExcerpt],
 ) -> str:
@@ -279,8 +279,8 @@ def generate_impact_explanation(
             "impact_comparison_not_persisted",
             "Impact generation requires a persisted comparison.",
         )
-    approved, evidence, links_by_evidence_id = _generation_input(comparison)
-    digest = _input_digest(approved, evidence)
+    approved, evidence, links_by_evidence_id = build_impact_generation_input(comparison)
+    digest = compute_impact_input_digest(approved, evidence)
     existing = session.scalar(
         select(ImpactExplanationDraft).where(
             ImpactExplanationDraft.comparison_id == comparison.id,

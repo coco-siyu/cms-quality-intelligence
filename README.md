@@ -89,12 +89,17 @@ separate facts, while retaining undated revisions as explicitly undocumented.
 The AI Impact workflow now defines a strict, claim-level cited pair for Data
 Analysts and ACO Quality Managers and can generate immutable private drafts
 from approved, currently verified comparisons. Drafts are validated against
-the exact supplied evidence set and are visible only through an authenticated
-admin API. A versioned fictional replay suite records schema and citation
+the exact supplied evidence set and are visible through an authenticated admin
+API. The public detail page now reads one stored, human-approved pair and lets
+visitors switch roles locally without another API or model call. Pending,
+rejected, withdrawn, explicitly outdated, digest-stale, or evidence-stale
+explanations are withheld; the public UI shows an honest empty state instead.
+A versioned fictional replay suite records schema and citation
 safeguard outcomes in
 [`docs/evaluations/impact-explanation-replay.md`](docs/evaluations/impact-explanation-replay.md).
-Human approval and public display remain Task 37 work; no generated explanation
-is public yet. See
+The Task 37 display boundary is complete, while Task 51 still owns the admin
+editing and approval controls needed to move a private draft through that
+boundary. See
 [`docs/impact-explanation-contract.md`](docs/impact-explanation-contract.md) and
 [`docs/impact-generation-evaluation.md`](docs/impact-generation-evaluation.md).
 The protected Admin review desk now provides a comparison
@@ -230,7 +235,9 @@ The API defaults to `http://localhost:8000`. Public routes are `GET /health`,
 `GET /api/measures/{measure_id}`, and
 `GET /api/measures/{measure_id}/versions`. M2 adds paginated
 `GET /api/changes` and exact `GET /api/changes/{measure_id}` comparison
-operations. The exact operation requires `program`, `collection_type`,
+operations, plus
+`GET /api/changes/{measure_id}/impact-explanation` for the latest current
+approved explanation pair. Exact operations require `program`, `collection_type`,
 `from_year`, and `to_year` query parameters so program and collection variants
 cannot be conflated.
 

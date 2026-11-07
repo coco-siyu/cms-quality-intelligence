@@ -75,3 +75,23 @@ export function useApiMeasureComparison(
     retry: false,
   });
 }
+
+export function useApiImpactExplanation(
+  measureId: string,
+  program: string,
+  fromYear: number,
+  toYear: number,
+) {
+  const parameters = {
+    program,
+    collection_type: "program_roster" as const,
+    from_year: fromYear,
+    to_year: toYear,
+  };
+  return useQuery({
+    queryKey: ["public-impact-explanation", measureId, parameters],
+    queryFn: ({ signal }) => changeApi.impact(measureId, parameters, signal),
+    enabled: Boolean(measureId && program) && fromYear !== toYear,
+    retry: false,
+  });
+}

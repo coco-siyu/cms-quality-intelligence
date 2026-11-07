@@ -1541,6 +1541,186 @@ h3 {
   color: var(--primary);
 }
 
+.public-impact-reader {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--card);
+  box-shadow: var(--sheet-shadow);
+}
+
+.impact-reader-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 28px;
+  padding: 34px 38px 30px;
+  border-bottom: 1px solid var(--border);
+}
+
+.impact-reader-header h2 {
+  margin-top: 8px;
+  font-family: var(--font-display);
+  font-size: clamp(30px, 4vw, 46px);
+  font-weight: 400;
+  letter-spacing: -0.025em;
+}
+
+.impact-approval-mark {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 4px;
+  color: var(--primary);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.impact-summary-sheet {
+  padding: 30px 38px 32px;
+  background: var(--muted);
+}
+
+.impact-summary-copy {
+  max-width: 900px;
+  margin: 12px 0 10px;
+  font-family: var(--font-display);
+  font-size: clamp(23px, 3vw, 32px);
+  line-height: 1.35;
+}
+
+.impact-reader-grid {
+  display: grid;
+  grid-template-columns: minmax(190px, 0.28fr) minmax(0, 1fr);
+}
+
+.impact-role-index {
+  padding: 34px 28px 40px 38px;
+  border-right: 1px solid var(--border);
+}
+
+.impact-role-switch {
+  align-items: stretch;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 14px;
+  background: transparent;
+}
+
+.impact-role-switch button {
+  height: auto;
+  justify-content: flex-start;
+  padding: 11px 12px;
+  text-align: left;
+}
+
+.impact-boundary-note {
+  margin-top: 22px;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.impact-reading-pane {
+  min-width: 0;
+  padding: 34px 38px 42px;
+}
+
+.impact-reading-heading {
+  padding-bottom: 26px;
+  border-bottom: 1px solid var(--border);
+}
+
+.impact-reading-heading h3 {
+  margin: 8px 0 2px;
+  font-family: var(--font-display);
+  font-size: 30px;
+  font-weight: 400;
+}
+
+.impact-reading-heading > p:last-child {
+  color: var(--muted-foreground);
+  font-size: 13px;
+}
+
+.impact-reading-section {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
+  gap: 28px;
+  padding: 28px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.impact-reading-section ol {
+  display: grid;
+  gap: 18px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+  counter-reset: impact-item;
+}
+
+.impact-reading-section li {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  gap: 0 10px;
+  color: var(--secondary-foreground);
+  line-height: 1.65;
+  counter-increment: impact-item;
+}
+
+.impact-reading-section li::before {
+  color: var(--muted-foreground);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  content: counter(impact-item, decimal-leading-zero);
+}
+
+.impact-reading-section li > .impact-citations {
+  grid-column: 2;
+}
+
+.impact-citations {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 7px;
+  vertical-align: middle;
+}
+
+.impact-citations a {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--primary);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-decoration: none;
+}
+
+.impact-citations a:hover {
+  text-decoration: underline;
+}
+
+.impact-caveats {
+  display: grid;
+  grid-template-columns: 190px minmax(0, 1fr);
+  gap: 12px 28px;
+  padding: 26px 38px 30px;
+  border-top: 1px solid var(--border);
+  background: var(--accent);
+}
+
+.impact-caveats p:not(.quiet-label) {
+  color: var(--secondary-foreground);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.impact-empty-state {
+  margin-top: 40px;
+}
+
 .history-timeline {
   padding: 0;
   margin: 32px 0;
@@ -1977,6 +2157,45 @@ h3 {
     flex: 1;
     padding: 0 6px;
     font-size: 10px;
+  }
+
+  .impact-reader-header,
+  .impact-summary-sheet,
+  .impact-reading-pane,
+  .impact-caveats {
+    padding-right: 22px;
+    padding-left: 22px;
+  }
+
+  .impact-reader-header {
+    flex-direction: column;
+  }
+
+  .impact-reader-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .impact-role-index {
+    padding: 24px 22px;
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .impact-role-switch {
+    width: 100%;
+    flex-direction: row;
+    background: var(--muted);
+  }
+
+  .impact-role-switch button {
+    justify-content: center;
+    padding: 10px 6px;
+  }
+
+  .impact-reading-section,
+  .impact-caveats {
+    grid-template-columns: 1fr;
+    gap: 14px;
   }
 
   .evidence-dialog {

@@ -395,6 +395,22 @@ usefulness still require human review before Task 37 publication.
 Goal: Let public users switch analytical perspectives without new model calls.
 Description: Implement the per-measure Data Analyst / ACO Quality Manager toggle and render only an approved explanation pair. Test that switching uses stored content and that pending, rejected, or outdated explanations are not silently presented as newly verified.
 
+Implementation status (complete, 2026-11-06): Added a fail-closed public
+explanation contract and measure-detail reader for one stored, human-approved
+Data Analyst / ACO Quality Manager pair. Both perspectives, caveats, and exact
+official evidence references arrive in one response; the role switch is local
+UI state and never invokes a model or performs a second request. Public
+projection requires an approved and explicitly published explanation, a still
+published comparison, currently valid evidence, a matching generation-input
+digest, and no outdated marker. Pending, rejected, withdrawn, explicitly
+outdated, digest-stale, malformed, or evidence-stale records return the same
+honest not-found boundary. The reader preserves the editorial detail-page
+system, labels organizational statements as possible impacts rather than CMS
+policy, and provides a precise empty state when no approved pair exists. This
+task adds the stored review/publication state needed by the boundary but no
+admin mutation controls; Task 51 remains responsible for editing, approving,
+rejecting, and publishing the pair through the admin workspace.
+
 ## M3 — Automated Ingestion and Verification
 
 ## 38. Implement single-admin authentication and authorization

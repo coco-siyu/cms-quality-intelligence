@@ -96,6 +96,45 @@ export type PublicChangePage = {
   };
 };
 
+export type ImpactCitation = {
+  evidence_id: string;
+};
+
+export type ImpactStatement = {
+  statement: string;
+  statement_type: "source_fact" | "possible_impact";
+  citations: ImpactCitation[];
+};
+
+export type ImpactExplanationOutput = {
+  plain_language_summary: ImpactStatement;
+  data_analyst: {
+    technical_implications: ImpactStatement[];
+    validation_considerations: ImpactStatement[];
+  };
+  aco_quality_manager: {
+    operational_implications: ImpactStatement[];
+    coordination_considerations: ImpactStatement[];
+  };
+  uncertainty_caveats: Array<{
+    statement: string;
+    citations: ImpactCitation[];
+  }>;
+};
+
+export type PublicImpactExplanation = {
+  measure_id: string;
+  measure_name: string;
+  program: string;
+  collection_type: CollectionType;
+  from_year: number;
+  to_year: number;
+  approved_at: string;
+  published_at: string;
+  output: ImpactExplanationOutput;
+  evidence: ChangeFieldEvidence[];
+};
+
 export type MeasureVersion = {
   version_id: string;
   performance_year: number;

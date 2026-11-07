@@ -140,6 +140,12 @@ class ComparisonReviewDecision(StrEnum):
     NEEDS_REVISION = "needs_revision"
 
 
+class ImpactExplanationReviewDecision(StrEnum):
+    PENDING = "pending"
+    APPROVE = "approve"
+    REJECT = "reject"
+
+
 class ComparisonPublicationEligibility(StrEnum):
     ELIGIBLE = "eligible"
     PUBLISHED = "published"

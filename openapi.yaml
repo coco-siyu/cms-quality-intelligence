@@ -226,6 +226,50 @@ paths:
           $ref: "#/components/responses/NotFound"
         "422":
           $ref: "#/components/responses/ValidationError"
+  /api/changes/{measure_id}/impact-explanation:
+    get:
+      operationId: getImpactExplanation
+      tags: [Public changes]
+      summary: Get the current approved role-specific explanation pair
+      description: |
+        Returns the newest human-approved and explicitly published explanation
+        pair only while its comparison, input digest, and cited evidence remain
+        current. Pending, rejected, withdrawn, and outdated versions return 404.
+        Both role perspectives are returned together so switching roles never
+        triggers a model call.
+      parameters:
+        - $ref: "#/components/parameters/MeasureId"
+        - name: program
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 120
+        - name: collection_type
+          in: query
+          required: true
+          schema:
+            $ref: "#/components/schemas/CollectionType"
+        - name: from_year
+          in: query
+          required: true
+          schema: {type: integer, minimum: 2000, maximum: 2100}
+        - name: to_year
+          in: query
+          required: true
+          schema: {type: integer, minimum: 2000, maximum: 2100}
+      responses:
+        "200":
+          description: One approved stored explanation pair and its official evidence.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicImpactExplanation"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
   /api/admin/session:
     get:
       operationId: getAdminSession
@@ -447,8 +491,8 @@ paths:
       summary: List private generated impact-explanation drafts
       description: |
         Returns immutable structured generation results for administrator review.
-        This endpoint does not approve or publish an explanation, and there is no
-        corresponding public endpoint until Task 37 adds an explicit workflow.
+        Review and publication metadata are included, but this endpoint does not
+        itself approve or publish an explanation.
       security:
         - AdminSessionCookie: []
       parameters:
@@ -1466,6 +1510,43 @@ components:
           maxItems: 8
           items:
             $ref: "#/components/schemas/ImpactUncertaintyCaveat"
+    PublicImpactExplanation:
+      type: object
+      additionalProperties: false
+      description: |
+        The latest human-approved, explicitly published, and currently valid
+        role-specific explanation pair for one public comparison.
+      required:
+        - measure_id
+        - measure_name
+        - program
+        - collection_type
+        - from_year
+        - to_year
+        - approved_at
+        - published_at
+        - output
+        - evidence
+      properties:
+        measure_id: {type: string}
+        measure_name: {type: string}
+        program: {type: string}
+        collection_type:
+          $ref: "#/components/schemas/CollectionType"
+        from_year: {type: integer, minimum: 2000, maximum: 2100}
+        to_year: {type: integer, minimum: 2000, maximum: 2100}
+        approved_at:
+          type: string
+          format: date-time
+        published_at:
+          type: string
+          format: date-time
+        output:
+          $ref: "#/components/schemas/ImpactExplanationOutput"
+        evidence:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChangeFieldEvidence"
     PublicChangePage:
       type: object
       required: [items, pagination]
@@ -1777,6 +1858,14 @@ components:
         - prompt_version
         - input_digest
         - output
+        - review_decision
+        - approved_output
+        - reviewed_at
+        - reviewed_by
+        - publication_state
+        - published_at
+        - published_by
+        - outdated_at
         - cited_evidence_ids
         - provider_response_id
         - created_at
@@ -1790,6 +1879,20 @@ components:
         input_digest: {type: string, minLength: 64, maxLength: 128}
         output:
           $ref: "#/components/schemas/ImpactExplanationOutput"
+        review_decision:
+          type: string
+          enum: [pending, approve, reject]
+        approved_output:
+          oneOf:
+            - $ref: "#/components/schemas/ImpactExplanationOutput"
+            - type: "null"
+        reviewed_at: {type: [string, "null"], format: date-time}
+        reviewed_by: {type: [string, "null"]}
+        publication_state:
+          $ref: "#/components/schemas/PublicationState"
+        published_at: {type: [string, "null"], format: date-time}
+        published_by: {type: [string, "null"]}
+        outdated_at: {type: [string, "null"], format: date-time}
         cited_evidence_ids:
           type: array
           items: {type: string}

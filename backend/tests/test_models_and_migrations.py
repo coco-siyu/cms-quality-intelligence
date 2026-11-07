@@ -320,7 +320,25 @@ def test_initial_migration_builds_and_reverts_schema(
         "provider_response_id",
         "created_at",
         "created_by",
+        "review_decision",
+        "approved_output_payload",
+        "reviewed_at",
+        "reviewed_by",
+        "publication_state",
+        "published_at",
+        "published_by",
+        "outdated_at",
     }.issubset(impact_columns)
+    impact_checks = {
+        constraint["name"]
+        for constraint in inspect(engine).get_check_constraints("impact_explanation_drafts")
+    }
+    assert {
+        "impact_explanation_review_decision",
+        "ck_impact_explanation_review_state",
+        "ck_impact_explanation_publication_state",
+        "publication_state",
+    }.issubset(impact_checks)
 
     command.downgrade(config, "base")
     assert inspect(engine).get_table_names() == ["alembic_version"]

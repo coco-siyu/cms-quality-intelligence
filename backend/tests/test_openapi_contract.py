@@ -52,6 +52,10 @@ def test_root_openapi_contract_is_valid() -> None:
     assert impact_output["properties"]["aco_quality_manager"]["$ref"].endswith(
         "/ACOQualityManagerImpact"
     )
+    assert "PublicImpactExplanation" in schemas
+    assert schemas["PublicImpactExplanation"]["properties"]["output"]["$ref"].endswith(
+        "/ImpactExplanationOutput"
+    )
 
 
 def test_runtime_openapi_exposes_contract_operation_ids_and_error_models() -> None:
@@ -65,6 +69,7 @@ def test_runtime_openapi_exposes_contract_operation_ids_and_error_models() -> No
         "/api/measures/{measure_id}/versions": "listMeasureVersions",
         "/api/changes": "listChanges",
         "/api/changes/{measure_id}": "getChange",
+        "/api/changes/{measure_id}/impact-explanation": "getImpactExplanation",
     }
 
     for path, operation_id in operations.items():

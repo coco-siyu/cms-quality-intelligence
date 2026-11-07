@@ -16,6 +16,7 @@ from app.domain import (
     ComparisonReviewDecision,
     FieldAvailability,
     FieldPublicationEligibility,
+    ImpactExplanationReviewDecision,
     IngestionItemStage,
     IngestionRunStatus,
     NormalizedFieldStatus,
@@ -99,6 +100,19 @@ class PublicChangeRecord(BaseModel):
     fields: list[ChangeFieldResponse]
 
 
+class PublicImpactExplanation(BaseModel):
+    measure_id: str
+    measure_name: str
+    program: str
+    collection_type: CollectionType
+    from_year: int
+    to_year: int
+    approved_at: datetime
+    published_at: datetime
+    output: ImpactExplanationOutput
+    evidence: list[ChangeFieldEvidenceResponse]
+
+
 class MeasureVersionResponse(BaseModel):
     version_id: str
     performance_year: int
@@ -176,6 +190,14 @@ class AdminImpactExplanationDraftResponse(BaseModel):
     prompt_version: str
     input_digest: str
     output: ImpactExplanationOutput
+    review_decision: ImpactExplanationReviewDecision
+    approved_output: ImpactExplanationOutput | None
+    reviewed_at: datetime | None
+    reviewed_by: str | None
+    publication_state: PublicationState
+    published_at: datetime | None
+    published_by: str | None
+    outdated_at: datetime | None
     cited_evidence_ids: list[str]
     provider_response_id: str | None
     created_at: datetime
