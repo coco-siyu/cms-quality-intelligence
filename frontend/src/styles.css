@@ -1202,8 +1202,9 @@ h3 {
 }
 
 .measure-tabs-list button:focus-visible {
-  outline: 2px solid var(--navy);
-  outline-offset: 2px;
+  outline: none;
+  background: color-mix(in srgb, var(--navy) 9%, transparent) !important;
+  color: var(--navy);
 }
 
 .measure-tabs-list button[data-state="active"] {
