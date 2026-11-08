@@ -4120,6 +4120,309 @@ h3 {
   width: 16px;
 }
 
+.admin-impact-review-dialog {
+  width: min(calc(100% - 28px), 1120px);
+  max-width: 1120px;
+  max-height: min(92vh, 980px);
+  padding: 0;
+  overflow-y: auto;
+}
+
+.impact-review-heading {
+  position: sticky;
+  z-index: 2;
+  top: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 28px 34px 22px;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--card) 96%, transparent);
+  backdrop-filter: blur(12px);
+}
+
+.impact-review-heading h2 {
+  margin-top: 6px;
+  color: var(--navy);
+  font-family: var(--font-display);
+  font-size: 34px;
+  font-weight: 400;
+}
+
+.impact-review-heading [data-radix-dialog-description] {
+  margin-top: 6px;
+  font-size: 11px;
+}
+
+.impact-version-select {
+  display: grid;
+  min-width: 250px;
+  gap: 5px;
+}
+
+.impact-version-select span,
+.impact-review-section > p,
+.impact-review-caveats > p,
+.impact-review-decision legend {
+  color: var(--muted-foreground);
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+}
+
+.impact-version-select select {
+  width: 100%;
+  padding: 8px 26px 8px 0;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+  color: var(--navy);
+  font-size: 11px;
+}
+
+.admin-impact-review-dialog form {
+  padding: 22px 34px 30px;
+}
+
+.impact-review-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-bottom: 18px;
+}
+
+.impact-review-meta span {
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: var(--muted);
+  color: var(--muted-foreground);
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.impact-review-warning {
+  padding: 11px 13px;
+  margin-bottom: 16px;
+  border-left: 3px solid var(--warning);
+  background: var(--warning-surface);
+  color: var(--secondary-foreground);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.impact-review-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 20px;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.impact-review-role {
+  min-width: 0;
+  padding: 22px 22px 18px 0;
+}
+
+.impact-review-role + .impact-review-role {
+  padding-right: 0;
+  padding-left: 22px;
+  border-left: 1px solid var(--border);
+}
+
+.impact-review-role > header p {
+  color: var(--olive);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.impact-review-role h3 {
+  margin-top: 4px;
+  color: var(--navy);
+  font-family: var(--font-display);
+  font-size: 27px;
+  font-weight: 400;
+}
+
+.impact-review-section {
+  display: grid;
+  gap: 9px;
+  margin-top: 18px;
+}
+
+.impact-review-statement {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  gap: 5px 10px;
+}
+
+.impact-review-statement > span,
+.impact-review-caveats label > span {
+  padding-top: 10px;
+  color: var(--olive);
+  font-family: var(--font-mono);
+  font-size: 9px;
+}
+
+.impact-review-statement textarea,
+.impact-review-caveats textarea {
+  width: 100%;
+  min-height: 76px;
+  padding: 9px 10px;
+  resize: vertical;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: inherit;
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.impact-review-statement textarea:not([readonly]):focus,
+.impact-review-caveats textarea:not([readonly]):focus {
+  border-color: var(--powder);
+  outline: 2px solid color-mix(in srgb, var(--powder) 22%, transparent);
+}
+
+.impact-review-statement textarea[readonly],
+.impact-review-caveats textarea[readonly] {
+  border-color: transparent;
+  background: var(--muted);
+}
+
+.impact-review-statement small {
+  display: flex;
+  grid-column: 2;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.impact-review-statement small a,
+.impact-review-statement small span {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--muted-foreground);
+  font-family: var(--font-mono);
+  font-size: 8px;
+}
+
+.impact-review-statement small svg {
+  width: 9px;
+}
+
+.admin-impact-review-dialog form > .impact-review-statement {
+  grid-template-columns: 1fr;
+  padding: 15px;
+  border-left: 3px solid var(--powder);
+  background: var(--powder-soft);
+}
+
+.admin-impact-review-dialog form > .impact-review-statement > span,
+.admin-impact-review-dialog form > .impact-review-statement > small {
+  grid-column: 1;
+}
+
+.admin-impact-review-dialog form > .impact-review-statement textarea {
+  min-height: 68px;
+  background: var(--card);
+  font-family: var(--font-display);
+  font-size: 17px;
+  line-height: 1.4;
+}
+
+.impact-review-caveats {
+  display: grid;
+  gap: 9px;
+  padding-top: 18px;
+}
+
+.impact-review-caveats label {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  gap: 10px;
+}
+
+.impact-review-caveats textarea {
+  min-height: 58px;
+}
+
+.impact-review-decision {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 190px));
+  gap: 8px;
+  padding: 20px 0 0;
+  border: 0;
+}
+
+.impact-review-decision legend {
+  grid-column: 1 / -1;
+  margin-bottom: 3px;
+}
+
+.impact-review-decision input {
+  position: absolute;
+  opacity: 0;
+}
+
+.impact-review-decision label span {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 11px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--muted-foreground);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.impact-review-decision input:checked + span {
+  border-color: var(--navy);
+  background: var(--powder-soft);
+  color: var(--navy);
+}
+
+.impact-review-decision svg {
+  width: 14px;
+}
+
+.impact-review-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 20px;
+}
+
+.impact-review-empty {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  min-height: 280px;
+  align-content: center;
+  padding: 34px;
+  color: var(--muted-foreground);
+  text-align: center;
+}
+
+.impact-review-empty svg {
+  width: 24px;
+}
+
+.impact-review-empty h3 {
+  color: var(--navy);
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 400;
+}
+
 .admin-queue {
   padding: 28px;
   margin-top: 18px;
@@ -5926,6 +6229,47 @@ h3 {
 
   .admin-comparison-decision {
     grid-template-columns: 1fr;
+  }
+
+  .impact-review-heading {
+    align-items: stretch;
+    flex-direction: column;
+    padding: 24px 18px 18px;
+  }
+
+  .impact-version-select {
+    min-width: 0;
+  }
+
+  .admin-impact-review-dialog form {
+    padding: 18px;
+  }
+
+  .impact-review-pair {
+    grid-template-columns: 1fr;
+  }
+
+  .impact-review-role,
+  .impact-review-role + .impact-review-role {
+    padding: 20px 0;
+  }
+
+  .impact-review-role + .impact-review-role {
+    border-top: 1px solid var(--border);
+    border-left: 0;
+  }
+
+  .impact-review-decision {
+    grid-template-columns: 1fr;
+  }
+
+  .impact-review-actions {
+    align-items: stretch;
+    flex-direction: column-reverse;
+  }
+
+  .impact-review-actions button {
+    width: 100%;
   }
 
   .admin-source-form {

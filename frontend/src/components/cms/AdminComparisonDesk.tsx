@@ -1,6 +1,7 @@
 import { useMemo, useState, type FormEvent } from "react";
 import {
   Check,
+  BookOpenCheck,
   CircleDashed,
   ExternalLink,
   FileSearch,
@@ -19,6 +20,7 @@ import {
 import { Button } from "../ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "../ui/dialog";
 import { StatusMark } from "./shared";
+import { AdminImpactReviewDialog } from "./AdminImpactReviewDialog";
 
 const FROM_YEAR = 2025;
 const TO_YEAR = 2026;
@@ -197,6 +199,7 @@ export function AdminComparisonDesk() {
   const preparation = useAdminComparisonPreparation(FROM_YEAR, TO_YEAR);
   const publication = useAdminComparisonPublication(FROM_YEAR, TO_YEAR);
   const [reviewing, setReviewing] = useState<AdminComparison | null>(null);
+  const [impactReviewing, setImpactReviewing] = useState<AdminComparison | null>(null);
 
   const items = comparisons.data?.items ?? [];
   const reviewed = items.filter((item) => item.review_decision !== "pending").length;
@@ -288,6 +291,14 @@ export function AdminComparisonDesk() {
             )}
             <footer>
               <Button
+                variant="ghost"
+                onClick={() => setImpactReviewing(comparison)}
+                aria-label={`Review AI impact ${comparison.measure_id}`}
+              >
+                <BookOpenCheck aria-hidden="true" />
+                AI impact
+              </Button>
+              <Button
                 variant="outline"
                 onClick={() => setReviewing(comparison)}
                 disabled={comparison.publication_state === "published"}
@@ -310,6 +321,10 @@ export function AdminComparisonDesk() {
         ))}
       </div>
       <ComparisonReviewDialog comparison={reviewing} onClose={() => setReviewing(null)} />
+      <AdminImpactReviewDialog
+        comparison={impactReviewing}
+        onClose={() => setImpactReviewing(null)}
+      />
     </section>
   );
 }

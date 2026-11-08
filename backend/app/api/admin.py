@@ -19,6 +19,7 @@ from app.domain import (
     CandidateReviewDecision,
     CollectionType,
     ComparisonReviewDecision,
+    ImpactExplanationReviewDecision,
     PublicationState,
 )
 from app.repositories.admin_comparisons import (
@@ -28,6 +29,7 @@ from app.repositories.admin_comparisons import (
     prepare_roster_comparisons,
 )
 from app.repositories.admin_impact_explanations import (
+    get_impact_explanation_draft,
     impact_draft_response,
     list_impact_explanation_drafts,
 )
@@ -48,6 +50,7 @@ from app.schemas import (
     AdminFieldCandidateResponse,
     AdminImpactExplanationDraftPage,
     AdminImpactExplanationDraftResponse,
+    AdminImpactExplanationReviewRequest,
     AdminLoginRequest,
     AdminMeasureDetail,
     AdminMeasurePage,
@@ -67,6 +70,11 @@ from app.services.comparison_publication import (
     ComparisonPublicationError,
     publish_approved_comparison,
     record_comparison_review,
+)
+from app.services.impact_explanation_review import (
+    ImpactExplanationReviewError,
+    publish_approved_impact_explanation,
+    record_impact_explanation_review,
 )
 from app.services.publication import FieldPublicationError, publish_approved_field
 from app.services.reviews import record_candidate_review
@@ -150,10 +158,24 @@ def require_impact_generation_header(
     _require_comparison_action("generate-impact-explanation", action)
 
 
+def require_impact_review_header(
+    action: Annotated[str, Header(alias="X-CMSQI-Admin-Action")],
+) -> None:
+    _require_comparison_action("review-impact-explanation", action)
+
+
+def require_impact_publish_header(
+    action: Annotated[str, Header(alias="X-CMSQI-Admin-Action")],
+) -> None:
+    _require_comparison_action("publish-impact-explanation", action)
+
+
 ComparisonPrepareHeader = Annotated[None, Depends(require_comparison_prepare_header)]
 ComparisonReviewHeader = Annotated[None, Depends(require_comparison_review_header)]
 ComparisonPublishHeader = Annotated[None, Depends(require_comparison_publish_header)]
 ImpactGenerationHeader = Annotated[None, Depends(require_impact_generation_header)]
+ImpactReviewHeader = Annotated[None, Depends(require_impact_review_header)]
+ImpactPublishHeader = Annotated[None, Depends(require_impact_publish_header)]
 
 
 def _session_response(request: Request, settings: Settings) -> AdminSessionResponse:
@@ -395,6 +417,94 @@ def generate_admin_impact_explanation_draft(
         session.rollback()
         raise HTTPException(
             status_code=502,
+            detail={"code": error.code, "message": error.message, "details": []},
+        ) from error
+    session.commit()
+    return impact_draft_response(draft)
+
+
+@router.patch(
+    "/impact-explanations/{draft_id}",
+    response_model=AdminImpactExplanationDraftResponse,
+    operation_id="reviewAdminImpactExplanationDraft",
+    responses={
+        **auth_responses,
+        403: {"model": ApiError, "description": "The admin action header is invalid."},
+        404: {"model": ApiError, "description": "The explanation draft was not found."},
+        409: {"model": ApiError, "description": "The review cannot be recorded."},
+    },
+)
+def review_admin_impact_explanation_draft(
+    session: DatabaseSession,
+    admin: AuthenticatedAdmin,
+    _action: ImpactReviewHeader,
+    draft_id: Annotated[str, Path(min_length=1, max_length=120)],
+    request: AdminImpactExplanationReviewRequest,
+) -> AdminImpactExplanationDraftResponse:
+    draft = get_impact_explanation_draft(session, draft_id=draft_id)
+    if draft is None:
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "code": "not_found",
+                "message": f"Impact explanation draft '{draft_id}' was not found.",
+                "details": [],
+            },
+        )
+    try:
+        record_impact_explanation_review(
+            draft,
+            decision=ImpactExplanationReviewDecision(request.decision),
+            output=request.output,
+            reviewer_name=admin.username,
+        )
+    except ImpactExplanationReviewError as error:
+        session.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail={"code": error.code, "message": error.message, "details": []},
+        ) from error
+    session.commit()
+    return impact_draft_response(draft)
+
+
+@router.post(
+    "/impact-explanations/{draft_id}/publish",
+    response_model=AdminImpactExplanationDraftResponse,
+    operation_id="publishAdminImpactExplanationDraft",
+    responses={
+        **auth_responses,
+        403: {"model": ApiError, "description": "The admin action header is invalid."},
+        404: {"model": ApiError, "description": "The explanation draft was not found."},
+        409: {"model": ApiError, "description": "The draft is not eligible for publication."},
+    },
+)
+def publish_admin_impact_explanation_draft(
+    session: DatabaseSession,
+    admin: AuthenticatedAdmin,
+    _action: ImpactPublishHeader,
+    draft_id: Annotated[str, Path(min_length=1, max_length=120)],
+) -> AdminImpactExplanationDraftResponse:
+    draft = get_impact_explanation_draft(session, draft_id=draft_id)
+    if draft is None:
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "code": "not_found",
+                "message": f"Impact explanation draft '{draft_id}' was not found.",
+                "details": [],
+            },
+        )
+    try:
+        publish_approved_impact_explanation(
+            session,
+            draft,
+            publisher_name=admin.username,
+        )
+    except ImpactExplanationReviewError as error:
+        session.rollback()
+        raise HTTPException(
+            status_code=409,
             detail={"code": error.code, "message": error.message, "details": []},
         ) from error
     session.commit()

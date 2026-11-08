@@ -101,9 +101,11 @@ records are withheld until re-review.
 A versioned fictional replay suite records schema and citation
 safeguard outcomes in
 [`docs/evaluations/impact-explanation-replay.md`](docs/evaluations/impact-explanation-replay.md).
-The Task 37 display boundary is complete, while Task 51 still owns the admin
-editing and approval controls needed to move a private draft through that
-boundary. See
+The Admin comparison desk now opens a private two-perspective impact review:
+reviewers can edit both role outputs, approve or reject the pair together, and
+publish it through a separate action only after its comparison is public.
+Generated wording and older approved versions remain private and auditable;
+publishing a newer current version retires rather than deletes the prior one. See
 [`docs/impact-explanation-contract.md`](docs/impact-explanation-contract.md) and
 [`docs/impact-generation-evaluation.md`](docs/impact-generation-evaluation.md).
 The protected Admin review desk now provides a comparison
@@ -281,6 +283,13 @@ versions in both selected years. Open a record's evidence, record **Approve** or
 review. A prepared or approved draft is never public; publication is the explicit
 boundary that enables `GET /api/changes` and exact comparison detail. One-sided
 records stay skipped until source-backed addition/removal handling is implemented.
+For a comparison with a generated impact draft, choose **AI impact** to inspect
+the shared summary, both role perspectives, and their official evidence IDs.
+Edits are saved only as reviewed wording; the provider result is never
+overwritten. **Approve pair** and **Reject pair** decide both perspectives
+together, while **Publish explanation** is a separate action enabled only after
+the underlying comparison is public. Stale drafts remain visible privately but
+cannot cross the public boundary.
 
 Optional AI features are disabled by default. To enable extraction clarification
 and/or semantic classification locally, set the shared API key plus the relevant
@@ -290,6 +299,7 @@ model name in the repository root `.env`, then restart FastAPI:
 CMSQI_OPENAI_API_KEY=your-api-key
 CMSQI_AI_CLARIFICATION_MODEL=your-structured-output-capable-model
 CMSQI_AI_SEMANTIC_MODEL=your-structured-output-capable-model
+CMSQI_AI_IMPACT_MODEL=your-structured-output-capable-model
 ```
 
 Requests use strict structured output and `store=false`. Private records retain

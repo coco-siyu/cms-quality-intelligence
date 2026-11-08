@@ -561,6 +561,86 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiError"
+  /api/admin/impact-explanations/{draft_id}:
+    patch:
+      operationId: reviewAdminImpactExplanationDraft
+      tags: [Admin review]
+      summary: Review one complete role-specific explanation pair
+      description: |
+        Stores human-edited approved wording separately from the immutable
+        generated output, or rejects the complete pair. A decision is final for
+        this draft version and does not publish it.
+      security:
+        - AdminSessionCookie: []
+      parameters:
+        - name: draft_id
+          in: path
+          required: true
+          schema: {type: string, minLength: 1, maxLength: 120}
+        - name: X-CMSQI-Admin-Action
+          in: header
+          required: true
+          schema:
+            type: string
+            const: review-impact-explanation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminImpactExplanationReviewRequest"
+      responses:
+        "200":
+          description: The privately reviewed explanation version.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminImpactExplanationDraft"
+        "401":
+          $ref: "#/components/responses/AdminUnauthorized"
+        "403":
+          $ref: "#/components/responses/AdminActionForbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /api/admin/impact-explanations/{draft_id}/publish:
+    post:
+      operationId: publishAdminImpactExplanationDraft
+      tags: [Admin review]
+      summary: Publish one approved role-specific explanation pair
+      description: |
+        Publishes only a current, human-approved pair whose comparison is
+        already public. Any older published pair for the same comparison is
+        withdrawn but retained privately.
+      security:
+        - AdminSessionCookie: []
+      parameters:
+        - name: draft_id
+          in: path
+          required: true
+          schema: {type: string, minLength: 1, maxLength: 120}
+        - name: X-CMSQI-Admin-Action
+          in: header
+          required: true
+          schema:
+            type: string
+            const: publish-impact-explanation
+      responses:
+        "200":
+          description: The explicitly published explanation version.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminImpactExplanationDraft"
+        "401":
+          $ref: "#/components/responses/AdminUnauthorized"
+        "403":
+          $ref: "#/components/responses/AdminActionForbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
   /api/admin/comparisons/{comparison_id}/publish:
     post:
       operationId: publishAdminComparison
@@ -1908,6 +1988,19 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/AdminImpactExplanationDraft"
+    AdminImpactExplanationReviewRequest:
+      type: object
+      additionalProperties: false
+      required: [decision]
+      properties:
+        decision:
+          type: string
+          enum: [approve, reject]
+        output:
+          oneOf:
+            - $ref: "#/components/schemas/ImpactExplanationOutput"
+            - type: "null"
+          description: Required for approval and forbidden for rejection.
     AdminComparisonGenerationRequest:
       type: object
       additionalProperties: false

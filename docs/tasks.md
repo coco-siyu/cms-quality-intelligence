@@ -42,8 +42,8 @@
   approved-change feed, plus a source-revision timeline that keeps CMS
   publication, applicability, and effective dates distinct. Tasks 34–37 define,
   generate, evaluate, and publicly render a stored, evidence-grounded AI Impact
-  explanation pair while withholding unapproved or stale drafts. Task 51 remains
-  responsible for the admin edit-and-approve controls. A guarded publication
+  explanation pair while withholding unapproved or stale drafts. Task 51 now
+  adds the admin edit, joint-decision, and separate publication controls. A guarded publication
   bridge now prepares six deterministic
   two-year roster comparisons, requires an append-only administrator decision,
   and keeps each record private until a separate publication action succeeds.
@@ -583,6 +583,23 @@ events.
 ## 51. Build the AI explanation edit-and-approve workflow
 Goal: Publish only a jointly approved pair of role-specific explanations.
 Description: Let the admin edit Data Analyst and ACO Quality Manager explanation drafts and approve or reject both together. Preserve prior approved versions privately and ensure the public app always shows the latest valid approved pair.
+
+Implementation status (complete, 2026-11-08): Added authenticated review and
+publication mutations plus an editorial two-column admin review folio. The
+generated provider payload remains immutable while a reviewer can edit the
+shared factual summary, both Data Analyst sections, both ACO Quality Manager
+sections, and uncertainty wording. Approval or rejection applies to the entire
+pair and becomes final for that draft version; approval does not publish.
+Publication is a separate guarded action that requires the comparison to
+already be public, the generation-input digest and evidence to remain current,
+and every citation to belong to the draft's verified evidence set. Publishing
+a newer approved version withdraws the previous public version without deleting
+its generated output, reviewed wording, reviewer, or timestamps. Pending,
+rejected, withdrawn, outdated, malformed, or digest-stale versions remain
+private and fail closed through the existing public endpoint. Backend contract,
+authorization, version-preservation, public-boundary, and frontend interaction
+tests cover the workflow. Initial generation remains the existing explicit
+provider action; manual regeneration of stale or rejected work remains Task 52.
 
 ## 52. Implement manual explanation regeneration
 Goal: Refresh stale explanations without overwriting human work.

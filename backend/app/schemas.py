@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, HttpUrl
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl, model_validator
 
 from app.domain import (
     AffectedField,
@@ -206,6 +206,21 @@ class AdminImpactExplanationDraftResponse(BaseModel):
 
 class AdminImpactExplanationDraftPage(BaseModel):
     items: list[AdminImpactExplanationDraftResponse]
+
+
+class AdminImpactExplanationReviewRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    decision: Literal["approve", "reject"]
+    output: ImpactExplanationOutput | None = None
+
+    @model_validator(mode="after")
+    def require_decision_output(self) -> "AdminImpactExplanationReviewRequest":
+        if self.decision == "approve" and self.output is None:
+            raise ValueError("Approval requires the complete reviewed explanation pair.")
+        if self.decision == "reject" and self.output is not None:
+            raise ValueError("Rejected drafts cannot include approved wording.")
+        return self
 
 
 class AdminComparisonGenerationRequest(BaseModel):

@@ -179,6 +179,67 @@ describe("private admin review workspace", () => {
       ],
       review_history: [],
     };
+    const impactOutput = {
+      plain_language_summary: {
+        statement: "The approved measure-set membership is unchanged across both years.",
+        statement_type: "source_fact" as const,
+        citations: [{ evidence_id: "CMS-001-2025" }, { evidence_id: "CMS-001-2026" }],
+      },
+      data_analyst: {
+        technical_implications: [
+          {
+            statement: "Analysts may retain the current year-over-year mapping.",
+            statement_type: "possible_impact" as const,
+            citations: [{ evidence_id: "CMS-001-2025" }],
+          },
+        ],
+        validation_considerations: [
+          {
+            statement: "Analysts may rerun the roster validation.",
+            statement_type: "possible_impact" as const,
+            citations: [{ evidence_id: "CMS-001-2026" }],
+          },
+        ],
+      },
+      aco_quality_manager: {
+        operational_implications: [
+          {
+            statement: "Quality teams may keep the current operating plan.",
+            statement_type: "possible_impact" as const,
+            citations: [{ evidence_id: "CMS-001-2025" }],
+          },
+        ],
+        coordination_considerations: [
+          {
+            statement: "Quality teams may confirm the roster with reporting partners.",
+            statement_type: "possible_impact" as const,
+            citations: [{ evidence_id: "CMS-001-2026" }],
+          },
+        ],
+      },
+      uncertainty_caveats: [],
+    };
+    let impactDraft = {
+      draft_id: "CMS-IMPACT-001",
+      comparison_id: 41,
+      provider: "openai",
+      model: "test-impact-model",
+      prompt_version: "cms-impact-explanation-v1",
+      input_digest: "a".repeat(64),
+      output: impactOutput,
+      review_decision: "pending" as "pending" | "approve" | "reject",
+      approved_output: null as typeof impactOutput | null,
+      reviewed_at: null as string | null,
+      reviewed_by: null as string | null,
+      publication_state: "draft" as "draft" | "published" | "withdrawn",
+      published_at: null as string | null,
+      published_by: null as string | null,
+      outdated_at: null,
+      cited_evidence_ids: ["CMS-001-2025", "CMS-001-2026"],
+      provider_response_id: "response-001",
+      created_at: "2026-11-08T12:00:00Z",
+      created_by: "reviewer",
+    };
     let prepared = false;
     let comparison: AdminComparison = baseComparison;
     const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
@@ -247,6 +308,32 @@ describe("private admin review workspace", () => {
         };
         return Promise.resolve(jsonResponse(comparison));
       }
+      if (url.endsWith("/api/admin/comparisons/41/impact-explanations") && !init?.method) {
+        return Promise.resolve(jsonResponse({ items: [impactDraft] }));
+      }
+      if (url.endsWith("/api/admin/impact-explanations/CMS-IMPACT-001") && init?.method === "PATCH") {
+        const body = JSON.parse(String(init.body)) as {
+          decision: "approve" | "reject";
+          output: typeof impactOutput | null;
+        };
+        impactDraft = {
+          ...impactDraft,
+          review_decision: body.decision,
+          approved_output: body.output,
+          reviewed_at: "2026-11-08T12:05:00Z",
+          reviewed_by: "reviewer",
+        };
+        return Promise.resolve(jsonResponse(impactDraft));
+      }
+      if (url.endsWith("/api/admin/impact-explanations/CMS-IMPACT-001/publish") && init?.method === "POST") {
+        impactDraft = {
+          ...impactDraft,
+          publication_state: "published",
+          published_at: "2026-11-08T12:06:00Z",
+          published_by: "reviewer",
+        };
+        return Promise.resolve(jsonResponse(impactDraft));
+      }
       return Promise.reject(new Error(`Unexpected request: ${url}`));
     });
     vi.stubGlobal("fetch", fetchMock);
@@ -290,6 +377,38 @@ describe("private admin review workspace", () => {
     );
     expect(publishCall?.[1]?.headers).toMatchObject({
       "X-CMSQI-Admin-Action": "publish-comparison",
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Review AI impact 001" }));
+    expect(await screen.findByRole("heading", { name: "001 · Potential impact" }))
+      .toBeInTheDocument();
+    fireEvent.change(await screen.findByLabelText("Technical implications 1"), {
+      target: { value: "Analysts may retain the reviewed year-over-year mapping." },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Approve pair" }));
+    expect(await screen.findByRole("button", { name: "Publish explanation" })).toBeEnabled();
+
+    const impactReviewCall = fetchMock.mock.calls.find(
+      ([input, init]) =>
+        String(input).endsWith("/api/admin/impact-explanations/CMS-IMPACT-001") &&
+        init?.method === "PATCH",
+    );
+    expect(impactReviewCall?.[1]?.headers).toMatchObject({
+      "X-CMSQI-Admin-Action": "review-impact-explanation",
+    });
+    expect(JSON.parse(String(impactReviewCall?.[1]?.body)).output.data_analyst
+      .technical_implications[0].statement)
+      .toBe("Analysts may retain the reviewed year-over-year mapping.");
+
+    fireEvent.click(screen.getByRole("button", { name: "Publish explanation" }));
+    expect(await within(screen.getByRole("dialog")).findByText("Published"))
+      .toBeInTheDocument();
+    const impactPublishCall = fetchMock.mock.calls.find(
+      ([input]) =>
+        String(input).endsWith("/api/admin/impact-explanations/CMS-IMPACT-001/publish"),
+    );
+    expect(impactPublishCall?.[1]?.headers).toMatchObject({
+      "X-CMSQI-Admin-Action": "publish-impact-explanation",
     });
   });
 

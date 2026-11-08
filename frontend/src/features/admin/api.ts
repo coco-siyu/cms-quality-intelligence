@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { ApiClientError } from "../measures/api/client";
-import type { ApiErrorPayload } from "../measures/api/types";
+import type { ApiErrorPayload, ImpactExplanationOutput } from "../measures/api/types";
 
 const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL ?? "").replace(/\/$/, "");
 
@@ -171,6 +171,28 @@ export type AdminComparison = {
     reviewed_at: string;
     reviewer_notes: string | null;
   }[];
+};
+
+export type AdminImpactExplanationDraft = {
+  draft_id: string;
+  comparison_id: number;
+  provider: string;
+  model: string;
+  prompt_version: string;
+  input_digest: string;
+  output: ImpactExplanationOutput;
+  review_decision: "pending" | "approve" | "reject";
+  approved_output: ImpactExplanationOutput | null;
+  reviewed_at: string | null;
+  reviewed_by: string | null;
+  publication_state: "draft" | "published" | "withdrawn";
+  published_at: string | null;
+  published_by: string | null;
+  outdated_at: string | null;
+  cited_evidence_ids: string[];
+  provider_response_id: string | null;
+  created_at: string;
+  created_by: string;
 };
 
 export type AdminSourceExtraction = {
@@ -454,6 +476,35 @@ export const adminApi = {
       },
     );
   },
+  impactExplanationDrafts(comparisonId: number, signal?: AbortSignal) {
+    return adminRequest<{ items: AdminImpactExplanationDraft[] }>(
+      `/api/admin/comparisons/${comparisonId}/impact-explanations`,
+      { signal },
+    );
+  },
+  reviewImpactExplanation(
+    draftId: string,
+    decision: "approve" | "reject",
+    output: ImpactExplanationOutput | null,
+  ) {
+    return adminRequest<AdminImpactExplanationDraft>(
+      `/api/admin/impact-explanations/${encodeURIComponent(draftId)}`,
+      {
+        method: "PATCH",
+        headers: { "X-CMSQI-Admin-Action": "review-impact-explanation" },
+        body: JSON.stringify({ decision, output }),
+      },
+    );
+  },
+  publishImpactExplanation(draftId: string) {
+    return adminRequest<AdminImpactExplanationDraft>(
+      `/api/admin/impact-explanations/${encodeURIComponent(draftId)}/publish`,
+      {
+        method: "POST",
+        headers: { "X-CMSQI-Admin-Action": "publish-impact-explanation" },
+      },
+    );
+  },
   reviewCandidate(reviewItemId: string, decision: AdminCandidateDecision) {
     return adminRequest<AdminFieldCandidate>(
       `/api/admin/review-items/${encodeURIComponent(reviewItemId)}`,
@@ -645,6 +696,51 @@ export function useAdminComparisonPublication(fromYear: number, toYear: number) 
       });
       void queryClient.invalidateQueries({ queryKey: ["changes"] });
       void queryClient.invalidateQueries({ queryKey: ["measures"] });
+    },
+  });
+}
+
+export function useAdminImpactExplanationDrafts(
+  comparisonId: number | null,
+  enabled: boolean,
+) {
+  return useQuery({
+    queryKey: ["admin-review", "impact-explanations", comparisonId],
+    queryFn: ({ signal }) => adminApi.impactExplanationDrafts(comparisonId ?? 0, signal),
+    enabled: enabled && comparisonId !== null,
+    retry: false,
+  });
+}
+
+export function useAdminImpactExplanationReview(comparisonId: number | null) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      draftId,
+      decision,
+      output,
+    }: {
+      draftId: string;
+      decision: "approve" | "reject";
+      output: ImpactExplanationOutput | null;
+    }) => adminApi.reviewImpactExplanation(draftId, decision, output),
+    onSuccess: () =>
+      void queryClient.invalidateQueries({
+        queryKey: ["admin-review", "impact-explanations", comparisonId],
+      }),
+  });
+}
+
+export function useAdminImpactExplanationPublication(comparisonId: number | null) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (draftId: string) => adminApi.publishImpactExplanation(draftId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: ["admin-review", "impact-explanations", comparisonId],
+      });
+      void queryClient.invalidateQueries({ queryKey: ["public-impact-explanation"] });
+      void queryClient.invalidateQueries({ queryKey: ["changes"] });
     },
   });
 }

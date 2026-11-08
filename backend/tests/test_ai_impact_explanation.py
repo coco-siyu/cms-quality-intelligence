@@ -5,7 +5,12 @@ from sqlalchemy.orm import Session
 
 from app.auth import hash_admin_password
 from app.config import Settings, get_settings
-from app.domain import ComparisonEvidenceStatus, ComparisonReviewDecision
+from app.domain import (
+    ComparisonEvidenceStatus,
+    ComparisonReviewDecision,
+    ImpactExplanationReviewDecision,
+    PublicationState,
+)
 from app.models import ImpactExplanationDraft, MeasureComparison
 from app.repositories.admin_impact_explanations import list_impact_explanation_drafts
 from app.services.ai_impact_explanation import (
@@ -24,6 +29,10 @@ from app.services.impact_explanation import (
     ImpactExplanationOutput,
     ImpactStatement,
     ImpactStatementType,
+)
+from app.services.impact_explanation_review import (
+    publish_approved_impact_explanation,
+    record_impact_explanation_review,
 )
 from app.services.semantic_classification import SemanticEvidenceExcerpt
 
@@ -80,6 +89,10 @@ class FakeImpactProvider(ImpactExplanationProvider):
         )
 
 
+class SecondFakeImpactProvider(FakeImpactProvider):
+    model_name = "test-impact-model-v2"
+
+
 def _comparison(session: Session) -> MeasureComparison:
     comparison = session.scalar(select(MeasureComparison))
     assert comparison is not None
@@ -118,6 +131,56 @@ def test_generation_persists_an_idempotent_private_cited_draft(
         "DEMO-EVIDENCE-DEMO-001-2025",
         "DEMO-EVIDENCE-DEMO-001-2026",
     ]
+
+
+def test_publishing_a_new_approved_version_withdraws_but_preserves_the_prior_version(
+    seeded_session: Session,
+) -> None:
+    comparison = _comparison(seeded_session)
+    first = generate_impact_explanation(
+        seeded_session,
+        comparison,
+        provider=FakeImpactProvider(),
+        created_by="generator",
+    )
+    second = generate_impact_explanation(
+        seeded_session,
+        comparison,
+        provider=SecondFakeImpactProvider(),
+        created_by="generator",
+    )
+    record_impact_explanation_review(
+        first,
+        decision=ImpactExplanationReviewDecision.APPROVE,
+        output=ImpactExplanationOutput.model_validate(first.output_payload),
+        reviewer_name="reviewer",
+    )
+    publish_approved_impact_explanation(
+        seeded_session,
+        first,
+        publisher_name="publisher",
+    )
+    record_impact_explanation_review(
+        second,
+        decision=ImpactExplanationReviewDecision.APPROVE,
+        output=ImpactExplanationOutput.model_validate(second.output_payload),
+        reviewer_name="reviewer",
+    )
+    publish_approved_impact_explanation(
+        seeded_session,
+        second,
+        publisher_name="publisher",
+    )
+    seeded_session.commit()
+
+    assert first.publication_state == PublicationState.WITHDRAWN
+    assert second.publication_state == PublicationState.PUBLISHED
+    page = list_impact_explanation_drafts(
+        seeded_session,
+        comparison_id=comparison.id,
+    )
+    assert len(page.items) == 2
+    assert {item.draft_id for item in page.items} == {first.draft_id, second.draft_id}
 
 
 @pytest.mark.parametrize(
@@ -209,6 +272,15 @@ def test_only_authenticated_admins_can_read_private_drafts(
     assert client.get(
         f"/api/admin/comparisons/{comparison.id}/impact-explanations"
     ).status_code == 401
+    assert client.patch(
+        f"/api/admin/impact-explanations/{draft.draft_id}",
+        headers={"X-CMSQI-Admin-Action": "review-impact-explanation"},
+        json={"decision": "approve", "output": draft.output_payload},
+    ).status_code == 401
+    assert client.post(
+        f"/api/admin/impact-explanations/{draft.draft_id}/publish",
+        headers={"X-CMSQI-Admin-Action": "publish-impact-explanation"},
+    ).status_code == 401
     client.app.dependency_overrides[get_settings] = lambda: Settings(
         admin_username="reviewer",
         admin_password_hash=hash_admin_password(
@@ -244,3 +316,137 @@ def test_only_authenticated_admins_can_read_private_drafts(
             "to_year": 2026,
         },
     ).text.lower()
+
+
+def test_admin_edits_approves_and_explicitly_publishes_the_complete_pair(
+    client: TestClient,
+    seeded_session: Session,
+) -> None:
+    comparison = _comparison(seeded_session)
+    draft = generate_impact_explanation(
+        seeded_session,
+        comparison,
+        provider=FakeImpactProvider(),
+        created_by="generator",
+    )
+    original_output = draft.output_payload.copy()
+    seeded_session.commit()
+    client.app.dependency_overrides[get_settings] = lambda: Settings(
+        admin_username="reviewer",
+        admin_password_hash=hash_admin_password(
+            "correct horse battery staple", salt=b"test-salt-16byte"
+        ),
+        admin_session_secret="test-session-secret-with-sufficient-entropy",
+    )
+    assert client.post(
+        "/api/admin/session",
+        json={
+            "username": "reviewer",
+            "password": "correct horse battery staple",
+        },
+    ).status_code == 200
+
+    edited_output = draft.output_payload.copy()
+    edited_output["data_analyst"] = {
+        **edited_output["data_analyst"],
+        "technical_implications": [
+            {
+                **edited_output["data_analyst"]["technical_implications"][0],
+                "statement": "Analysts may need to inspect the approved year-specific mapping.",
+            }
+        ],
+    }
+    wrong_header = client.patch(
+        f"/api/admin/impact-explanations/{draft.draft_id}",
+        headers={"X-CMSQI-Admin-Action": "review-comparison"},
+        json={"decision": "approve", "output": edited_output},
+    )
+    assert wrong_header.status_code == 403
+
+    reviewed = client.patch(
+        f"/api/admin/impact-explanations/{draft.draft_id}",
+        headers={"X-CMSQI-Admin-Action": "review-impact-explanation"},
+        json={"decision": "approve", "output": edited_output},
+    )
+    assert reviewed.status_code == 200
+    assert reviewed.json()["review_decision"] == "approve"
+    assert reviewed.json()["reviewed_by"] == "reviewer"
+    assert reviewed.json()["output"] == original_output
+    assert reviewed.json()["approved_output"] == edited_output
+
+    public_before_publish = client.get(
+        "/api/changes/DEMO-001/impact-explanation",
+        params={
+            "program": "Fictional Quality Program",
+            "collection_type": "program_roster",
+            "from_year": 2025,
+            "to_year": 2026,
+        },
+    )
+    assert public_before_publish.status_code == 404
+
+    published = client.post(
+        f"/api/admin/impact-explanations/{draft.draft_id}/publish",
+        headers={"X-CMSQI-Admin-Action": "publish-impact-explanation"},
+    )
+    assert published.status_code == 200
+    assert published.json()["publication_state"] == "published"
+    assert published.json()["published_by"] == "reviewer"
+
+    public = client.get(
+        "/api/changes/DEMO-001/impact-explanation",
+        params={
+            "program": "Fictional Quality Program",
+            "collection_type": "program_roster",
+            "from_year": 2025,
+            "to_year": 2026,
+        },
+    )
+    assert public.status_code == 200
+    assert public.json()["output"] == edited_output
+
+    locked = client.patch(
+        f"/api/admin/impact-explanations/{draft.draft_id}",
+        headers={"X-CMSQI-Admin-Action": "review-impact-explanation"},
+        json={"decision": "reject", "output": None},
+    )
+    assert locked.status_code == 409
+    assert locked.json()["code"] == "impact_explanation_published_locked"
+
+
+def test_rejected_and_outdated_explanation_drafts_fail_closed(
+    client: TestClient,
+    seeded_session: Session,
+) -> None:
+    comparison = _comparison(seeded_session)
+    draft = generate_impact_explanation(
+        seeded_session,
+        comparison,
+        provider=FakeImpactProvider(),
+        created_by="generator",
+    )
+    draft.outdated_at = comparison.reviewed_at
+    seeded_session.commit()
+    client.app.dependency_overrides[get_settings] = lambda: Settings(
+        admin_username="reviewer",
+        admin_password_hash=hash_admin_password(
+            "correct horse battery staple", salt=b"test-salt-16byte"
+        ),
+        admin_session_secret="test-session-secret-with-sufficient-entropy",
+    )
+    client.post(
+        "/api/admin/session",
+        json={
+            "username": "reviewer",
+            "password": "correct horse battery staple",
+        },
+    )
+
+    response = client.patch(
+        f"/api/admin/impact-explanations/{draft.draft_id}",
+        headers={"X-CMSQI-Admin-Action": "review-impact-explanation"},
+        json={"decision": "reject", "output": None},
+    )
+
+    assert response.status_code == 409
+    assert response.json()["code"] == "impact_explanation_outdated"

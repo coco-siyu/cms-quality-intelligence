@@ -15,6 +15,22 @@ from app.schemas import (
 from app.services.impact_explanation import ImpactExplanationOutput
 
 
+def get_impact_explanation_draft(
+    session: Session,
+    *,
+    draft_id: str,
+) -> ImpactExplanationDraft | None:
+    return session.scalar(
+        select(ImpactExplanationDraft)
+        .where(ImpactExplanationDraft.draft_id == draft_id)
+        .options(
+            selectinload(ImpactExplanationDraft.citations)
+            .selectinload(ImpactExplanationCitation.comparison_evidence)
+            .selectinload(MeasureComparisonEvidence.evidence_reference)
+        )
+    )
+
+
 def impact_draft_response(
     draft: ImpactExplanationDraft,
 ) -> AdminImpactExplanationDraftResponse:
