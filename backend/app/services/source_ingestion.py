@@ -29,6 +29,7 @@ from app.models import (
     SourceTextSegment,
 )
 from app.services.source_registry import SourceRegistryError, validate_official_cms_url
+from app.services.source_staleness import mark_source_dependents_stale
 
 USER_AGENT = "CMS-Quality-Intelligence-source-ingestion/0.1"
 HTML_EXTRACTOR_VERSION = "stdlib-html-v1"
@@ -414,6 +415,7 @@ def fetch_registered_source(
         )
         session.add(revision)
         session.flush()
+        mark_source_dependents_stale(session, revision, detected_at=checked_at)
         outcome = SourceCheckOutcome.NEW_REVISION
     else:
         revision.last_source_check_at = checked_at

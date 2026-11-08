@@ -1,6 +1,6 @@
 # CMS Quality Intelligence — Implementation Backlog
 
-## Checkpoint status (November 4, 2026)
+## Checkpoint status (November 8, 2026)
 
 - Tasks 1, 2, 5–12: implemented and verified through Checkpoints A, B, C1,
   and C2.1–C2.5. The official PY2025–PY2026 roster has two-source evidence,
@@ -40,20 +40,23 @@
   evaluation harness, public comparison APIs, the verified-data Change
   Overview dashboard, evidence-backed side-by-side detail, and a chronological
   approved-change feed, plus a source-revision timeline that keeps CMS
-  publication, applicability, and effective dates distinct. Task 34 adds the
-  strict paired AI Impact output contract; Tasks 35–37 remain
-  open. A guarded publication bridge now prepares six deterministic
+  publication, applicability, and effective dates distinct. Tasks 34–37 define,
+  generate, evaluate, and publicly render a stored, evidence-grounded AI Impact
+  explanation pair while withholding unapproved or stale drafts. Task 51 remains
+  responsible for the admin edit-and-approve controls. A guarded publication
+  bridge now prepares six deterministic
   two-year roster comparisons, requires an append-only administrator decision,
   and keeps each record private until a separate publication action succeeds.
   The two one-sided roster records remain explicitly skipped rather than being
   inferred as additions or removals. Tasks
   44–46 and 48–49 provide AI
   clarification, durable ingestion progress, manual review, and the safe
-  partial-publication slice. Task 47 remains open. Task 31 now renders exact,
+  partial-publication slice. Task 50 now marks source-dependent versions,
+  pending candidates, completed draft reviews, comparison evidence, and impact
+  explanations stale when a new revision is detected. Task 47 remains open.
+  Task 31 now renders exact,
   evidence-backed side-by-side comparisons when the public API has an approved
-  record, with an explicit reference-only fallback when it does not. Tasks
-  35–37 remain open; AI Impact generation, evaluation, and display are not yet
-  production-backed.
+  record, with an explicit reference-only fallback when it does not.
 
 This backlog implements the scoped 2025–2026 MSSP / APP Plus MVP in independent, one-session work items. Tasks are ordered for incremental delivery (M1–M4), but each description provides enough context for an assignee to begin without reading preceding tasks. Keep all official CMS facts source-backed, treat unverified extractions as drafts, and do not use patient-level data. **This document is planning only; no implementation code is included.**
 
@@ -561,6 +564,21 @@ evidence; no AI explanation generation is implemented yet.
 ## 50. Mark reviews and explanations stale on source changes
 Goal: Prevent older verification decisions from appearing current after revisions.
 Description: When a new relevant CMS source revision is detected, flag affected pending reviews as outdated and require re-verification before publication. Change completed reviews to Needs Re-review when applicable, preserving prior approvals, sign-offs, and source history.
+
+Implementation status (complete, 2026-11-08): Creating a new content-hash
+revision now immediately locates measure versions, field candidates, comparison
+evidence, and impact explanations that cite an older revision of the same CMS
+source. Affected versions receive the existing newer-revision guard. Pending
+field candidates remain undecided but are explicitly labeled outdated; completed
+draft reviews receive an append-only system-authored Needs Revision event while
+their prior human decision remains in history. Draft comparison approvals follow
+the same audited transition. Published comparisons and fields retain immutable
+approval/publication metadata, but stale version and evidence guards withhold
+them from current comparison projection. Dependent explanation drafts receive an
+`outdated_at` timestamp, so even previously published pairs return the same
+public not-found boundary until a current pair is reviewed. Repeating staleness
+processing for the same revision is idempotent and does not duplicate audit
+events.
 
 ## 51. Build the AI explanation edit-and-approve workflow
 Goal: Publish only a jointly approved pair of role-specific explanations.

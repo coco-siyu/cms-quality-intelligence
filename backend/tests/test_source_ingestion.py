@@ -185,6 +185,53 @@ def test_changed_content_creates_a_new_immutable_revision(session: Session) -> N
     assert revisions[0].content_hash != revisions[1].content_hash
 
 
+def test_new_revisions_trigger_dependent_staleness_detection(
+    session: Session,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    source = _source(session)
+    settings = Settings(source_fetch_max_bytes=10_000)
+    bodies = iter(
+        [
+            b"<html><p>First official version.</p></html>",
+            b"<html><p>Second official version.</p></html>",
+        ]
+    )
+    detected_revision_numbers: list[int] = []
+
+    def capture_staleness(
+        _session: Session,
+        revision: SourceRevision,
+        *,
+        detected_at: object,
+    ) -> None:
+        assert detected_at is not None
+        detected_revision_numbers.append(revision.revision_number)
+
+    monkeypatch.setattr(
+        "app.services.source_ingestion.mark_source_dependents_stale",
+        capture_staleness,
+    )
+
+    def respond(_request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200, headers={"content-type": "text/html"}, content=next(bodies)
+        )
+
+    with _client(respond) as client:
+        for _ in range(2):
+            fetch_registered_source(
+                session,
+                source,
+                settings=settings,
+                checked_by="reviewer",
+                force=False,
+                client=client,
+            )
+
+    assert detected_revision_numbers == [1, 2]
+
+
 def test_redirects_are_revalidated_before_following(session: Session) -> None:
     source = _source(session)
 

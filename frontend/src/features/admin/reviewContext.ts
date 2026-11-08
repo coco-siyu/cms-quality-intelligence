@@ -41,6 +41,13 @@ export function extractionSignal(status: string): ExtractionSignal {
           "The field may not apply to this variant, but a reviewer must confirm that interpretation.",
         tone: "applicability",
       };
+    case "candidate_outdated_newer_source_revision":
+      return {
+        label: "New source review required",
+        description:
+          "A newer official source revision was detected. Review the latest evidence before approving this field.",
+        tone: "manual",
+      };
     default:
       return {
         label: "Unclassified review state",

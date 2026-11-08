@@ -94,6 +94,10 @@ API. The public detail page now reads one stored, human-approved pair and lets
 visitors switch roles locally without another API or model call. Pending,
 rejected, withdrawn, explicitly outdated, digest-stale, or evidence-stale
 explanations are withheld; the public UI shows an honest empty state instead.
+New content-hash source revisions now invalidate dependent review candidates,
+comparison evidence, and explanation drafts immediately. Prior human approvals
+and publication metadata remain auditable, while stale comparison and AI-impact
+records are withheld until re-review.
 A versioned fictional replay suite records schema and citation
 safeguard outcomes in
 [`docs/evaluations/impact-explanation-replay.md`](docs/evaluations/impact-explanation-replay.md).

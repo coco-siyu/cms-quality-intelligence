@@ -125,5 +125,8 @@ describe("admin candidate review context", () => {
     expect(extractionSignal("not_applicable_candidate_needs_sme_confirmation").label).toBe(
       "Applicability confirmation",
     );
+    expect(extractionSignal("candidate_outdated_newer_source_revision").label).toBe(
+      "New source review required",
+    );
   });
 });
