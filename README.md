@@ -289,7 +289,11 @@ Edits are saved only as reviewed wording; the provider result is never
 overwritten. **Approve pair** and **Reject pair** decide both perspectives
 together, while **Publish explanation** is a separate action enabled only after
 the underlying comparison is public. Stale drafts remain visible privately but
-cannot cross the public boundary.
+cannot cross the public boundary. When no version exists, **Generate explanation**
+creates the first private draft. **Regenerate** makes a new pending version and
+leaves prior generated, reviewed, and published versions unchanged in the
+version selector. Both actions require the optional provider configuration and
+may make a billable model request; neither action approves or publishes output.
 
 Optional AI features are disabled by default. To enable extraction clarification
 and/or semantic classification locally, set the shared API key plus the relevant

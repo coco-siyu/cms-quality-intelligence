@@ -605,6 +605,22 @@ provider action; manual regeneration of stale or rejected work remains Task 52.
 Goal: Refresh stale explanations without overwriting human work.
 Description: Flag explanations outdated after approved source/field edits and expose a protected Regenerate action. Create a new draft instead of overwriting the previous version, leaving existing accepted checklist tasks intact and showing new suggestions separately.
 
+Implementation status (complete for the explanation workflow, 2026-11-08):
+The protected admin folio now exposes an explicit initial Generate action and a
+separate Regenerate action backed by distinct guarded API operations. Ordinary
+generation remains idempotent, while regeneration always calls the configured
+provider and appends a pending private sequence for the current approved
+comparison input. Generated payloads, human-edited approved wording, decisions,
+citations, provider metadata, and publication timestamps on every prior version
+remain immutable and selectable in the private version history. Regeneration
+requires an existing draft plus currently approved, verified comparison
+evidence; it never republishes automatically. Publishing a newly reviewed
+version continues to withdraw, not delete, the prior public version. Task 50's
+outdated marker remains the fail-closed trigger after source revisions. No
+checklist tables exist before Tasks 54–56; this operation writes only a new
+explanation draft and citations, so it cannot overwrite future accepted or
+completed checklist work, and task-proposal reconciliation remains Task 55.
+
 ## 53. Test ingestion-to-publication integration
 Goal: Verify the complete official-source change pipeline.
 Description: Use controlled CMS-like PDF/HTML fixtures to test detection, extraction, clarification, verification, approval, and public visibility end to end. Include unchanged-source, uncertain-field, retry, unauthorized-admin-action, and newer-source-during-review scenarios.

@@ -316,6 +316,7 @@ def test_initial_migration_builds_and_reverts_schema(
         "model",
         "prompt_version",
         "input_digest",
+        "generation_sequence",
         "output_payload",
         "provider_response_id",
         "created_at",
@@ -337,8 +338,25 @@ def test_initial_migration_builds_and_reverts_schema(
         "impact_explanation_review_decision",
         "ck_impact_explanation_review_state",
         "ck_impact_explanation_publication_state",
+        "ck_impact_explanation_generation_sequence",
         "publication_state",
     }.issubset(impact_checks)
+    impact_unique_constraints = {
+        frozenset(constraint["column_names"])
+        for constraint in inspect(engine).get_unique_constraints(
+            "impact_explanation_drafts"
+        )
+    }
+    assert frozenset(
+        {
+            "comparison_id",
+            "provider",
+            "model",
+            "prompt_version",
+            "input_digest",
+            "generation_sequence",
+        }
+    ) in impact_unique_constraints
 
     command.downgrade(config, "base")
     assert inspect(engine).get_table_names() == ["alembic_version"]

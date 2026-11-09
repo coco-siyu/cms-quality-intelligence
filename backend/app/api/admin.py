@@ -158,6 +158,12 @@ def require_impact_generation_header(
     _require_comparison_action("generate-impact-explanation", action)
 
 
+def require_impact_regeneration_header(
+    action: Annotated[str, Header(alias="X-CMSQI-Admin-Action")],
+) -> None:
+    _require_comparison_action("regenerate-impact-explanation", action)
+
+
 def require_impact_review_header(
     action: Annotated[str, Header(alias="X-CMSQI-Admin-Action")],
 ) -> None:
@@ -174,6 +180,7 @@ ComparisonPrepareHeader = Annotated[None, Depends(require_comparison_prepare_hea
 ComparisonReviewHeader = Annotated[None, Depends(require_comparison_review_header)]
 ComparisonPublishHeader = Annotated[None, Depends(require_comparison_publish_header)]
 ImpactGenerationHeader = Annotated[None, Depends(require_impact_generation_header)]
+ImpactRegenerationHeader = Annotated[None, Depends(require_impact_regeneration_header)]
 ImpactReviewHeader = Annotated[None, Depends(require_impact_review_header)]
 ImpactPublishHeader = Annotated[None, Depends(require_impact_publish_header)]
 
@@ -388,6 +395,52 @@ def generate_admin_impact_explanation_draft(
     _action: ImpactGenerationHeader,
     comparison_id: Annotated[int, Path(ge=1)],
 ) -> AdminImpactExplanationDraftResponse:
+    return _generate_admin_impact_explanation_draft(
+        session,
+        admin=admin,
+        settings=settings,
+        comparison_id=comparison_id,
+        regenerate=False,
+    )
+
+
+@router.post(
+    "/comparisons/{comparison_id}/impact-explanations/regenerate",
+    response_model=AdminImpactExplanationDraftResponse,
+    operation_id="regenerateAdminImpactExplanationDraft",
+    responses={
+        **auth_responses,
+        403: {"model": ApiError, "description": "The admin action header is invalid."},
+        404: {"model": ApiError, "description": "The comparison was not found."},
+        409: {"model": ApiError, "description": "The comparison is not eligible."},
+        502: {"model": ApiError, "description": "The provider request failed."},
+        503: {"model": ApiError, "description": "Impact generation is not configured."},
+    },
+)
+def regenerate_admin_impact_explanation_draft(
+    session: DatabaseSession,
+    admin: AuthenticatedAdmin,
+    settings: ApplicationSettings,
+    _action: ImpactRegenerationHeader,
+    comparison_id: Annotated[int, Path(ge=1)],
+) -> AdminImpactExplanationDraftResponse:
+    return _generate_admin_impact_explanation_draft(
+        session,
+        admin=admin,
+        settings=settings,
+        comparison_id=comparison_id,
+        regenerate=True,
+    )
+
+
+def _generate_admin_impact_explanation_draft(
+    session: Session,
+    *,
+    admin: AdminIdentity,
+    settings: Settings,
+    comparison_id: int,
+    regenerate: bool,
+) -> AdminImpactExplanationDraftResponse:
     comparison = get_admin_comparison(session, comparison_id)
     if comparison is None:
         raise HTTPException(
@@ -405,6 +458,7 @@ def generate_admin_impact_explanation_draft(
             comparison,
             provider=provider,
             created_by=admin.username,
+            regenerate=regenerate,
         )
     except ImpactGenerationError as error:
         session.rollback()

@@ -9,7 +9,7 @@ from typing import Protocol
 from uuid import uuid4
 
 from openai import OpenAI
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.config import Settings
@@ -271,8 +271,14 @@ def generate_impact_explanation(
     *,
     provider: ImpactExplanationProvider,
     created_by: str,
+    regenerate: bool = False,
 ) -> ImpactExplanationDraft:
-    """Create one idempotent private draft without approving or publishing it."""
+    """Create one private draft without approving or publishing it.
+
+    Ordinary generation reuses an identical prior result. Explicit regeneration
+    appends a new sequence while retaining every prior generated and reviewed
+    version.
+    """
 
     if comparison.id is None:
         raise ImpactGenerationError(
@@ -281,7 +287,7 @@ def generate_impact_explanation(
         )
     approved, evidence, links_by_evidence_id = build_impact_generation_input(comparison)
     digest = compute_impact_input_digest(approved, evidence)
-    existing = session.scalar(
+    matching_draft_query = (
         select(ImpactExplanationDraft).where(
             ImpactExplanationDraft.comparison_id == comparison.id,
             ImpactExplanationDraft.provider == provider.provider_name,
@@ -289,9 +295,35 @@ def generate_impact_explanation(
             ImpactExplanationDraft.prompt_version == PROMPT_VERSION,
             ImpactExplanationDraft.input_digest == digest,
         )
+        .order_by(ImpactExplanationDraft.generation_sequence.desc())
     )
-    if existing is not None:
+    existing = session.scalar(matching_draft_query)
+    if existing is not None and not regenerate:
         return existing
+    if regenerate:
+        prior_draft_id = session.scalar(
+            select(ImpactExplanationDraft.id)
+            .where(ImpactExplanationDraft.comparison_id == comparison.id)
+            .limit(1)
+        )
+        if prior_draft_id is None:
+            raise ImpactGenerationError(
+                "impact_regeneration_requires_existing_draft",
+                "Generate the first impact explanation before regenerating it.",
+            )
+
+    generation_sequence = (
+        session.scalar(
+            select(func.max(ImpactExplanationDraft.generation_sequence)).where(
+                ImpactExplanationDraft.comparison_id == comparison.id,
+                ImpactExplanationDraft.provider == provider.provider_name,
+                ImpactExplanationDraft.model == provider.model_name,
+                ImpactExplanationDraft.prompt_version == PROMPT_VERSION,
+                ImpactExplanationDraft.input_digest == digest,
+            )
+        )
+        or 0
+    ) + 1
 
     result = provider.generate(comparison=approved, evidence=evidence)
     try:
@@ -306,6 +338,7 @@ def generate_impact_explanation(
         model=provider.model_name,
         prompt_version=PROMPT_VERSION,
         input_digest=digest,
+        generation_sequence=generation_sequence,
         output_payload=output.model_dump(mode="json"),
         provider_response_id=result.response_id,
         created_by=created_by,

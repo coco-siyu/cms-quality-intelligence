@@ -108,6 +108,17 @@ def test_runtime_openapi_exposes_contract_operation_ids_and_error_models() -> No
         ("/api/admin/normalized-fields/{field_candidate_id}/clarifications", "post"): (
             "clarifyAdminNormalizedField"
         ),
+        ("/api/admin/comparisons/{comparison_id}/impact-explanations", "get"): (
+            "listAdminImpactExplanationDrafts"
+        ),
+        (
+            "/api/admin/comparisons/{comparison_id}/impact-explanations/generate",
+            "post",
+        ): "generateAdminImpactExplanationDraft",
+        (
+            "/api/admin/comparisons/{comparison_id}/impact-explanations/regenerate",
+            "post",
+        ): "regenerateAdminImpactExplanationDraft",
         ("/api/admin/impact-explanations/{draft_id}", "patch"): (
             "reviewAdminImpactExplanationDraft"
         ),

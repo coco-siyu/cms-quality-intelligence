@@ -180,6 +180,7 @@ export type AdminImpactExplanationDraft = {
   model: string;
   prompt_version: string;
   input_digest: string;
+  generation_sequence: number;
   output: ImpactExplanationOutput;
   review_decision: "pending" | "approve" | "reject";
   approved_output: ImpactExplanationOutput | null;
@@ -482,6 +483,18 @@ export const adminApi = {
       { signal },
     );
   },
+  generateImpactExplanation(comparisonId: number, regenerate: boolean) {
+    const action = regenerate ? "regenerate" : "generate";
+    return adminRequest<AdminImpactExplanationDraft>(
+      `/api/admin/comparisons/${comparisonId}/impact-explanations/${action}`,
+      {
+        method: "POST",
+        headers: {
+          "X-CMSQI-Admin-Action": `${action}-impact-explanation`,
+        },
+      },
+    );
+  },
   reviewImpactExplanation(
     draftId: string,
     decision: "approve" | "reject",
@@ -709,6 +722,18 @@ export function useAdminImpactExplanationDrafts(
     queryFn: ({ signal }) => adminApi.impactExplanationDrafts(comparisonId ?? 0, signal),
     enabled: enabled && comparisonId !== null,
     retry: false,
+  });
+}
+
+export function useAdminImpactExplanationGeneration(comparisonId: number | null) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (regenerate: boolean) =>
+      adminApi.generateImpactExplanation(comparisonId ?? 0, regenerate),
+    onSuccess: () =>
+      void queryClient.invalidateQueries({
+        queryKey: ["admin-review", "impact-explanations", comparisonId],
+      }),
   });
 }
 

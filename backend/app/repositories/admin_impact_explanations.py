@@ -41,6 +41,7 @@ def impact_draft_response(
         model=draft.model,
         prompt_version=draft.prompt_version,
         input_digest=draft.input_digest,
+        generation_sequence=draft.generation_sequence,
         output=ImpactExplanationOutput.model_validate(draft.output_payload),
         review_decision=draft.review_decision,
         approved_output=(

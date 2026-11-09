@@ -117,6 +117,7 @@ def test_generation_persists_an_idempotent_private_cited_draft(
     assert repeated.id == first.id
     assert provider.calls == 1
     assert first.prompt_version == "cms-impact-explanation-v1"
+    assert first.generation_sequence == 1
     assert first.provider_response_id == "response-impact-test-001"
     assert first.output_payload["plain_language_summary"]["statement_type"] == "source_fact"
     assert len(first.input_digest) == 64
@@ -131,6 +132,60 @@ def test_generation_persists_an_idempotent_private_cited_draft(
         "DEMO-EVIDENCE-DEMO-001-2025",
         "DEMO-EVIDENCE-DEMO-001-2026",
     ]
+
+
+def test_regeneration_appends_a_new_private_version_and_preserves_review_history(
+    seeded_session: Session,
+) -> None:
+    comparison = _comparison(seeded_session)
+    provider = FakeImpactProvider()
+    first = generate_impact_explanation(
+        seeded_session, comparison, provider=provider, created_by="generator"
+    )
+    record_impact_explanation_review(
+        first,
+        decision=ImpactExplanationReviewDecision.REJECT,
+        output=None,
+        reviewer_name="reviewer",
+    )
+
+    regenerated = generate_impact_explanation(
+        seeded_session,
+        comparison,
+        provider=provider,
+        created_by="generator",
+        regenerate=True,
+    )
+    reused = generate_impact_explanation(
+        seeded_session, comparison, provider=provider, created_by="generator"
+    )
+    seeded_session.commit()
+
+    assert regenerated.id != first.id
+    assert regenerated.generation_sequence == 2
+    assert regenerated.review_decision == ImpactExplanationReviewDecision.PENDING
+    assert reused.id == regenerated.id
+    assert provider.calls == 2
+    assert first.review_decision == ImpactExplanationReviewDecision.REJECT
+    assert first.reviewed_by == "reviewer"
+    assert seeded_session.query(ImpactExplanationDraft).count() == 2
+
+
+def test_regeneration_requires_a_prior_private_version(seeded_session: Session) -> None:
+    provider = FakeImpactProvider()
+
+    with pytest.raises(ImpactGenerationError) as error:
+        generate_impact_explanation(
+            seeded_session,
+            _comparison(seeded_session),
+            provider=provider,
+            created_by="generator",
+            regenerate=True,
+        )
+
+    assert error.value.code == "impact_regeneration_requires_existing_draft"
+    assert provider.calls == 0
+    assert seeded_session.query(ImpactExplanationDraft).count() == 0
 
 
 def test_publishing_a_new_approved_version_withdraws_but_preserves_the_prior_version(
@@ -281,6 +336,10 @@ def test_only_authenticated_admins_can_read_private_drafts(
         f"/api/admin/impact-explanations/{draft.draft_id}/publish",
         headers={"X-CMSQI-Admin-Action": "publish-impact-explanation"},
     ).status_code == 401
+    assert client.post(
+        f"/api/admin/comparisons/{comparison.id}/impact-explanations/regenerate",
+        headers={"X-CMSQI-Admin-Action": "regenerate-impact-explanation"},
+    ).status_code == 401
     client.app.dependency_overrides[get_settings] = lambda: Settings(
         admin_username="reviewer",
         admin_password_hash=hash_admin_password(
@@ -307,6 +366,12 @@ def test_only_authenticated_admins_can_read_private_drafts(
     )
     assert not_configured.status_code == 503
     assert not_configured.json()["code"] == "impact_provider_not_configured"
+    regeneration_not_configured = client.post(
+        f"/api/admin/comparisons/{comparison.id}/impact-explanations/regenerate",
+        headers={"X-CMSQI-Admin-Action": "regenerate-impact-explanation"},
+    )
+    assert regeneration_not_configured.status_code == 503
+    assert regeneration_not_configured.json()["code"] == "impact_provider_not_configured"
     assert "impact" not in client.get(
         "/api/changes/DEMO-001",
         params={

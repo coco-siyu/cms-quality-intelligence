@@ -561,6 +561,57 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiError"
+  /api/admin/comparisons/{comparison_id}/impact-explanations/regenerate:
+    post:
+      operationId: regenerateAdminImpactExplanationDraft
+      tags: [Admin review]
+      summary: Append a regenerated private impact-explanation draft
+      description: |
+        Calls the configured structured-output provider after an explicit
+        administrator action and always creates a new private version. Prior
+        generated output, reviewed wording, decisions, publication metadata,
+        and citations remain unchanged. The action requires at least one prior
+        draft and currently approved comparison evidence.
+      security:
+        - AdminSessionCookie: []
+      parameters:
+        - name: comparison_id
+          in: path
+          required: true
+          schema: {type: integer, minimum: 1}
+        - name: X-CMSQI-Admin-Action
+          in: header
+          required: true
+          schema:
+            type: string
+            const: regenerate-impact-explanation
+      responses:
+        "200":
+          description: A newly generated, private, pending-review draft.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminImpactExplanationDraft"
+        "401":
+          $ref: "#/components/responses/AdminUnauthorized"
+        "403":
+          $ref: "#/components/responses/AdminActionForbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "502":
+          description: The configured structured-output provider request failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "503":
+          description: Impact generation is not configured.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
   /api/admin/impact-explanations/{draft_id}:
     patch:
       operationId: reviewAdminImpactExplanationDraft
@@ -1937,6 +1988,7 @@ components:
         - model
         - prompt_version
         - input_digest
+        - generation_sequence
         - output
         - review_decision
         - approved_output
@@ -1957,6 +2009,7 @@ components:
         model: {type: string}
         prompt_version: {type: string}
         input_digest: {type: string, minLength: 64, maxLength: 128}
+        generation_sequence: {type: integer, minimum: 1}
         output:
           $ref: "#/components/schemas/ImpactExplanationOutput"
         review_decision:

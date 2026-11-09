@@ -1,10 +1,11 @@
 import { useMemo, useState, type FormEvent } from "react";
-import { Check, ExternalLink, Globe2, ShieldAlert, X } from "lucide-react";
+import { Check, ExternalLink, Globe2, RefreshCw, ShieldAlert, X } from "lucide-react";
 
 import {
   type AdminComparison,
   type AdminImpactExplanationDraft,
   useAdminImpactExplanationDrafts,
+  useAdminImpactExplanationGeneration,
   useAdminImpactExplanationPublication,
   useAdminImpactExplanationReview,
 } from "../../features/admin/api";
@@ -130,6 +131,7 @@ export function AdminImpactReviewDialog({
     comparison?.comparison_id ?? null,
     comparison !== null,
   );
+  const generation = useAdminImpactExplanationGeneration(comparison?.comparison_id ?? null);
   const review = useAdminImpactExplanationReview(comparison?.comparison_id ?? null);
   const publication = useAdminImpactExplanationPublication(comparison?.comparison_id ?? null);
   const [selectedDraftId, setSelectedDraftId] = useState<string | null>(null);
@@ -200,8 +202,23 @@ export function AdminImpactReviewDialog({
     });
   }
 
+  function generate(regenerate: boolean) {
+    generation.mutate(regenerate, {
+      onSuccess: (draft) => setSelectedDraftId(draft.draft_id),
+    });
+  }
+
   const editable = selectedDraft?.review_decision === "pending" && !selectedDraft.outdated_at;
-  const actionError = review.error?.message ?? publication.error?.message;
+  const generationEligible =
+    comparison?.review_decision === "approve" && comparison.evidence_status === "verified";
+  const generationBlocker =
+    comparison?.review_decision !== "approve"
+      ? "Approve the comparison first."
+      : comparison.evidence_status !== "verified"
+        ? "Verify the comparison evidence first."
+        : undefined;
+  const actionError =
+    generation.error?.message ?? review.error?.message ?? publication.error?.message;
 
   return (
     <Dialog open={comparison !== null} onOpenChange={(open) => !open && onClose()}>
@@ -245,6 +262,18 @@ export function AdminImpactReviewDialog({
             <ShieldAlert aria-hidden="true" />
             <h3>No generated explanation is ready.</h3>
             <p>The approved comparison remains public without an AI interpretation.</p>
+            {generation.error && (
+              <p className="admin-form-error" role="alert">{generation.error.message}</p>
+            )}
+            <Button
+              type="button"
+              onClick={() => generate(false)}
+              disabled={!generationEligible || generation.isPending}
+              title={generationBlocker}
+            >
+              <RefreshCw aria-hidden="true" />
+              {generation.isPending ? "Generating…" : "Generate explanation"}
+            </Button>
           </div>
         )}
 
@@ -373,6 +402,16 @@ export function AdminImpactReviewDialog({
             {actionError && <p className="admin-form-error" role="alert">{actionError}</p>}
             <footer className="impact-review-actions">
               <Button type="button" variant="outline" onClick={onClose}>Close</Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => generate(true)}
+                disabled={!generationEligible || generation.isPending}
+                title={generationBlocker}
+              >
+                <RefreshCw aria-hidden="true" />
+                {generation.isPending ? "Regenerating…" : "Regenerate"}
+              </Button>
               {editable && (
                 <Button type="submit" disabled={review.isPending}>
                   {review.isPending ? "Saving…" : decision === "approve" ? "Approve pair" : "Reject pair"}

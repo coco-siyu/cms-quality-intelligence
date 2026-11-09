@@ -2,9 +2,9 @@
 
 Task 34 defines the provider-independent output shape for a paired Data Analyst
 and ACO Quality Manager explanation. Tasks 35 and 36 use that shape for private,
-evidence-bounded generation and deterministic safety evaluation. They do not
-approve content or change the public AI Impact tab; approval and display remain
-Task 37.
+evidence-bounded generation and deterministic safety evaluation. Tasks 37, 51,
+and 52 add fail-closed public display, joint human review, and append-only manual
+regeneration without changing the output contract.
 
 ## Output sections
 
@@ -48,6 +48,23 @@ correct. Generation therefore uses only approved comparisons and official
 excerpts, and the Task 36 replay tests the enforceable schema and citation
 boundary. Human reviewers must still evaluate factual accuracy, unsupported
 claims, and role usefulness before Task 37 publication.
+
+## Versioning and regeneration
+
+- Initial generation is idempotent for one comparison, provider, model, prompt,
+  and exact evidence input.
+- Manual regeneration is a separate authenticated action. It always creates a
+  newly pending private sequence and never changes a prior generated payload or
+  review decision.
+- Rejected, outdated, approved, published, and withdrawn versions remain in the
+  private history. A newly approved version replaces the public projection only
+  through the separate publication action.
+- Regeneration requires a currently approved comparison with verified evidence.
+  It does not clear an outdated marker from an older version or publish content
+  automatically.
+- The regeneration service writes only the new explanation and its citations.
+  Checklist persistence begins in Task 54, so later checklist reconciliation
+  can preserve accepted and completed work independently of explanation versions.
 
 ## Fictional example
 

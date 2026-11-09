@@ -226,6 +226,7 @@ describe("private admin review workspace", () => {
       model: "test-impact-model",
       prompt_version: "cms-impact-explanation-v1",
       input_digest: "a".repeat(64),
+      generation_sequence: 1,
       output: impactOutput,
       review_decision: "pending" as "pending" | "approve" | "reject",
       approved_output: null as typeof impactOutput | null,
@@ -241,6 +242,7 @@ describe("private admin review workspace", () => {
       created_by: "reviewer",
     };
     let prepared = false;
+    let impactReady = false;
     let comparison: AdminComparison = baseComparison;
     const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
@@ -309,7 +311,33 @@ describe("private admin review workspace", () => {
         return Promise.resolve(jsonResponse(comparison));
       }
       if (url.endsWith("/api/admin/comparisons/41/impact-explanations") && !init?.method) {
-        return Promise.resolve(jsonResponse({ items: [impactDraft] }));
+        return Promise.resolve(jsonResponse({ items: impactReady ? [impactDraft] : [] }));
+      }
+      if (
+        url.endsWith("/api/admin/comparisons/41/impact-explanations/generate") &&
+        init?.method === "POST"
+      ) {
+        impactReady = true;
+        return Promise.resolve(jsonResponse(impactDraft));
+      }
+      if (
+        url.endsWith("/api/admin/comparisons/41/impact-explanations/regenerate") &&
+        init?.method === "POST"
+      ) {
+        impactDraft = {
+          ...impactDraft,
+          draft_id: "CMS-IMPACT-002",
+          generation_sequence: 2,
+          review_decision: "pending",
+          approved_output: null,
+          reviewed_at: null,
+          reviewed_by: null,
+          publication_state: "draft",
+          published_at: null,
+          published_by: null,
+          created_at: "2026-11-08T12:10:00Z",
+        };
+        return Promise.resolve(jsonResponse(impactDraft));
       }
       if (url.endsWith("/api/admin/impact-explanations/CMS-IMPACT-001") && init?.method === "PATCH") {
         const body = JSON.parse(String(init.body)) as {
@@ -382,6 +410,24 @@ describe("private admin review workspace", () => {
     fireEvent.click(screen.getByRole("button", { name: "Review AI impact 001" }));
     expect(await screen.findByRole("heading", { name: "001 · Potential impact" }))
       .toBeInTheDocument();
+    expect(await screen.findByText("No generated explanation is ready."))
+      .toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Generate explanation" }));
+    await waitFor(() => {
+      expect(
+        fetchMock.mock.calls.some(([input]) =>
+          String(input).endsWith(
+            "/api/admin/comparisons/41/impact-explanations/generate",
+          ),
+        ),
+      ).toBe(true);
+    });
+    const generationCall = fetchMock.mock.calls.find(([input]) =>
+      String(input).endsWith("/api/admin/comparisons/41/impact-explanations/generate"),
+    );
+    expect(generationCall?.[1]?.headers).toMatchObject({
+      "X-CMSQI-Admin-Action": "generate-impact-explanation",
+    });
     fireEvent.change(await screen.findByLabelText("Technical implications 1"), {
       target: { value: "Analysts may retain the reviewed year-over-year mapping." },
     });
@@ -410,6 +456,26 @@ describe("private admin review workspace", () => {
     expect(impactPublishCall?.[1]?.headers).toMatchObject({
       "X-CMSQI-Admin-Action": "publish-impact-explanation",
     });
+
+    fireEvent.click(screen.getByRole("button", { name: "Regenerate" }));
+    await waitFor(() => {
+      expect(
+        fetchMock.mock.calls.some(([input]) =>
+          String(input).endsWith(
+            "/api/admin/comparisons/41/impact-explanations/regenerate",
+          ),
+        ),
+      ).toBe(true);
+    });
+    const regenerationCall = fetchMock.mock.calls.find(([input]) =>
+      String(input).endsWith(
+        "/api/admin/comparisons/41/impact-explanations/regenerate",
+      ),
+    );
+    expect(regenerationCall?.[1]?.headers).toMatchObject({
+      "X-CMSQI-Admin-Action": "regenerate-impact-explanation",
+    });
+    expect(await screen.findByRole("button", { name: "Approve pair" })).toBeEnabled();
   });
 
   it("loads a private measure directly with source provenance", async () => {

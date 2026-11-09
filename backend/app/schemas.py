@@ -189,6 +189,7 @@ class AdminImpactExplanationDraftResponse(BaseModel):
     model: str
     prompt_version: str
     input_digest: str
+    generation_sequence: int = Field(ge=1)
     output: ImpactExplanationOutput
     review_decision: ImpactExplanationReviewDecision
     approved_output: ImpactExplanationOutput | None

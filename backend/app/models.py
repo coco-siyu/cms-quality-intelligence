@@ -1139,6 +1139,7 @@ class ImpactExplanationDraft(Base):
             "model",
             "prompt_version",
             "input_digest",
+            "generation_sequence",
             name="uq_impact_explanation_input",
         ),
         CheckConstraint(
@@ -1158,6 +1159,10 @@ class ImpactExplanationDraft(Base):
             "AND review_decision = 'approve')",
             name="ck_impact_explanation_publication_state",
         ),
+        CheckConstraint(
+            "generation_sequence >= 1",
+            name="ck_impact_explanation_generation_sequence",
+        ),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -1169,13 +1174,16 @@ class ImpactExplanationDraft(Base):
     model: Mapped[str] = mapped_column(String(160))
     prompt_version: Mapped[str] = mapped_column(String(120))
     input_digest: Mapped[str] = mapped_column(String(128))
+    generation_sequence: Mapped[int] = mapped_column(Integer, default=1)
     output_payload: Mapped[dict[str, object]] = mapped_column(JSON)
     review_decision: Mapped[ImpactExplanationReviewDecision] = mapped_column(
         impact_explanation_review_decision_enum,
         default=ImpactExplanationReviewDecision.PENDING,
         index=True,
     )
-    approved_output_payload: Mapped[dict[str, object] | None] = mapped_column(JSON)
+    approved_output_payload: Mapped[dict[str, object] | None] = mapped_column(
+        JSON(none_as_null=True)
+    )
     reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     reviewed_by: Mapped[str | None] = mapped_column(String(200))
     publication_state: Mapped[PublicationState] = mapped_column(
