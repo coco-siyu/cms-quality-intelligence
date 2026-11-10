@@ -2,7 +2,7 @@ SHELL := /bin/bash
 
 .DEFAULT_GOAL := help
 
-.PHONY: help setup db dev containers container-logs stop seed preview-data admin-credentials smoke check security-check backend-check frontend-check
+.PHONY: help setup db dev containers container-logs stop seed preview-data admin-credentials smoke integration-test check security-check backend-check frontend-check
 
 help:
 	@echo "CMS Quality Intelligence local commands"
@@ -15,6 +15,7 @@ help:
 	@echo "  make containers         Build and start the complete containerized application"
 	@echo "  make container-logs     Follow logs from the containerized application"
 	@echo "  make smoke              Check frontend, API, and database-backed endpoint"
+	@echo "  make integration-test   Test the isolated three-service Compose stack"
 	@echo "  make security-check     Check tracked files for common credential leaks"
 	@echo "  make stop               Stop all Docker Compose services"
 	@echo "  make check              Run backend and frontend verification"
@@ -48,6 +49,9 @@ container-logs:
 
 smoke:
 	./scripts/smoke.sh
+
+integration-test: .env
+	./scripts/test-compose.sh
 
 stop:
 	docker compose stop

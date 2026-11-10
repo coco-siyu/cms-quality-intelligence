@@ -178,6 +178,12 @@ frontend, API health, and a database-backed endpoint. Repeat that check with
 `make smoke`, follow output with `make container-logs`, and stop the stack with
 `make stop`.
 
+Run `make integration-test` for the black-box container suite. It creates an
+isolated Compose project and PostgreSQL volume, tests the frontend, proxy, API,
+authentication boundary, reviewed preview roster, and restart persistence, then
+removes the test stack. The full scenario list and diagnostic option are in
+[`tests/integration/README.md`](tests/integration/README.md).
+
 To seed private reviewed-draft artifacts inside the containerized backend:
 
 ```sh
