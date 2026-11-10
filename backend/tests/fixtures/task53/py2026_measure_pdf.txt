@@ -1,0 +1,1 @@
+Controlled Task 53 fixture. CMS eCQM ID: CMS999v2 Performance Year 2026 eCQM Quality ID: 999 Measure Title: Controlled Integration Measure Description: Controlled 2026 definition for integration testing only. Numerator: Controlled 2026 numerator for integration testing only.

@@ -625,6 +625,19 @@ completed checklist work, and task-proposal reconciliation remains Task 55.
 Goal: Verify the complete official-source change pipeline.
 Description: Use controlled CMS-like PDF/HTML fixtures to test detection, extraction, clarification, verification, approval, and public visibility end to end. Include unchanged-source, uncertain-field, retry, unauthorized-admin-action, and newer-source-during-review scenarios.
 
+Implementation status (complete, 2026-11-08): A controlled integration suite now
+drives explicitly fictional CMS-like HTML and machine-readable PDF fixtures through
+source retrieval, immutable revision creation, extraction, deterministic
+normalization, evidence-bounded clarification, source verification, field review and
+publication, deterministic comparison review and publication, and reviewed impact
+explanation publication. Public API assertions verify that measures, comparisons, and
+impact wording remain unavailable until their own guarded publication step, while
+unresolved and AI-proposed wording remains private. The suite also covers unchanged
+content idempotency, a failed retrieval recovered by a later bounded run, rejected
+unauthenticated admin mutation, and a newer source revision reopening a completed
+review without erasing its prior approval event. Repository-wide backend and frontend
+verification passes through `make check`.
+
 ## M4 — Review Workflow, Export, Hardening, and Delivery
 
 ## 54. Define checklist and review audit schemas
