@@ -644,9 +644,37 @@ verification passes through `make check`.
 Goal: Model editable tasks and durable review history.
 Description: Add persistence for role-tagged checklist items, accepted suggestions, task states, reviews, sign-offs, and append-only review events. Design changes so regeneration and reopening cannot erase previous completion or reviewer actions.
 
+Implementation status (complete, 2026-11-10): Alembic and SQLAlchemy now model
+one durable review per comparison, role-tagged generated proposals, separately
+accepted checklist items, explicit task and review states, immutable sign-off
+snapshots, and sequenced append-only review events. Proposals retain the exact
+impact-explanation draft that generated them, while accepted tasks, prior
+completion metadata, sign-offs, and events remain independent historical records.
+Database constraints reject incomplete completion/decision metadata and sign-off
+snapshots whose accepted/resolved counts disagree. Task 58 will validate those
+snapshot counts against the active checklist before sign-off. Migration and
+persistence tests verify that explanation regeneration and review reopening append
+new records without erasing earlier reviewer actions. No public or administrative
+API behavior changes
+in this schema-only task; proposal generation remains Task 55.
+
 ## 55. Generate role-tagged impact task proposals
 Goal: Suggest actionable technical and operational follow-up tasks.
 Description: Generate structured suggestions from approved CMS changes with Data Analyst and/or ACO Quality Manager tags and supporting evidence. Keep proposed tasks separate from accepted checklist items so an admin controls what enters the active workflow.
+
+Implementation status (complete, 2026-11-10): A strict structured-output contract
+now generates concise Data Analyst, ACO Quality Manager, or shared follow-up
+proposals only from a current human-approved impact explanation, its approved
+comparison, and the exact verified official evidence excerpts. Every proposal has
+validated evidence citations, provider/model/prompt/input provenance, and remains a
+private pending suggestion rather than an accepted checklist item. Generation is
+idempotent for one explanation version; a regenerated explanation receives a
+separate proposal batch without replacing older suggestions or reviewer history.
+Authenticated list/generate endpoints and the formal OpenAPI contract preserve the
+public/private boundary. Tests cover unsupported citations, production-SQL
+rejection, unapproved and outdated explanations, authentication, audit events,
+version separation, and provider configuration. Accepting or editing proposals
+remains Task 56.
 
 ## 56. Build the interactive impact checklist
 Goal: Let the admin manage one shared checklist per review.

@@ -24,9 +24,11 @@ from app.domain import (
     NormalizedStagingStatus,
     PublicationState,
     PublicVerificationStatus,
+    ReviewRole,
     SourceCheckOutcome,
     SourceExtractionStatus,
     SourceNormalizationStatus,
+    TaskProposalStatus,
 )
 from app.services.impact_explanation import ImpactExplanationOutput
 
@@ -207,6 +209,31 @@ class AdminImpactExplanationDraftResponse(BaseModel):
 
 class AdminImpactExplanationDraftPage(BaseModel):
     items: list[AdminImpactExplanationDraftResponse]
+
+
+class AdminImpactTaskProposalResponse(BaseModel):
+    proposal_id: str
+    review_id: str
+    impact_explanation_draft_id: str
+    sequence: int = Field(ge=1)
+    role: ReviewRole
+    title: str
+    description: str | None
+    status: TaskProposalStatus
+    evidence: list[ChangeFieldEvidenceResponse]
+    provider: str
+    model: str
+    prompt_version: str
+    input_digest: str
+    provider_response_id: str | None
+    decided_at: datetime | None
+    decided_by: str | None
+    created_at: datetime
+    created_by: str
+
+
+class AdminImpactTaskProposalPage(BaseModel):
+    items: list[AdminImpactTaskProposalResponse]
 
 
 class AdminImpactExplanationReviewRequest(BaseModel):

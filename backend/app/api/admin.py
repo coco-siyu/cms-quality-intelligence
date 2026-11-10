@@ -40,6 +40,10 @@ from app.repositories.admin_reviews import (
     list_private_measures,
     review_summary,
 )
+from app.repositories.admin_task_proposals import (
+    list_task_proposal_models,
+    task_proposal_page,
+)
 from app.schemas import (
     AdminCandidateDecisionRequest,
     AdminComparisonDecisionRequest,
@@ -51,6 +55,7 @@ from app.schemas import (
     AdminImpactExplanationDraftPage,
     AdminImpactExplanationDraftResponse,
     AdminImpactExplanationReviewRequest,
+    AdminImpactTaskProposalPage,
     AdminLoginRequest,
     AdminMeasureDetail,
     AdminMeasurePage,
@@ -65,6 +70,14 @@ from app.services.ai_impact_explanation import (
 )
 from app.services.ai_impact_explanation import (
     provider_from_settings as impact_provider_from_settings,
+)
+from app.services.ai_impact_task_proposals import (
+    ImpactTaskGenerationError,
+    ImpactTaskProviderError,
+    generate_impact_task_proposals,
+)
+from app.services.ai_impact_task_proposals import (
+    provider_from_settings as task_proposal_provider_from_settings,
 )
 from app.services.comparison_publication import (
     ComparisonPublicationError,
@@ -176,6 +189,12 @@ def require_impact_publish_header(
     _require_comparison_action("publish-impact-explanation", action)
 
 
+def require_task_proposal_generation_header(
+    action: Annotated[str, Header(alias="X-CMSQI-Admin-Action")],
+) -> None:
+    _require_comparison_action("generate-task-proposals", action)
+
+
 ComparisonPrepareHeader = Annotated[None, Depends(require_comparison_prepare_header)]
 ComparisonReviewHeader = Annotated[None, Depends(require_comparison_review_header)]
 ComparisonPublishHeader = Annotated[None, Depends(require_comparison_publish_header)]
@@ -183,6 +202,7 @@ ImpactGenerationHeader = Annotated[None, Depends(require_impact_generation_heade
 ImpactRegenerationHeader = Annotated[None, Depends(require_impact_regeneration_header)]
 ImpactReviewHeader = Annotated[None, Depends(require_impact_review_header)]
 ImpactPublishHeader = Annotated[None, Depends(require_impact_publish_header)]
+TaskProposalGenerationHeader = Annotated[None, Depends(require_task_proposal_generation_header)]
 
 
 def _session_response(request: Request, settings: Settings) -> AdminSessionResponse:
@@ -224,9 +244,7 @@ def login(
             },
         )
     username_matches = hmac.compare_digest(credentials.username, settings.admin_username)
-    password_matches = verify_admin_password(
-        credentials.password, settings.admin_password_hash
-    )
+    password_matches = verify_admin_password(credentials.password, settings.admin_password_hash)
     if not username_matches or not password_matches:
         raise HTTPException(
             status_code=401,
@@ -373,6 +391,90 @@ def admin_impact_explanation_drafts(
             },
         )
     return list_impact_explanation_drafts(session, comparison_id=comparison_id)
+
+
+@router.get(
+    "/impact-explanations/{draft_id}/task-proposals",
+    response_model=AdminImpactTaskProposalPage,
+    operation_id="listAdminImpactTaskProposals",
+    responses={
+        **auth_responses,
+        404: {"model": ApiError, "description": "The explanation draft was not found."},
+    },
+)
+def admin_impact_task_proposals(
+    session: DatabaseSession,
+    _admin: AuthenticatedAdmin,
+    draft_id: Annotated[str, Path(min_length=1, max_length=120)],
+) -> AdminImpactTaskProposalPage:
+    proposals = list_task_proposal_models(session, draft_id=draft_id)
+    if proposals is None:
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "code": "not_found",
+                "message": f"Impact explanation draft '{draft_id}' was not found.",
+                "details": [],
+            },
+        )
+    return task_proposal_page(proposals)
+
+
+@router.post(
+    "/impact-explanations/{draft_id}/task-proposals/generate",
+    response_model=AdminImpactTaskProposalPage,
+    operation_id="generateAdminImpactTaskProposals",
+    responses={
+        **auth_responses,
+        403: {"model": ApiError, "description": "The admin action header is invalid."},
+        404: {"model": ApiError, "description": "The explanation draft was not found."},
+        409: {"model": ApiError, "description": "The explanation is not eligible."},
+        502: {"model": ApiError, "description": "The provider request failed."},
+        503: {"model": ApiError, "description": "Task generation is not configured."},
+    },
+)
+def generate_admin_impact_task_proposals(
+    session: DatabaseSession,
+    admin: AuthenticatedAdmin,
+    settings: ApplicationSettings,
+    _action: TaskProposalGenerationHeader,
+    draft_id: Annotated[str, Path(min_length=1, max_length=120)],
+) -> AdminImpactTaskProposalPage:
+    draft = get_impact_explanation_draft(session, draft_id=draft_id)
+    if draft is None:
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "code": "not_found",
+                "message": f"Impact explanation draft '{draft_id}' was not found.",
+                "details": [],
+            },
+        )
+    try:
+        provider = task_proposal_provider_from_settings(settings)
+        generate_impact_task_proposals(
+            session,
+            draft,
+            provider=provider,
+            created_by=admin.username,
+        )
+    except ImpactTaskGenerationError as error:
+        session.rollback()
+        status_code = 503 if error.code == "task_proposal_provider_not_configured" else 409
+        raise HTTPException(
+            status_code=status_code,
+            detail={"code": error.code, "message": error.message, "details": []},
+        ) from error
+    except ImpactTaskProviderError as error:
+        session.rollback()
+        raise HTTPException(
+            status_code=502,
+            detail={"code": error.code, "message": error.message, "details": []},
+        ) from error
+    session.commit()
+    proposals = list_task_proposal_models(session, draft_id=draft_id)
+    assert proposals is not None
+    return task_proposal_page(proposals)
 
 
 @router.post(

@@ -23,6 +23,7 @@ from app.domain import (
     CandidateReviewDecision,
     ChangeEvidenceSide,
     ChangeStatus,
+    ChecklistTaskStatus,
     ClarificationEvidenceRelation,
     ClarificationOutcome,
     CollectionType,
@@ -32,15 +33,19 @@ from app.domain import (
     ImpactExplanationReviewDecision,
     IngestionItemStage,
     IngestionRunStatus,
+    MeasureReviewStatus,
     NormalizedFieldStatus,
     NormalizedIdentityStatus,
     NormalizedStagingStatus,
     PublicationState,
     PublicVerificationStatus,
+    ReviewEventType,
+    ReviewRole,
     SemanticClassification,
     SourceCheckOutcome,
     SourceExtractionStatus,
     SourceNormalizationStatus,
+    TaskProposalStatus,
 )
 
 
@@ -219,6 +224,41 @@ ingestion_item_stage_enum = Enum(
 impact_explanation_review_decision_enum = Enum(
     ImpactExplanationReviewDecision,
     name="impact_explanation_review_decision",
+    native_enum=False,
+    create_constraint=True,
+    values_callable=lambda values: [value.value for value in values],
+)
+measure_review_status_enum = Enum(
+    MeasureReviewStatus,
+    name="measure_review_status",
+    native_enum=False,
+    create_constraint=True,
+    values_callable=lambda values: [value.value for value in values],
+)
+review_role_enum = Enum(
+    ReviewRole,
+    name="review_role",
+    native_enum=False,
+    create_constraint=True,
+    values_callable=lambda values: [value.value for value in values],
+)
+task_proposal_status_enum = Enum(
+    TaskProposalStatus,
+    name="task_proposal_status",
+    native_enum=False,
+    create_constraint=True,
+    values_callable=lambda values: [value.value for value in values],
+)
+checklist_task_status_enum = Enum(
+    ChecklistTaskStatus,
+    name="checklist_task_status",
+    native_enum=False,
+    create_constraint=True,
+    values_callable=lambda values: [value.value for value in values],
+)
+review_event_type_enum = Enum(
+    ReviewEventType,
+    name="review_event_type",
     native_enum=False,
     create_constraint=True,
     values_callable=lambda values: [value.value for value in values],
@@ -412,9 +452,7 @@ class SourceNormalization(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
     created_by: Mapped[str] = mapped_column(String(200))
 
-    source_extraction: Mapped[SourceExtraction] = relationship(
-        back_populates="normalizations"
-    )
+    source_extraction: Mapped[SourceExtraction] = relationship(back_populates="normalizations")
     measure_candidates: Mapped[list["NormalizedMeasureCandidate"]] = relationship(
         back_populates="normalization", cascade="all, delete-orphan"
     )
@@ -449,9 +487,7 @@ class NormalizedMeasureCandidate(Base):
     )
     issues: Mapped[str | None] = mapped_column(Text)
 
-    normalization: Mapped[SourceNormalization] = relationship(
-        back_populates="measure_candidates"
-    )
+    normalization: Mapped[SourceNormalization] = relationship(back_populates="measure_candidates")
     matched_measure_version: Mapped["MeasureVersion | None"] = relationship(
         back_populates="normalized_candidates"
     )
@@ -480,9 +516,7 @@ class NormalizedFieldCandidate(Base):
     )
     field_name: Mapped[str] = mapped_column(String(80))
     candidate_value: Mapped[str | None] = mapped_column(Text)
-    status: Mapped[NormalizedFieldStatus] = mapped_column(
-        normalized_field_status_enum, index=True
-    )
+    status: Mapped[NormalizedFieldStatus] = mapped_column(normalized_field_status_enum, index=True)
     source_text_segment_id: Mapped[int | None] = mapped_column(
         ForeignKey("source_text_segments.id", ondelete="RESTRICT")
     )
@@ -495,9 +529,7 @@ class NormalizedFieldCandidate(Base):
         ForeignKey("specification_field_candidates.id", ondelete="RESTRICT")
     )
 
-    measure_candidate: Mapped[NormalizedMeasureCandidate] = relationship(
-        back_populates="fields"
-    )
+    measure_candidate: Mapped[NormalizedMeasureCandidate] = relationship(back_populates="fields")
     source_text_segment: Mapped[SourceTextSegment | None] = relationship(
         back_populates="normalized_fields"
     )
@@ -536,9 +568,7 @@ class AIClarificationProposal(Base):
     model: Mapped[str] = mapped_column(String(160))
     prompt_version: Mapped[str] = mapped_column(String(120))
     input_digest: Mapped[str] = mapped_column(String(128))
-    outcome: Mapped[ClarificationOutcome] = mapped_column(
-        clarification_outcome_enum, index=True
-    )
+    outcome: Mapped[ClarificationOutcome] = mapped_column(clarification_outcome_enum, index=True)
     proposed_value: Mapped[str | None] = mapped_column(Text)
     summary: Mapped[str] = mapped_column(Text)
     provider_response_id: Mapped[str | None] = mapped_column(String(200))
@@ -575,9 +605,7 @@ class AIClarificationEvidence(Base):
     )
     explanation: Mapped[str] = mapped_column(Text)
 
-    clarification: Mapped[AIClarificationProposal] = relationship(
-        back_populates="evidence"
-    )
+    clarification: Mapped[AIClarificationProposal] = relationship(back_populates="evidence")
     source_text_segment: Mapped[SourceTextSegment] = relationship(
         back_populates="clarification_evidence"
     )
@@ -613,9 +641,7 @@ class SourceCheck(Base):
     source_document: Mapped[SourceDocument] = relationship(back_populates="checks")
     source_revision: Mapped[SourceRevision | None] = relationship(back_populates="checks")
     extraction: Mapped[SourceExtraction | None] = relationship(back_populates="checks")
-    ingestion_items: Mapped[list["IngestionRunItem"]] = relationship(
-        back_populates="source_check"
-    )
+    ingestion_items: Mapped[list["IngestionRunItem"]] = relationship(back_populates="source_check")
 
 
 class IngestionRun(Base):
@@ -830,9 +856,7 @@ class SpecificationFieldCandidateReview(Base):
     reviewer_notes: Mapped[str | None] = mapped_column(Text)
     imported_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
-    field_candidate: Mapped[SpecificationFieldCandidate] = relationship(
-        back_populates="reviews"
-    )
+    field_candidate: Mapped[SpecificationFieldCandidate] = relationship(back_populates="reviews")
 
 
 class SpecificationField(Base):
@@ -953,6 +977,9 @@ class MeasureComparison(Base):
     impact_explanation_drafts: Mapped[list["ImpactExplanationDraft"]] = relationship(
         back_populates="comparison", cascade="all, delete-orphan"
     )
+    measure_review: Mapped["MeasureReview | None"] = relationship(
+        back_populates="comparison", uselist=False
+    )
 
 
 class MeasureComparisonReview(Base):
@@ -1029,9 +1056,7 @@ class MeasureComparisonField(Base):
 
 class MeasureComparisonEvidence(Base):
     __tablename__ = "measure_comparison_evidence"
-    __table_args__ = (
-        UniqueConstraint("comparison_field_id", "evidence_reference_id", "side"),
-    )
+    __table_args__ = (UniqueConstraint("comparison_field_id", "evidence_reference_id", "side"),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
     comparison_field_id: Mapped[int] = mapped_column(
@@ -1042,16 +1067,15 @@ class MeasureComparisonEvidence(Base):
     )
     side: Mapped[ChangeEvidenceSide] = mapped_column(change_evidence_side_enum)
 
-    comparison_field: Mapped[MeasureComparisonField] = relationship(
-        back_populates="evidence_links"
-    )
-    evidence_reference: Mapped[EvidenceReference] = relationship(
-        back_populates="comparison_links"
-    )
+    comparison_field: Mapped[MeasureComparisonField] = relationship(back_populates="evidence_links")
+    evidence_reference: Mapped[EvidenceReference] = relationship(back_populates="comparison_links")
     semantic_citations: Mapped[list["SemanticClassificationCitation"]] = relationship(
         back_populates="comparison_evidence"
     )
     impact_citations: Mapped[list["ImpactExplanationCitation"]] = relationship(
+        back_populates="comparison_evidence"
+    )
+    task_proposal_citations: Mapped[list["ReviewTaskProposalCitation"]] = relationship(
         back_populates="comparison_evidence"
     )
 
@@ -1120,9 +1144,7 @@ class SemanticClassificationCitation(Base):
         ForeignKey("measure_comparison_evidence.id", ondelete="CASCADE")
     )
 
-    proposal: Mapped[SemanticClassificationProposal] = relationship(
-        back_populates="citations"
-    )
+    proposal: Mapped[SemanticClassificationProposal] = relationship(back_populates="citations")
     comparison_evidence: Mapped[MeasureComparisonEvidence] = relationship(
         back_populates="semantic_citations"
     )
@@ -1200,6 +1222,9 @@ class ImpactExplanationDraft(Base):
     citations: Mapped[list["ImpactExplanationCitation"]] = relationship(
         back_populates="draft", cascade="all, delete-orphan"
     )
+    task_proposals: Mapped[list["ReviewTaskProposal"]] = relationship(
+        back_populates="impact_explanation_draft"
+    )
 
 
 class ImpactExplanationCitation(Base):
@@ -1218,3 +1243,215 @@ class ImpactExplanationCitation(Base):
     comparison_evidence: Mapped[MeasureComparisonEvidence] = relationship(
         back_populates="impact_citations"
     )
+
+
+class MeasureReview(Base):
+    """One durable internal review and shared checklist for a comparison."""
+
+    __tablename__ = "measure_reviews"
+    __table_args__ = (
+        CheckConstraint(
+            "(status = 'completed' AND completed_at IS NOT NULL "
+            "AND completed_by IS NOT NULL) OR "
+            "(status != 'completed' AND completed_at IS NULL "
+            "AND completed_by IS NULL)",
+            name="ck_measure_review_completion_state",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    review_id: Mapped[str] = mapped_column(String(120), unique=True, index=True)
+    comparison_id: Mapped[int] = mapped_column(
+        ForeignKey("measure_comparisons.id", ondelete="RESTRICT"), unique=True
+    )
+    status: Mapped[MeasureReviewStatus] = mapped_column(
+        measure_review_status_enum, default=MeasureReviewStatus.PENDING, index=True
+    )
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    completed_by: Mapped[str | None] = mapped_column(String(200))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    created_by: Mapped[str] = mapped_column(String(200))
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, onupdate=utc_now
+    )
+
+    comparison: Mapped[MeasureComparison] = relationship(back_populates="measure_review")
+    task_proposals: Mapped[list["ReviewTaskProposal"]] = relationship(back_populates="review")
+    checklist_items: Mapped[list["ReviewChecklistItem"]] = relationship(back_populates="review")
+    signoffs: Mapped[list["ReviewSignOff"]] = relationship(back_populates="review")
+    events: Mapped[list["ReviewEvent"]] = relationship(back_populates="review")
+
+
+class ReviewTaskProposal(Base):
+    """A generated suggestion kept separate from the accepted checklist."""
+
+    __tablename__ = "review_task_proposals"
+    __table_args__ = (
+        UniqueConstraint("impact_explanation_draft_id", "sequence"),
+        CheckConstraint("sequence >= 1", name="ck_review_task_proposal_sequence"),
+        CheckConstraint(
+            "(status = 'pending' AND decided_at IS NULL AND decided_by IS NULL) OR "
+            "(status IN ('accepted', 'dismissed') AND decided_at IS NOT NULL "
+            "AND decided_by IS NOT NULL)",
+            name="ck_review_task_proposal_decision_state",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    proposal_id: Mapped[str] = mapped_column(String(120), unique=True, index=True)
+    review_id: Mapped[int] = mapped_column(
+        ForeignKey("measure_reviews.id", ondelete="RESTRICT"), index=True
+    )
+    impact_explanation_draft_id: Mapped[int] = mapped_column(
+        ForeignKey("impact_explanation_drafts.id", ondelete="RESTRICT"), index=True
+    )
+    sequence: Mapped[int] = mapped_column(Integer)
+    role: Mapped[ReviewRole] = mapped_column(review_role_enum, index=True)
+    title: Mapped[str] = mapped_column(String(500))
+    description: Mapped[str | None] = mapped_column(Text)
+    provider: Mapped[str] = mapped_column(String(80))
+    model: Mapped[str] = mapped_column(String(160))
+    prompt_version: Mapped[str] = mapped_column(String(120))
+    input_digest: Mapped[str] = mapped_column(String(128))
+    provider_response_id: Mapped[str | None] = mapped_column(String(200))
+    status: Mapped[TaskProposalStatus] = mapped_column(
+        task_proposal_status_enum, default=TaskProposalStatus.PENDING, index=True
+    )
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    decided_by: Mapped[str | None] = mapped_column(String(200))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    created_by: Mapped[str] = mapped_column(String(200))
+
+    review: Mapped[MeasureReview] = relationship(back_populates="task_proposals")
+    impact_explanation_draft: Mapped[ImpactExplanationDraft] = relationship(
+        back_populates="task_proposals"
+    )
+    accepted_item: Mapped["ReviewChecklistItem | None"] = relationship(
+        back_populates="accepted_from_proposal", uselist=False
+    )
+    citations: Mapped[list["ReviewTaskProposalCitation"]] = relationship(
+        back_populates="proposal", cascade="all, delete-orphan"
+    )
+
+
+class ReviewTaskProposalCitation(Base):
+    """One official evidence link supporting a generated task proposal."""
+
+    __tablename__ = "review_task_proposal_citations"
+    __table_args__ = (UniqueConstraint("review_task_proposal_id", "comparison_evidence_id"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    review_task_proposal_id: Mapped[int] = mapped_column(
+        ForeignKey("review_task_proposals.id", ondelete="CASCADE")
+    )
+    comparison_evidence_id: Mapped[int] = mapped_column(
+        ForeignKey("measure_comparison_evidence.id", ondelete="RESTRICT")
+    )
+
+    proposal: Mapped[ReviewTaskProposal] = relationship(back_populates="citations")
+    comparison_evidence: Mapped[MeasureComparisonEvidence] = relationship(
+        back_populates="task_proposal_citations"
+    )
+
+
+class ReviewChecklistItem(Base):
+    """One accepted or administrator-authored item in the shared checklist."""
+
+    __tablename__ = "review_checklist_items"
+    __table_args__ = (
+        CheckConstraint(
+            "(status = 'open' AND resolved_at IS NULL AND resolved_by IS NULL) OR "
+            "(status IN ('completed', 'not_applicable') AND resolved_at IS NOT NULL "
+            "AND resolved_by IS NOT NULL)",
+            name="ck_review_checklist_item_resolution_state",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    checklist_item_id: Mapped[str] = mapped_column(String(120), unique=True, index=True)
+    review_id: Mapped[int] = mapped_column(
+        ForeignKey("measure_reviews.id", ondelete="RESTRICT"), index=True
+    )
+    accepted_from_proposal_id: Mapped[int | None] = mapped_column(
+        ForeignKey("review_task_proposals.id", ondelete="RESTRICT"),
+        unique=True,
+    )
+    role: Mapped[ReviewRole] = mapped_column(review_role_enum, index=True)
+    title: Mapped[str] = mapped_column(String(500))
+    description: Mapped[str | None] = mapped_column(Text)
+    status: Mapped[ChecklistTaskStatus] = mapped_column(
+        checklist_task_status_enum, default=ChecklistTaskStatus.OPEN, index=True
+    )
+    notes: Mapped[str | None] = mapped_column(Text)
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    resolved_by: Mapped[str | None] = mapped_column(String(200))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    created_by: Mapped[str] = mapped_column(String(200))
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, onupdate=utc_now
+    )
+
+    review: Mapped[MeasureReview] = relationship(back_populates="checklist_items")
+    accepted_from_proposal: Mapped[ReviewTaskProposal | None] = relationship(
+        back_populates="accepted_item"
+    )
+
+
+class ReviewSignOff(Base):
+    """An immutable sign-off snapshot; reopening appends rather than replaces it."""
+
+    __tablename__ = "review_signoffs"
+    __table_args__ = (
+        UniqueConstraint("review_id", "sequence"),
+        CheckConstraint("sequence >= 1", name="ck_review_signoff_sequence"),
+        CheckConstraint(
+            "accepted_task_count >= 0 AND resolved_task_count >= 0 "
+            "AND accepted_task_count = resolved_task_count",
+            name="ck_review_signoff_resolved_tasks",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    signoff_id: Mapped[str] = mapped_column(String(120), unique=True, index=True)
+    review_id: Mapped[int] = mapped_column(
+        ForeignKey("measure_reviews.id", ondelete="RESTRICT"), index=True
+    )
+    sequence: Mapped[int] = mapped_column(Integer)
+    accepted_task_count: Mapped[int] = mapped_column(Integer)
+    resolved_task_count: Mapped[int] = mapped_column(Integer)
+    note: Mapped[str | None] = mapped_column(Text)
+    signed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    signed_by: Mapped[str] = mapped_column(String(200))
+
+    review: Mapped[MeasureReview] = relationship(back_populates="signoffs")
+
+
+class ReviewEvent(Base):
+    """Append-only internal activity entry for a review timeline."""
+
+    __tablename__ = "review_events"
+    __table_args__ = (
+        UniqueConstraint("review_id", "sequence"),
+        CheckConstraint("sequence >= 1", name="ck_review_event_sequence"),
+        CheckConstraint(
+            "(subject_type IS NULL AND subject_id IS NULL) OR "
+            "(subject_type IS NOT NULL AND subject_id IS NOT NULL)",
+            name="ck_review_event_subject",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    event_id: Mapped[str] = mapped_column(String(120), unique=True, index=True)
+    review_id: Mapped[int] = mapped_column(
+        ForeignKey("measure_reviews.id", ondelete="RESTRICT"), index=True
+    )
+    sequence: Mapped[int] = mapped_column(Integer)
+    event_type: Mapped[ReviewEventType] = mapped_column(review_event_type_enum, index=True)
+    subject_type: Mapped[str | None] = mapped_column(String(80))
+    subject_id: Mapped[str | None] = mapped_column(String(160))
+    actor: Mapped[str] = mapped_column(String(200))
+    occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    note: Mapped[str | None] = mapped_column(Text)
+    payload: Mapped[dict[str, object]] = mapped_column(JSON, default=dict)
+
+    review: Mapped[MeasureReview] = relationship(back_populates="events")

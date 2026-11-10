@@ -146,6 +146,46 @@ class ImpactExplanationReviewDecision(StrEnum):
     REJECT = "reject"
 
 
+class MeasureReviewStatus(StrEnum):
+    PENDING = "pending"
+    IN_REVIEW = "in_review"
+    COMPLETED = "completed"
+    REOPENED = "reopened"
+    NEEDS_RE_REVIEW = "needs_re_review"
+
+
+class ReviewRole(StrEnum):
+    DATA_ANALYST = "data_analyst"
+    ACO_QUALITY_MANAGER = "aco_quality_manager"
+    BOTH = "both"
+
+
+class TaskProposalStatus(StrEnum):
+    PENDING = "pending"
+    ACCEPTED = "accepted"
+    DISMISSED = "dismissed"
+
+
+class ChecklistTaskStatus(StrEnum):
+    OPEN = "open"
+    COMPLETED = "completed"
+    NOT_APPLICABLE = "not_applicable"
+
+
+class ReviewEventType(StrEnum):
+    REVIEW_CREATED = "review_created"
+    PROPOSAL_CREATED = "proposal_created"
+    PROPOSAL_ACCEPTED = "proposal_accepted"
+    PROPOSAL_DISMISSED = "proposal_dismissed"
+    TASK_ADDED = "task_added"
+    TASK_EDITED = "task_edited"
+    TASK_STATUS_CHANGED = "task_status_changed"
+    NOTE_ADDED = "note_added"
+    SIGNED_OFF = "signed_off"
+    REOPENED = "reopened"
+    NEEDS_RE_REVIEW = "needs_re_review"
+
+
 class ComparisonPublicationEligibility(StrEnum):
     ELIGIBLE = "eligible"
     PUBLISHED = "published"

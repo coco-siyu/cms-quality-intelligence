@@ -42,15 +42,20 @@ relative URLs and does not need deployment-specific CORS exceptions.
   review, and publication rules.
 - Public repositories return only published records. Draft candidates and audit
   details are available only through authenticated `/api/admin/...` endpoints.
-- Optional AI paths propose evidence-bounded private extraction clarifications
-  and semantic classifications; neither can approve, change, or publish records.
+- Optional AI paths propose evidence-bounded private extraction clarifications,
+  semantic classifications, explanations, and role-tagged follow-up tasks; none
+  can approve, accept, change, or publish records.
 
 ### Database
 
 - PostgreSQL stores stable measure identities, performance-year versions,
-  source revisions, evidence, candidates, reviews, and ingestion history.
+  source revisions, evidence, candidates, reviews, shared checklist items,
+  sign-offs, and ingestion history.
 - Alembic owns schema migrations.
-- Immutable source hashes and append-only review events preserve provenance.
+- Generated task proposals remain separate from accepted checklist items so a
+  later explanation draft cannot replace work already accepted or completed.
+- Immutable source hashes, historical sign-offs, and append-only review events
+  preserve provenance when a review is reopened or regenerated.
 - There is no patient-level data or PHI in the product model.
 
 ### Source processing

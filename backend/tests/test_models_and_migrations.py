@@ -172,9 +172,7 @@ def test_unresolved_comparison_side_cannot_be_claimed_as_removed(session: Sessio
 
 
 def test_change_field_links_evidence_to_each_year_side(seeded_session: Session) -> None:
-    measure = seeded_session.scalar(
-        select(Measure).where(Measure.measure_id == "DEMO-001")
-    )
+    measure = seeded_session.scalar(select(Measure).where(Measure.measure_id == "DEMO-001"))
     assert measure is not None
     comparison = measure.comparisons[0]
     comparison_field = comparison.affected_fields[0]
@@ -215,11 +213,17 @@ def test_initial_migration_builds_and_reverts_schema(
         "measure_comparisons",
         "measure_comparison_fields",
         "measure_comparison_evidence",
-            "measure_comparison_reviews",
+        "measure_comparison_reviews",
         "semantic_classification_proposals",
         "semantic_classification_citations",
         "impact_explanation_drafts",
         "impact_explanation_citations",
+        "measure_reviews",
+        "review_task_proposals",
+        "review_task_proposal_citations",
+        "review_checklist_items",
+        "review_signoffs",
+        "review_events",
         "source_checks",
         "source_extractions",
         "source_text_segments",
@@ -233,8 +237,7 @@ def test_initial_migration_builds_and_reverts_schema(
         "ingestion_run_events",
     }.issubset(inspect(engine).get_table_names())
     candidate_columns = {
-        column["name"]
-        for column in inspect(engine).get_columns("specification_field_candidates")
+        column["name"] for column in inspect(engine).get_columns("specification_field_candidates")
     }
     assert {
         "source_excerpt",
@@ -244,8 +247,7 @@ def test_initial_migration_builds_and_reverts_schema(
         "published_by",
     }.issubset(candidate_columns)
     comparison_field_columns = {
-        column["name"]
-        for column in inspect(engine).get_columns("measure_comparison_fields")
+        column["name"] for column in inspect(engine).get_columns("measure_comparison_fields")
     }
     assert {
         "status",
@@ -264,8 +266,7 @@ def test_initial_migration_builds_and_reverts_schema(
         "change_status",
     }.issubset(comparison_checks)
     comparison_columns = {
-        column["name"]
-        for column in inspect(engine).get_columns("measure_comparisons")
+        column["name"] for column in inspect(engine).get_columns("measure_comparisons")
     }
     assert {
         "collection_type",
@@ -288,9 +289,10 @@ def test_initial_migration_builds_and_reverts_schema(
         frozenset(constraint["column_names"])
         for constraint in inspect(engine).get_unique_constraints("measure_comparisons")
     }
-    assert frozenset(
-        {"measure_id", "program", "from_year", "to_year", "collection_type"}
-    ) in comparison_unique_constraints
+    assert (
+        frozenset({"measure_id", "program", "from_year", "to_year", "collection_type"})
+        in comparison_unique_constraints
+    )
     semantic_columns = {
         column["name"]
         for column in inspect(engine).get_columns("semantic_classification_proposals")
@@ -343,20 +345,102 @@ def test_initial_migration_builds_and_reverts_schema(
     }.issubset(impact_checks)
     impact_unique_constraints = {
         frozenset(constraint["column_names"])
-        for constraint in inspect(engine).get_unique_constraints(
-            "impact_explanation_drafts"
-        )
+        for constraint in inspect(engine).get_unique_constraints("impact_explanation_drafts")
     }
-    assert frozenset(
-        {
-            "comparison_id",
-            "provider",
-            "model",
-            "prompt_version",
-            "input_digest",
-            "generation_sequence",
-        }
-    ) in impact_unique_constraints
+    assert (
+        frozenset(
+            {
+                "comparison_id",
+                "provider",
+                "model",
+                "prompt_version",
+                "input_digest",
+                "generation_sequence",
+            }
+        )
+        in impact_unique_constraints
+    )
+
+    review_columns = {column["name"] for column in inspect(engine).get_columns("measure_reviews")}
+    assert {
+        "review_id",
+        "comparison_id",
+        "status",
+        "completed_at",
+        "completed_by",
+        "created_at",
+        "created_by",
+        "updated_at",
+    }.issubset(review_columns)
+    review_checks = {
+        constraint["name"]
+        for constraint in inspect(engine).get_check_constraints("measure_reviews")
+    }
+    assert {
+        "measure_review_status",
+        "ck_measure_review_completion_state",
+    }.issubset(review_checks)
+
+    proposal_columns = {
+        column["name"] for column in inspect(engine).get_columns("review_task_proposals")
+    }
+    assert {
+        "proposal_id",
+        "review_id",
+        "impact_explanation_draft_id",
+        "sequence",
+        "role",
+        "title",
+        "description",
+        "provider",
+        "model",
+        "prompt_version",
+        "input_digest",
+        "provider_response_id",
+        "status",
+        "decided_at",
+        "decided_by",
+    }.issubset(proposal_columns)
+    proposal_citation_columns = {
+        column["name"] for column in inspect(engine).get_columns("review_task_proposal_citations")
+    }
+    assert {
+        "review_task_proposal_id",
+        "comparison_evidence_id",
+    }.issubset(proposal_citation_columns)
+    checklist_columns = {
+        column["name"] for column in inspect(engine).get_columns("review_checklist_items")
+    }
+    assert {
+        "checklist_item_id",
+        "review_id",
+        "accepted_from_proposal_id",
+        "role",
+        "title",
+        "description",
+        "status",
+        "notes",
+        "resolved_at",
+        "resolved_by",
+    }.issubset(checklist_columns)
+    signoff_checks = {
+        constraint["name"]
+        for constraint in inspect(engine).get_check_constraints("review_signoffs")
+    }
+    assert "ck_review_signoff_resolved_tasks" in signoff_checks
+    event_columns = {column["name"] for column in inspect(engine).get_columns("review_events")}
+    assert {
+        "event_id",
+        "review_id",
+        "sequence",
+        "event_type",
+        "subject_type",
+        "subject_id",
+        "actor",
+        "occurred_at",
+        "note",
+        "payload",
+    }.issubset(event_columns)
 
     command.downgrade(config, "base")
     assert inspect(engine).get_table_names() == ["alembic_version"]

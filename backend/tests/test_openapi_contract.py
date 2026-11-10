@@ -46,15 +46,17 @@ def test_root_openapi_contract_is_valid() -> None:
         "aco_quality_manager",
         "uncertainty_caveats",
     }
-    assert impact_output["properties"]["data_analyst"]["$ref"].endswith(
-        "/DataAnalystImpact"
-    )
+    assert impact_output["properties"]["data_analyst"]["$ref"].endswith("/DataAnalystImpact")
     assert impact_output["properties"]["aco_quality_manager"]["$ref"].endswith(
         "/ACOQualityManagerImpact"
     )
     assert "PublicImpactExplanation" in schemas
     assert schemas["PublicImpactExplanation"]["properties"]["output"]["$ref"].endswith(
         "/ImpactExplanationOutput"
+    )
+    assert "AdminImpactTaskProposal" in schemas
+    assert schemas["AdminImpactTaskProposal"]["properties"]["evidence"]["items"]["$ref"].endswith(
+        "/ChangeFieldEvidence"
     )
 
 
@@ -82,9 +84,7 @@ def test_runtime_openapi_exposes_contract_operation_ids_and_error_models() -> No
         ("/api/admin/review-summary", "get"): "getAdminReviewSummary",
         ("/api/admin/measures", "get"): "listAdminMeasures",
         ("/api/admin/measures/{measure_id}", "get"): "getAdminMeasure",
-        ("/api/admin/review-items/{review_item_id}", "patch"): (
-            "reviewAdminFieldCandidate"
-        ),
+        ("/api/admin/review-items/{review_item_id}", "patch"): ("reviewAdminFieldCandidate"),
         ("/api/admin/review-items/{review_item_id}/publish", "post"): (
             "publishAdminFieldCandidate"
         ),
@@ -96,9 +96,7 @@ def test_runtime_openapi_exposes_contract_operation_ids_and_error_models() -> No
         ("/api/admin/sources/{source_id}", "get"): "getAdminSource",
         ("/api/admin/sources/{source_id}", "patch"): "updateAdminSource",
         ("/api/admin/sources/{source_id}/check", "post"): "checkAdminSource",
-        ("/api/admin/source-extractions/{extraction_id}", "get"): (
-            "getAdminSourceExtraction"
-        ),
+        ("/api/admin/source-extractions/{extraction_id}", "get"): ("getAdminSourceExtraction"),
         ("/api/admin/source-extractions/{extraction_id}/normalize", "post"): (
             "normalizeAdminSourceExtraction"
         ),
@@ -125,6 +123,13 @@ def test_runtime_openapi_exposes_contract_operation_ids_and_error_models() -> No
         ("/api/admin/impact-explanations/{draft_id}/publish", "post"): (
             "publishAdminImpactExplanationDraft"
         ),
+        ("/api/admin/impact-explanations/{draft_id}/task-proposals", "get"): (
+            "listAdminImpactTaskProposals"
+        ),
+        (
+            "/api/admin/impact-explanations/{draft_id}/task-proposals/generate",
+            "post",
+        ): "generateAdminImpactTaskProposals",
     }
     for (path, method), operation_id in admin_operations.items():
         assert schema["paths"][path][method]["operationId"] == operation_id
