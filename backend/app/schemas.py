@@ -8,6 +8,7 @@ from app.domain import (
     CandidateReviewDecision,
     ChangeEvidenceSide,
     ChangeStatus,
+    ChecklistTaskStatus,
     ClarificationEvidenceRelation,
     ClarificationOutcome,
     CollectionType,
@@ -19,11 +20,14 @@ from app.domain import (
     ImpactExplanationReviewDecision,
     IngestionItemStage,
     IngestionRunStatus,
+    MeasureReviewStatus,
     NormalizedFieldStatus,
     NormalizedIdentityStatus,
     NormalizedStagingStatus,
     PublicationState,
     PublicVerificationStatus,
+    ReviewDashboardStatus,
+    ReviewEventType,
     ReviewRole,
     SourceCheckOutcome,
     SourceExtractionStatus,
@@ -234,6 +238,139 @@ class AdminImpactTaskProposalResponse(BaseModel):
 
 class AdminImpactTaskProposalPage(BaseModel):
     items: list[AdminImpactTaskProposalResponse]
+
+
+class AdminReviewChecklistItemResponse(BaseModel):
+    checklist_item_id: str
+    review_id: str
+    accepted_from_proposal_id: str | None
+    role: ReviewRole
+    title: str
+    description: str | None
+    status: ChecklistTaskStatus
+    notes: str | None
+    resolved_at: datetime | None
+    resolved_by: str | None
+    created_at: datetime
+    created_by: str
+    updated_at: datetime
+
+
+class AdminReviewChecklistProgress(BaseModel):
+    total: int = Field(ge=0)
+    open: int = Field(ge=0)
+    resolved: int = Field(ge=0)
+
+
+class AdminReviewSignOffResponse(BaseModel):
+    signoff_id: str
+    sequence: int = Field(ge=1)
+    accepted_task_count: int = Field(ge=0)
+    resolved_task_count: int = Field(ge=0)
+    note: str | None
+    signed_at: datetime
+    signed_by: str
+
+
+class AdminReviewChecklistResponse(BaseModel):
+    comparison_id: int
+    review_id: str | None
+    review_status: MeasureReviewStatus | None
+    eligible_impact_explanation_draft_id: str | None
+    proposals: list[AdminImpactTaskProposalResponse]
+    items: list[AdminReviewChecklistItemResponse]
+    progress: AdminReviewChecklistProgress
+    signoffs: list[AdminReviewSignOffResponse]
+    can_sign_off: bool
+    signoff_blocker: str | None
+
+
+class AdminReviewLifecycleRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    note: str | None = Field(default=None, max_length=4_000)
+
+
+class AdminReviewActivityEventResponse(BaseModel):
+    event_id: str
+    sequence: int = Field(ge=1)
+    event_type: ReviewEventType
+    title: str
+    detail: str
+    actor: str
+    occurred_at: datetime
+    note: str | None
+
+
+class AdminReviewActivityReviewResponse(BaseModel):
+    review_id: str
+    comparison_id: int
+    review_status: MeasureReviewStatus
+    program: str
+    collection_type: CollectionType
+    from_year: int
+    to_year: int
+    events: list[AdminReviewActivityEventResponse]
+
+
+class AdminMeasureReviewActivityResponse(BaseModel):
+    measure_id: str
+    reviews: list[AdminReviewActivityReviewResponse]
+
+
+class AdminReviewDashboardItem(BaseModel):
+    comparison_id: int
+    measure_id: str
+    measure_name: str
+    program: str
+    from_year: int
+    to_year: int
+    dashboard_status: ReviewDashboardStatus
+    review_id: str | None
+    review_status: MeasureReviewStatus | None
+    remaining_tasks: int = Field(ge=0)
+    progress: AdminReviewChecklistProgress
+
+
+class AdminReviewDashboardSummary(BaseModel):
+    total: int = Field(ge=0)
+    pending: int = Field(ge=0)
+    in_review: int = Field(ge=0)
+    completed: int = Field(ge=0)
+    needs_re_review: int = Field(ge=0)
+
+
+class AdminReviewDashboardResponse(BaseModel):
+    summary: AdminReviewDashboardSummary
+    items: list[AdminReviewDashboardItem]
+
+
+class AdminReviewChecklistItemCreateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    role: ReviewRole
+    title: str = Field(min_length=1, max_length=500)
+    description: str | None = Field(default=None, max_length=4_000)
+    notes: str | None = Field(default=None, max_length=4_000)
+
+
+class AdminReviewChecklistItemUpdateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    role: ReviewRole | None = None
+    title: str | None = Field(default=None, min_length=1, max_length=500)
+    description: str | None = Field(default=None, max_length=4_000)
+    notes: str | None = Field(default=None, max_length=4_000)
+    status: ChecklistTaskStatus | None = None
+
+    @model_validator(mode="after")
+    def require_one_update(self) -> "AdminReviewChecklistItemUpdateRequest":
+        if not self.model_fields_set:
+            raise ValueError("At least one checklist field must be updated.")
+        for field in ("role", "title", "status"):
+            if field in self.model_fields_set and getattr(self, field) is None:
+                raise ValueError(f"{field} cannot be null when it is updated.")
+        return self
 
 
 class AdminImpactExplanationReviewRequest(BaseModel):

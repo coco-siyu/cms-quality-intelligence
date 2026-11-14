@@ -17,12 +17,14 @@ from app.models import (
     MeasureComparison,
     MeasureComparisonEvidence,
     MeasureComparisonField,
+    MeasureReview,
     MeasureVersion,
     SourceRevision,
     SpecificationField,
     SpecificationFieldCandidate,
 )
 from app.services.comparison_publication import record_comparison_review
+from app.services.review_lifecycle import require_re_review_for_new_source
 from app.services.reviews import record_candidate_review
 
 SYSTEM_REVIEWER = "system:source-revision"
@@ -159,6 +161,9 @@ def mark_source_dependents_stale(
             .options(
                 selectinload(MeasureComparison.reviews),
                 selectinload(MeasureComparison.impact_explanation_drafts),
+                selectinload(MeasureComparison.measure_review).selectinload(
+                    MeasureReview.signoffs
+                ),
             )
         ).unique()
     )
@@ -186,6 +191,13 @@ def mark_source_dependents_stale(
             if explanation.outdated_at is None:
                 explanation.outdated_at = stale_time
                 explanations_outdated += 1
+        if comparison.measure_review is not None:
+            require_re_review_for_new_source(
+                session,
+                comparison.measure_review,
+                actor=SYSTEM_REVIEWER,
+                note=comparison_note,
+            )
 
     session.flush()
     return SourceStalenessResult(

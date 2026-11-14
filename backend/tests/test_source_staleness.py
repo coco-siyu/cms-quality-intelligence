@@ -6,11 +6,15 @@ from sqlalchemy.orm import Session
 
 from app.domain import (
     CandidateReviewDecision,
+    ChecklistTaskStatus,
     ComparisonEvidenceStatus,
     ComparisonReviewDecision,
     ImpactExplanationReviewDecision,
+    MeasureReviewStatus,
     PublicationState,
     PublicVerificationStatus,
+    ReviewEventType,
+    ReviewRole,
 )
 from app.models import (
     ImpactExplanationCitation,
@@ -21,7 +25,13 @@ from app.models import (
     SourceRevision,
     SpecificationFieldCandidate,
 )
+from app.schemas import (
+    AdminReviewChecklistItemCreateRequest,
+    AdminReviewChecklistItemUpdateRequest,
+)
 from app.services.comparison_publication import record_comparison_review
+from app.services.review_checklists import add_checklist_item, update_checklist_item
+from app.services.review_lifecycle import sign_off_review
 from app.services.reviews import record_candidate_review
 from app.services.source_staleness import (
     OUTDATED_EXTRACTION_STATUS,
@@ -105,6 +115,29 @@ def test_new_revision_reopens_draft_reviews_and_outdates_explanations(
         ],
     )
     seeded_session.add_all([candidate, explanation])
+    checklist_item = add_checklist_item(
+        seeded_session,
+        comparison_id=comparison.id,
+        request=AdminReviewChecklistItemCreateRequest(
+            role=ReviewRole.BOTH,
+            title="Confirm the source-backed comparison",
+        ),
+        actor="human-reviewer",
+    )
+    update_checklist_item(
+        seeded_session,
+        checklist_item_id=checklist_item.checklist_item_id,
+        request=AdminReviewChecklistItemUpdateRequest(
+            status=ChecklistTaskStatus.COMPLETED
+        ),
+        actor="human-reviewer",
+    )
+    measure_review = sign_off_review(
+        seeded_session,
+        review_id=checklist_item.review.review_id,
+        actor="human-reviewer",
+        note="Initial source review complete.",
+    )
     detected_at = datetime(2026, 11, 8, 9, tzinfo=UTC)
     revision = _new_revision(document, detected_at=detected_at)
     seeded_session.flush()
@@ -133,6 +166,9 @@ def test_new_revision_reopens_draft_reviews_and_outdates_explanations(
     assert comparison.review_decision == ComparisonReviewDecision.APPROVE
     assert comparison.evidence_status == ComparisonEvidenceStatus.INCOMPLETE
     assert explanation.outdated_at == detected_at
+    assert measure_review.status == MeasureReviewStatus.NEEDS_RE_REVIEW
+    assert len(measure_review.signoffs) == 1
+    assert measure_review.events[-1].event_type == ReviewEventType.NEEDS_RE_REVIEW
 
     parameters = {
         "program": "Fictional Quality Program",

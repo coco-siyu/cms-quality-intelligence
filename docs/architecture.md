@@ -54,6 +54,25 @@ relative URLs and does not need deployment-specific CORS exceptions.
 - Alembic owns schema migrations.
 - Generated task proposals remain separate from accepted checklist items so a
   later explanation draft cannot replace work already accepted or completed.
+- Authenticated checklist mutations convert proposals explicitly, persist
+  administrator-authored edits and resolution metadata, and append a review
+  event for every decision or status transition. Role filters are a view over
+  this one shared checklist; they do not create separate task copies.
+- The authenticated review-dashboard projection summarizes status and checklist
+  counts across comparisons without returning checklist content or notes.
+  Reopened reviews are presented in the In Review operational queue while their
+  durable `reopened` state remains unchanged.
+- Formal review completion is a separate authenticated service boundary. A
+  sign-off is allowed only when every accepted checklist item is completed or
+  not applicable, writes an immutable count snapshot, and locks checklist
+  mutations until an administrator reopens the review. Reopening and later
+  sign-offs append events and snapshots without replacing prior history. A new
+  official source revision moves a completed review to `needs_re_review` while
+  retaining the earlier sign-off.
+- A protected review-activity read model translates append-only events into
+  human-readable measure timelines without exposing raw event payloads. It may
+  return private notes to the authenticated measure page; no public repository
+  or response schema includes this activity history.
 - Immutable source hashes, historical sign-offs, and append-only review events
   preserve provenance when a review is reopened or regenerated.
 - There is no patient-level data or PHI in the product model.
@@ -73,6 +92,10 @@ relative URLs and does not need deployment-specific CORS exceptions.
 - `openapi.yaml` is the frontend/backend contract and is checked by tests.
 - Public and private data are separated in backend queries, not merely hidden in
   the interface.
+- Public CSV export reuses the Measure Explorer selection and the same
+  evidence-valid comparison projection as the JSON API. The backend emits one
+  allowlisted row per published comparison field; it never serializes review
+  notes, checklist data, drafts, or raw administrative models.
 - Admin sessions are signed, HttpOnly cookies. Production HTTPS deployments must
   set `CMSQI_ADMIN_SESSION_SECURE=true`.
 - Official CMS evidence is the factual source of truth. AI output is advisory.

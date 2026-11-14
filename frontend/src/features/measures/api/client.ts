@@ -45,6 +45,36 @@ async function apiGet<T>(path: string, signal?: AbortSignal): Promise<T> {
   return (await response.json()) as T;
 }
 
+async function apiDownload(
+  path: string,
+  fallbackFilename: string,
+  signal?: AbortSignal,
+): Promise<{ blob: Blob; filename: string }> {
+  let response: Response;
+  try {
+    response = await fetch(`${apiBaseUrl}${path}`, {
+      headers: { Accept: "text/csv" },
+      signal,
+    });
+  } catch (error) {
+    throw new ApiClientError(
+      0,
+      error instanceof Error ? error.message : "The API could not be reached.",
+    );
+  }
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => undefined)) as ApiErrorPayload | undefined;
+    throw new ApiClientError(
+      response.status,
+      payload?.message ?? `API request failed (${response.status}).`,
+      payload,
+    );
+  }
+  const disposition = response.headers.get("Content-Disposition") ?? "";
+  const filename = disposition.match(/filename="?([^";]+)"?/i)?.[1] ?? fallbackFilename;
+  return { blob: await response.blob(), filename };
+}
+
 export type MeasureListParameters = {
   q?: string;
   performance_year?: number;
@@ -65,6 +95,10 @@ export type ChangeListParameters = {
   collection_type?: string;
   page?: number;
   page_size?: number;
+};
+
+export type ChangeExportParameters = Omit<MeasureListParameters, "page" | "page_size"> & {
+  collection_type?: string;
 };
 
 export type ChangeDetailParameters = {
@@ -122,6 +156,13 @@ export const changeApi = {
   impact(measureId: string, parameters: ChangeDetailParameters, signal?: AbortSignal) {
     return apiGet<PublicImpactExplanation>(
       `/api/changes/${encodeURIComponent(measureId)}/impact-explanation${queryString(parameters)}`,
+      signal,
+    );
+  },
+  exportCsv(parameters: ChangeExportParameters, signal?: AbortSignal) {
+    return apiDownload(
+      `/api/changes/export.csv${queryString(parameters)}`,
+      "cms-quality-changes.csv",
       signal,
     );
   },

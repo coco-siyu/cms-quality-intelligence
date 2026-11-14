@@ -373,6 +373,13 @@ def _filtered_measures_statement(filters: MeasureFilters) -> Select[tuple[Measur
     return statement
 
 
+def list_filtered_measure_ids(session: Session, filters: MeasureFilters) -> list[str]:
+    """Return the complete stable-ID selection used by public list views."""
+
+    statement = _filtered_measures_statement(filters).with_only_columns(Measure.measure_id)
+    return list(session.scalars(statement.order_by(Measure.measure_id)))
+
+
 def list_measures(session: Session, filters: MeasureFilters) -> PublicMeasurePage:
     statement = _filtered_measures_statement(filters)
 

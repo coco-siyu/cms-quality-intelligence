@@ -4,7 +4,7 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createAppRouter } from "../router";
-import type { AdminComparison } from "../features/admin/api";
+import type { AdminComparison, AdminReviewChecklist } from "../features/admin/api";
 
 function jsonResponse(value: unknown, status = 200) {
   return new Response(JSON.stringify(value), {
@@ -73,6 +73,14 @@ describe("private admin review workspace", () => {
           }),
         );
       }
+      if (url.includes("/api/admin/review-dashboard")) {
+        return Promise.resolve(
+          jsonResponse({
+            summary: { total: 0, pending: 0, in_review: 0, completed: 0, needs_re_review: 0 },
+            items: [],
+          }),
+        );
+      }
       if (url.includes("/api/admin/measures?")) {
         return Promise.resolve(
           jsonResponse({
@@ -120,6 +128,102 @@ describe("private admin review workspace", () => {
     await waitFor(() => {
       expect(fetchMock.mock.calls.every((call) => call[1]?.credentials === "include")).toBe(true);
     });
+  });
+
+  it("filters centralized review progress and links to the private measure view", async () => {
+    const summary = {
+      total: 2,
+      pending: 0,
+      in_review: 1,
+      completed: 0,
+      needs_re_review: 1,
+    };
+    const inReview = {
+      comparison_id: 41,
+      measure_id: "001",
+      measure_name: "Diabetes: Glycemic Status Assessment Greater Than 9%",
+      program: "Medicare Shared Savings Program — APP Plus",
+      from_year: 2025,
+      to_year: 2026,
+      dashboard_status: "in_review",
+      review_id: "CMS-REVIEW-001",
+      review_status: "in_review",
+      remaining_tasks: 2,
+      progress: { total: 3, open: 2, resolved: 1 },
+    };
+    const needsReview = {
+      ...inReview,
+      comparison_id: 42,
+      measure_id: "113",
+      measure_name: "Colorectal Cancer Screening",
+      dashboard_status: "needs_re_review",
+      review_id: "CMS-REVIEW-113",
+      review_status: "needs_re_review",
+      remaining_tasks: 1,
+      progress: { total: 2, open: 1, resolved: 1 },
+    };
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith("/api/admin/session")) {
+        return Promise.resolve(
+          jsonResponse({ configured: true, authenticated: true, username: "reviewer" }),
+        );
+      }
+      if (url.endsWith("/api/admin/review-summary")) {
+        return Promise.resolve(
+          jsonResponse({
+            private_measures: 2,
+            draft_versions: 4,
+            pending_candidates: 0,
+            decided_candidates: 0,
+            source_revisions: 4,
+            newer_revision_flags: 1,
+          }),
+        );
+      }
+      if (url.includes("/api/admin/review-dashboard?status=needs_re_review")) {
+        return Promise.resolve(jsonResponse({ summary, items: [needsReview] }));
+      }
+      if (url.endsWith("/api/admin/review-dashboard")) {
+        return Promise.resolve(jsonResponse({ summary, items: [needsReview, inReview] }));
+      }
+      if (url.includes("/api/admin/measures?")) {
+        return Promise.resolve(
+          jsonResponse({
+            items: [],
+            pagination: { page: 1, page_size: 100, total_items: 0, total_pages: 0 },
+          }),
+        );
+      }
+      if (url.includes("/api/admin/comparisons?")) {
+        return Promise.resolve(jsonResponse({ items: [] }));
+      }
+      return Promise.reject(new Error(`Unexpected request: ${url}`));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await renderRoute("/admin");
+
+    expect(await screen.findByRole("heading", { name: "Measure review dashboard" }))
+      .toBeInTheDocument();
+    expect(await screen.findByText("Colorectal Cancer Screening")).toBeInTheDocument();
+    expect(screen.getByRole("progressbar", { name: "001 checklist progress" }))
+      .toHaveAttribute("aria-valuenow", "1");
+    expect(screen.getByRole("progressbar", { name: "001 checklist progress" }))
+      .toHaveAttribute("aria-valuemax", "3");
+    expect(screen.getByText("2 remaining")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Open review for 001" }))
+      .toHaveAttribute("href", "/admin/measures/001");
+
+    fireEvent.click(screen.getByRole("button", { name: /Needs re-review/ }));
+    await waitFor(() => {
+      expect(screen.queryByText(inReview.measure_name)).not.toBeInTheDocument();
+    });
+    expect(await screen.findByText(needsReview.measure_name)).toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining("/api/admin/review-dashboard?status=needs_re_review"),
+      expect.objectContaining({ credentials: "include" }),
+    );
   });
 
   it("prepares, reviews, and publishes an evidence-backed comparison explicitly", async () => {
@@ -260,6 +364,14 @@ describe("private admin review workspace", () => {
             decided_candidates: 0,
             source_revisions: 16,
             newer_revision_flags: 0,
+          }),
+        );
+      }
+      if (url.includes("/api/admin/review-dashboard")) {
+        return Promise.resolve(
+          jsonResponse({
+            summary: { total: 0, pending: 0, in_review: 0, completed: 0, needs_re_review: 0 },
+            items: [],
           }),
         );
       }
@@ -478,6 +590,321 @@ describe("private admin review workspace", () => {
     expect(await screen.findByRole("button", { name: "Approve pair" })).toBeEnabled();
   });
 
+  it("manages generated and manual impact tasks in one role-filtered checklist", async () => {
+    const comparison: AdminComparison = {
+      comparison_id: 41,
+      measure_id: "001",
+      measure_name: "Diabetes: Glycemic Status Assessment Greater Than 9%",
+      program: "Medicare Shared Savings Program — APP Plus",
+      collection_type: "program_roster",
+      from_year: 2025,
+      to_year: 2026,
+      status: "unchanged",
+      evidence_status: "verified",
+      publication_state: "published",
+      publication_eligibility: "published",
+      publication_blocker: null,
+      review_decision: "approve",
+      reviewed_at: "2026-11-04T12:05:00Z",
+      reviewer_name: "reviewer",
+      reviewer_notes: null,
+      published_at: "2026-11-04T12:06:00Z",
+      published_by: "reviewer",
+      created_at: "2026-11-04T12:00:00Z",
+      fields: [],
+      review_history: [],
+    };
+    const evidence = {
+      evidence_id: "CMS-001-2026",
+      source_revision_id: "CMS-APP-2026-R1",
+      document_title: "PY 2026 APP Quality Requirements",
+      official_url: "https://www.cms.gov/example/2026.pdf",
+      publication_date: "2025-11-01",
+      effective_date: null,
+      locator: "PDF pages 3-4",
+      excerpt: "Official roster evidence.",
+      side: "to_version" as const,
+    };
+    let checklist: AdminReviewChecklist = {
+      comparison_id: 41,
+      review_id: null as string | null,
+      review_status: null,
+      eligible_impact_explanation_draft_id: "CMS-IMPACT-001",
+      proposals: [],
+      items: [],
+      progress: { total: 0, open: 0, resolved: 0 },
+      signoffs: [],
+      can_sign_off: false,
+      signoff_blocker: "Start the review before signing off.",
+    };
+    const refreshProgress = () => {
+      const open = checklist.items.filter((item) => item.status === "open").length;
+      checklist.progress = {
+        total: checklist.items.length,
+        open,
+        resolved: checklist.items.length - open,
+      };
+      checklist.can_sign_off = Boolean(checklist.review_id) && open === 0 && checklist.review_status !== "completed";
+      checklist.signoff_blocker = checklist.can_sign_off
+        ? null
+        : checklist.review_status === "completed"
+          ? "This review is already signed off. Reopen it before signing off again."
+          : open > 0
+            ? `${open} accepted task${open === 1 ? " remains" : "s remain"} unresolved.`
+            : "Start the review before signing off.";
+    };
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith("/api/admin/session")) {
+        return Promise.resolve(
+          jsonResponse({ configured: true, authenticated: true, username: "reviewer" }),
+        );
+      }
+      if (url.endsWith("/api/admin/review-summary")) {
+        return Promise.resolve(
+          jsonResponse({
+            private_measures: 1,
+            draft_versions: 2,
+            pending_candidates: 0,
+            decided_candidates: 0,
+            source_revisions: 2,
+            newer_revision_flags: 0,
+          }),
+        );
+      }
+      if (url.includes("/api/admin/review-dashboard")) {
+        return Promise.resolve(
+          jsonResponse({
+            summary: { total: 1, pending: 0, in_review: 1, completed: 0, needs_re_review: 0 },
+            items: [],
+          }),
+        );
+      }
+      if (url.includes("/api/admin/measures?")) {
+        return Promise.resolve(
+          jsonResponse({
+            items: [],
+            pagination: { page: 1, page_size: 100, total_items: 0, total_pages: 0 },
+          }),
+        );
+      }
+      if (url.includes("/api/admin/comparisons?") && !init?.method) {
+        return Promise.resolve(jsonResponse({ items: [comparison] }));
+      }
+      if (url.endsWith("/api/admin/comparisons/41/review-checklist") && !init?.method) {
+        return Promise.resolve(jsonResponse(checklist));
+      }
+      if (
+        url.endsWith("/api/admin/impact-explanations/CMS-IMPACT-001/task-proposals/generate") &&
+        init?.method === "POST"
+      ) {
+        checklist = {
+          ...checklist,
+          review_id: "CMS-REVIEW-001",
+          review_status: "pending",
+          proposals: [
+            {
+              proposal_id: "PROPOSAL-ANALYST",
+              review_id: "CMS-REVIEW-001",
+              impact_explanation_draft_id: "CMS-IMPACT-001",
+              sequence: 1,
+              role: "data_analyst",
+              title: "Validate the year-specific mapping",
+              description: "Compare the reviewed mapping with the official evidence.",
+              status: "pending",
+              evidence: [evidence],
+              provider: "openai",
+              model: "test-model",
+              prompt_version: "v1",
+              input_digest: "a".repeat(64),
+              provider_response_id: "response-1",
+              decided_at: null,
+              decided_by: null,
+              created_at: "2026-11-10T12:00:00Z",
+              created_by: "reviewer",
+            },
+            {
+              proposal_id: "PROPOSAL-MANAGER",
+              review_id: "CMS-REVIEW-001",
+              impact_explanation_draft_id: "CMS-IMPACT-001",
+              sequence: 2,
+              role: "aco_quality_manager",
+              title: "Confirm the reporting handoff",
+              description: "Review the operational handoff with the quality team.",
+              status: "pending",
+              evidence: [evidence],
+              provider: "openai",
+              model: "test-model",
+              prompt_version: "v1",
+              input_digest: "b".repeat(64),
+              provider_response_id: "response-1",
+              decided_at: null,
+              decided_by: null,
+              created_at: "2026-11-10T12:00:00Z",
+              created_by: "reviewer",
+            },
+          ],
+        };
+        return Promise.resolve(jsonResponse({ items: checklist.proposals }));
+      }
+      if (url.endsWith("/api/admin/task-proposals/PROPOSAL-ANALYST/accept")) {
+        checklist.proposals[0] = { ...checklist.proposals[0], status: "accepted" };
+        checklist.items.push({
+          checklist_item_id: "CHECKLIST-1",
+          review_id: "CMS-REVIEW-001",
+          accepted_from_proposal_id: "PROPOSAL-ANALYST",
+          role: "data_analyst",
+          title: "Validate the year-specific mapping",
+          description: "Compare the reviewed mapping with the official evidence.",
+          status: "open",
+          notes: null,
+          resolved_at: null,
+          resolved_by: null,
+          created_at: "2026-11-10T12:05:00Z",
+          created_by: "reviewer",
+          updated_at: "2026-11-10T12:05:00Z",
+        });
+        checklist.review_status = "in_review";
+        refreshProgress();
+        return Promise.resolve(jsonResponse(checklist));
+      }
+      if (url.endsWith("/api/admin/comparisons/41/review-checklist/items")) {
+        const body = JSON.parse(String(init?.body));
+        checklist.items.push({
+          checklist_item_id: "CHECKLIST-2",
+          review_id: "CMS-REVIEW-001",
+          accepted_from_proposal_id: null,
+          ...body,
+          status: "open",
+          resolved_at: null,
+          resolved_by: null,
+          created_at: "2026-11-10T12:06:00Z",
+          created_by: "reviewer",
+          updated_at: "2026-11-10T12:06:00Z",
+        });
+        refreshProgress();
+        return Promise.resolve(jsonResponse(checklist));
+      }
+      if (url.endsWith("/api/admin/review-checklist/items/CHECKLIST-1")) {
+        const body = JSON.parse(String(init?.body));
+        checklist.items[0] = {
+          ...checklist.items[0],
+          ...body,
+          resolved_at: body.status === "open" ? null : "2026-11-10T12:07:00Z",
+          resolved_by: body.status === "open" ? null : "reviewer",
+        };
+        refreshProgress();
+        return Promise.resolve(jsonResponse(checklist));
+      }
+      if (url.endsWith("/api/admin/review-checklist/items/CHECKLIST-2")) {
+        const body = JSON.parse(String(init?.body));
+        checklist.items[1] = {
+          ...checklist.items[1],
+          ...body,
+          resolved_at: body.status === "open" ? null : "2026-11-10T12:08:00Z",
+          resolved_by: body.status === "open" ? null : "reviewer",
+        };
+        refreshProgress();
+        return Promise.resolve(jsonResponse(checklist));
+      }
+      if (url.endsWith("/api/admin/reviews/CMS-REVIEW-001/sign-off")) {
+        const body = JSON.parse(String(init?.body)) as { note: string | null };
+        checklist = {
+          ...checklist,
+          review_status: "completed",
+          signoffs: [
+            ...checklist.signoffs,
+            {
+              signoff_id: "SIGNOFF-1",
+              sequence: 1,
+              accepted_task_count: 2,
+              resolved_task_count: 2,
+              note: body.note,
+              signed_at: "2026-11-10T12:09:00Z",
+              signed_by: "reviewer",
+            },
+          ],
+          can_sign_off: false,
+          signoff_blocker: "This review is already signed off. Reopen it before signing off again.",
+        };
+        return Promise.resolve(jsonResponse(checklist));
+      }
+      if (url.endsWith("/api/admin/reviews/CMS-REVIEW-001/reopen")) {
+        checklist = {
+          ...checklist,
+          review_status: "reopened",
+          can_sign_off: true,
+          signoff_blocker: null,
+        };
+        return Promise.resolve(jsonResponse(checklist));
+      }
+      return Promise.reject(new Error(`Unexpected request: ${url}`));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await renderRoute("/admin");
+    fireEvent.click(await screen.findByRole("button", { name: "Open checklist 001" }));
+    expect(await screen.findByRole("heading", { name: "001 · Impact checklist" }))
+      .toBeInTheDocument();
+    fireEvent.click(await screen.findByRole("button", { name: "Generate" }));
+    expect(await screen.findByText("Validate the year-specific mapping"))
+      .toBeInTheDocument();
+    expect(screen.getByText("Confirm the reporting handoff")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Data Analyst" }));
+    expect(screen.queryByText("Confirm the reporting handoff")).not.toBeInTheDocument();
+    const suggestion = screen.getByText("Validate the year-specific mapping").closest("article");
+    fireEvent.click(within(suggestion!).getByRole("button", { name: "Accept" }));
+    await waitFor(() => expect(screen.getByText("0/1")).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole("button", { name: "Add task" }));
+    fireEvent.change(screen.getByLabelText("New task title"), {
+      target: { value: "Document the validation result" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Add to checklist" }));
+    expect(await screen.findByText("Document the validation result")).toBeInTheDocument();
+
+    const acceptedTask = screen.getByText("Validate the year-specific mapping").closest("article");
+    fireEvent.click(within(acceptedTask!).getByRole("button", { name: "Complete" }));
+    await waitFor(() => expect(within(acceptedTask!).getByText("Completed")).toBeInTheDocument());
+    expect(screen.getByText("1/2")).toBeInTheDocument();
+
+    const manualTask = screen.getByText("Document the validation result").closest("article");
+    fireEvent.click(within(manualTask!).getByRole("button", { name: "Complete" }));
+    await waitFor(() => expect(screen.getByText("2/2")).toBeInTheDocument());
+
+    fireEvent.change(screen.getByLabelText("Sign-off note (optional)"), {
+      target: { value: "All accepted follow-up work is resolved." },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Confirm sign-off" }));
+    expect(await screen.findByRole("heading", { name: "Signed off" })).toBeInTheDocument();
+    expect(screen.getByText(/Sign-off 1 · reviewer/)).toBeInTheDocument();
+    expect(within(acceptedTask!).getByRole("button", { name: "Edit" })).toBeDisabled();
+
+    const signoffCall = fetchMock.mock.calls.find(([input]) =>
+      String(input).endsWith("/api/admin/reviews/CMS-REVIEW-001/sign-off"),
+    );
+    expect(signoffCall?.[1]?.headers).toMatchObject({
+      "X-CMSQI-Admin-Action": "manage-review-lifecycle",
+    });
+    expect(JSON.parse(String(signoffCall?.[1]?.body))).toEqual({
+      note: "All accepted follow-up work is resolved.",
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Reopen review" }));
+    expect(await screen.findByRole("heading", { name: "Ready for sign-off?" }))
+      .toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Confirm sign-off" })).toBeEnabled();
+    expect(within(acceptedTask!).getByRole("button", { name: "Edit" })).toBeEnabled();
+
+    const acceptCall = fetchMock.mock.calls.find(([input]) =>
+      String(input).endsWith("/api/admin/task-proposals/PROPOSAL-ANALYST/accept"),
+    );
+    expect(acceptCall?.[1]?.headers).toMatchObject({
+      "X-CMSQI-Admin-Action": "manage-review-checklist",
+    });
+  });
+
   it("loads a private measure directly with source provenance", async () => {
     const candidate = {
       review_item_id: "CMS-001-PY2025-ECQM-definition",
@@ -611,6 +1038,46 @@ describe("private admin review workspace", () => {
             jsonResponse({ configured: true, authenticated: true, username: "reviewer" }),
           );
         }
+        if (url.endsWith("/api/admin/measures/001/review-activity")) {
+          return Promise.resolve(
+            jsonResponse({
+              measure_id: "001",
+              reviews: [
+                {
+                  review_id: "CMS-REVIEW-001",
+                  comparison_id: 41,
+                  review_status: "reopened",
+                  program: "Medicare Shared Savings Program — APP Plus",
+                  collection_type: "program_roster",
+                  from_year: 2025,
+                  to_year: 2026,
+                  events: [
+                    {
+                      event_id: "EVENT-2",
+                      sequence: 2,
+                      event_type: "reopened",
+                      title: "Review reopened",
+                      detail: "A completed review was reopened for another review pass.",
+                      actor: "reviewer",
+                      occurred_at: "2026-11-11T14:00:00Z",
+                      note: "Confirm the latest official revision.",
+                    },
+                    {
+                      event_id: "EVENT-1",
+                      sequence: 1,
+                      event_type: "signed_off",
+                      title: "Review signed off",
+                      detail: "2 of 2 accepted tasks were resolved at sign-off.",
+                      actor: "reviewer",
+                      occurred_at: "2026-11-10T14:00:00Z",
+                      note: "Initial review complete.",
+                    },
+                  ],
+                },
+              ],
+            }),
+          );
+        }
         if (url.endsWith("/api/admin/measures/001")) return Promise.resolve(jsonResponse(detail));
         return Promise.reject(new Error(`Unexpected request: ${url}`));
       });
@@ -624,6 +1091,13 @@ describe("private admin review workspace", () => {
       }),
     ).toBeInTheDocument();
     expect(screen.getByText("Private draft")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Review activity" }))
+      .toBeInTheDocument();
+    expect(screen.getByText("2 recorded events")).toBeInTheDocument();
+    expect(screen.getByText("Review reopened")).toBeInTheDocument();
+    expect(screen.getByText("Review signed off")).toBeInTheDocument();
+    expect(screen.getByText("Confirm the latest official revision.")).toBeInTheDocument();
+    expect(screen.getByText("reviewer · Event 2")).toBeInTheDocument();
     fireEvent.click(screen.getAllByText("definition")[0]);
     expect(screen.getByText("Candidate definition requiring human review.")).toBeVisible();
     expect(screen.getAllByRole("link", { name: /Official CMS specification/ })[0]).toHaveAttribute(

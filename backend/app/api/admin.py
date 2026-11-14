@@ -21,6 +21,7 @@ from app.domain import (
     ComparisonReviewDecision,
     ImpactExplanationReviewDecision,
     PublicationState,
+    ReviewDashboardStatus,
 )
 from app.repositories.admin_comparisons import (
     admin_comparison_response,
@@ -33,6 +34,9 @@ from app.repositories.admin_impact_explanations import (
     impact_draft_response,
     list_impact_explanation_drafts,
 )
+from app.repositories.admin_review_activity import get_measure_review_activity
+from app.repositories.admin_review_checklists import get_review_checklist
+from app.repositories.admin_review_dashboard import list_admin_review_dashboard
 from app.repositories.admin_reviews import (
     candidate_response,
     get_private_candidate,
@@ -59,6 +63,12 @@ from app.schemas import (
     AdminLoginRequest,
     AdminMeasureDetail,
     AdminMeasurePage,
+    AdminMeasureReviewActivityResponse,
+    AdminReviewChecklistItemCreateRequest,
+    AdminReviewChecklistItemUpdateRequest,
+    AdminReviewChecklistResponse,
+    AdminReviewDashboardResponse,
+    AdminReviewLifecycleRequest,
     AdminReviewSummary,
     AdminSessionResponse,
     ApiError,
@@ -90,6 +100,17 @@ from app.services.impact_explanation_review import (
     record_impact_explanation_review,
 )
 from app.services.publication import FieldPublicationError, publish_approved_field
+from app.services.review_checklists import (
+    ReviewChecklistError,
+    add_checklist_item,
+    decide_task_proposal,
+    update_checklist_item,
+)
+from app.services.review_lifecycle import (
+    ReviewLifecycleError,
+    reopen_review,
+    sign_off_review,
+)
 from app.services.reviews import record_candidate_review
 
 router = APIRouter(prefix="/api/admin", tags=["Admin review"])
@@ -195,6 +216,18 @@ def require_task_proposal_generation_header(
     _require_comparison_action("generate-task-proposals", action)
 
 
+def require_review_checklist_header(
+    action: Annotated[str, Header(alias="X-CMSQI-Admin-Action")],
+) -> None:
+    _require_comparison_action("manage-review-checklist", action)
+
+
+def require_review_lifecycle_header(
+    action: Annotated[str, Header(alias="X-CMSQI-Admin-Action")],
+) -> None:
+    _require_comparison_action("manage-review-lifecycle", action)
+
+
 ComparisonPrepareHeader = Annotated[None, Depends(require_comparison_prepare_header)]
 ComparisonReviewHeader = Annotated[None, Depends(require_comparison_review_header)]
 ComparisonPublishHeader = Annotated[None, Depends(require_comparison_publish_header)]
@@ -203,6 +236,8 @@ ImpactRegenerationHeader = Annotated[None, Depends(require_impact_regeneration_h
 ImpactReviewHeader = Annotated[None, Depends(require_impact_review_header)]
 ImpactPublishHeader = Annotated[None, Depends(require_impact_publish_header)]
 TaskProposalGenerationHeader = Annotated[None, Depends(require_task_proposal_generation_header)]
+ReviewChecklistHeader = Annotated[None, Depends(require_review_checklist_header)]
+ReviewLifecycleHeader = Annotated[None, Depends(require_review_lifecycle_header)]
 
 
 def _session_response(request: Request, settings: Settings) -> AdminSessionResponse:
@@ -338,6 +373,33 @@ def admin_measure_detail(
 
 
 @router.get(
+    "/measures/{measure_id}/review-activity",
+    response_model=AdminMeasureReviewActivityResponse,
+    operation_id="getAdminMeasureReviewActivity",
+    responses={
+        **auth_responses,
+        404: {"model": ApiError, "description": "The measure was not found."},
+    },
+)
+def admin_measure_review_activity(
+    session: DatabaseSession,
+    _admin: AuthenticatedAdmin,
+    measure_id: Annotated[str, Path(min_length=1)],
+) -> AdminMeasureReviewActivityResponse:
+    result = get_measure_review_activity(session, measure_id=measure_id)
+    if result is None:
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "code": "not_found",
+                "message": f"Measure '{measure_id}' was not found.",
+                "details": [],
+            },
+        )
+    return result
+
+
+@router.get(
     "/comparisons",
     response_model=AdminComparisonPage,
     operation_id="listAdminComparisons",
@@ -365,6 +427,20 @@ def admin_comparisons(
         to_year=to_year,
         collection_type=collection_type,
     )
+
+
+@router.get(
+    "/review-dashboard",
+    response_model=AdminReviewDashboardResponse,
+    operation_id="getAdminReviewDashboard",
+    responses=auth_responses,
+)
+def admin_review_dashboard(
+    session: DatabaseSession,
+    _admin: AuthenticatedAdmin,
+    status: ReviewDashboardStatus | None = None,
+) -> AdminReviewDashboardResponse:
+    return list_admin_review_dashboard(session, status=status)
 
 
 @router.get(
@@ -475,6 +551,248 @@ def generate_admin_impact_task_proposals(
     proposals = list_task_proposal_models(session, draft_id=draft_id)
     assert proposals is not None
     return task_proposal_page(proposals)
+
+
+def _checklist_error(error: ReviewChecklistError) -> HTTPException:
+    not_found = error.code.endswith("_not_found")
+    return HTTPException(
+        status_code=404 if not_found else 409,
+        detail={"code": error.code, "message": error.message, "details": []},
+    )
+
+
+@router.get(
+    "/comparisons/{comparison_id}/review-checklist",
+    response_model=AdminReviewChecklistResponse,
+    operation_id="getAdminReviewChecklist",
+    responses={
+        **auth_responses,
+        404: {"model": ApiError, "description": "The comparison was not found."},
+    },
+)
+def admin_review_checklist(
+    session: DatabaseSession,
+    _admin: AuthenticatedAdmin,
+    comparison_id: Annotated[int, Path(ge=1)],
+) -> AdminReviewChecklistResponse:
+    checklist = get_review_checklist(session, comparison_id=comparison_id)
+    if checklist is None:
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "code": "comparison_not_found",
+                "message": f"Comparison '{comparison_id}' was not found.",
+                "details": [],
+            },
+        )
+    return checklist
+
+
+@router.post(
+    "/comparisons/{comparison_id}/review-checklist/items",
+    response_model=AdminReviewChecklistResponse,
+    operation_id="createAdminReviewChecklistItem",
+    responses={
+        **auth_responses,
+        403: {"model": ApiError, "description": "The admin action header is invalid."},
+        404: {"model": ApiError, "description": "The comparison was not found."},
+    },
+)
+def create_admin_review_checklist_item(
+    request: AdminReviewChecklistItemCreateRequest,
+    session: DatabaseSession,
+    admin: AuthenticatedAdmin,
+    _action: ReviewChecklistHeader,
+    comparison_id: Annotated[int, Path(ge=1)],
+) -> AdminReviewChecklistResponse:
+    try:
+        add_checklist_item(
+            session,
+            comparison_id=comparison_id,
+            request=request,
+            actor=admin.username,
+        )
+    except ReviewChecklistError as error:
+        session.rollback()
+        raise _checklist_error(error) from error
+    session.commit()
+    checklist = get_review_checklist(session, comparison_id=comparison_id)
+    assert checklist is not None
+    return checklist
+
+
+@router.patch(
+    "/review-checklist/items/{checklist_item_id}",
+    response_model=AdminReviewChecklistResponse,
+    operation_id="updateAdminReviewChecklistItem",
+    responses={
+        **auth_responses,
+        403: {"model": ApiError, "description": "The admin action header is invalid."},
+        404: {"model": ApiError, "description": "The checklist item was not found."},
+    },
+)
+def update_admin_review_checklist_item(
+    request: AdminReviewChecklistItemUpdateRequest,
+    session: DatabaseSession,
+    admin: AuthenticatedAdmin,
+    _action: ReviewChecklistHeader,
+    checklist_item_id: Annotated[str, Path(min_length=1, max_length=120)],
+) -> AdminReviewChecklistResponse:
+    try:
+        item = update_checklist_item(
+            session,
+            checklist_item_id=checklist_item_id,
+            request=request,
+            actor=admin.username,
+        )
+    except ReviewChecklistError as error:
+        session.rollback()
+        raise _checklist_error(error) from error
+    comparison_id = item.review.comparison_id
+    session.commit()
+    checklist = get_review_checklist(session, comparison_id=comparison_id)
+    assert checklist is not None
+    return checklist
+
+
+def _lifecycle_error(error: ReviewLifecycleError) -> HTTPException:
+    not_found = error.code.endswith("_not_found")
+    return HTTPException(
+        status_code=404 if not_found else 409,
+        detail={"code": error.code, "message": error.message, "details": []},
+    )
+
+
+@router.post(
+    "/reviews/{review_id}/sign-off",
+    response_model=AdminReviewChecklistResponse,
+    operation_id="signOffAdminReview",
+    responses={
+        **auth_responses,
+        403: {"model": ApiError, "description": "The admin action header is invalid."},
+        404: {"model": ApiError, "description": "The review was not found."},
+        409: {"model": ApiError, "description": "The review cannot be signed off."},
+    },
+)
+def sign_off_admin_review(
+    request: AdminReviewLifecycleRequest,
+    session: DatabaseSession,
+    admin: AuthenticatedAdmin,
+    _action: ReviewLifecycleHeader,
+    review_id: Annotated[str, Path(min_length=1, max_length=120)],
+) -> AdminReviewChecklistResponse:
+    try:
+        review = sign_off_review(
+            session,
+            review_id=review_id,
+            actor=admin.username,
+            note=request.note,
+        )
+    except ReviewLifecycleError as error:
+        session.rollback()
+        raise _lifecycle_error(error) from error
+    comparison_id = review.comparison_id
+    session.commit()
+    checklist = get_review_checklist(session, comparison_id=comparison_id)
+    assert checklist is not None
+    return checklist
+
+
+@router.post(
+    "/reviews/{review_id}/reopen",
+    response_model=AdminReviewChecklistResponse,
+    operation_id="reopenAdminReview",
+    responses={
+        **auth_responses,
+        403: {"model": ApiError, "description": "The admin action header is invalid."},
+        404: {"model": ApiError, "description": "The review was not found."},
+        409: {"model": ApiError, "description": "The review cannot be reopened."},
+    },
+)
+def reopen_admin_review(
+    request: AdminReviewLifecycleRequest,
+    session: DatabaseSession,
+    admin: AuthenticatedAdmin,
+    _action: ReviewLifecycleHeader,
+    review_id: Annotated[str, Path(min_length=1, max_length=120)],
+) -> AdminReviewChecklistResponse:
+    try:
+        review = reopen_review(
+            session,
+            review_id=review_id,
+            actor=admin.username,
+            note=request.note,
+        )
+    except ReviewLifecycleError as error:
+        session.rollback()
+        raise _lifecycle_error(error) from error
+    comparison_id = review.comparison_id
+    session.commit()
+    checklist = get_review_checklist(session, comparison_id=comparison_id)
+    assert checklist is not None
+    return checklist
+
+
+@router.post(
+    "/task-proposals/{proposal_id}/accept",
+    response_model=AdminReviewChecklistResponse,
+    operation_id="acceptAdminImpactTaskProposal",
+    responses={
+        **auth_responses,
+        403: {"model": ApiError, "description": "The admin action header is invalid."},
+        404: {"model": ApiError, "description": "The task proposal was not found."},
+        409: {"model": ApiError, "description": "The proposal was already decided."},
+    },
+)
+def accept_admin_impact_task_proposal(
+    session: DatabaseSession,
+    admin: AuthenticatedAdmin,
+    _action: ReviewChecklistHeader,
+    proposal_id: Annotated[str, Path(min_length=1, max_length=120)],
+) -> AdminReviewChecklistResponse:
+    try:
+        review = decide_task_proposal(
+            session, proposal_id=proposal_id, accept=True, actor=admin.username
+        )
+    except ReviewChecklistError as error:
+        session.rollback()
+        raise _checklist_error(error) from error
+    comparison_id = review.comparison_id
+    session.commit()
+    checklist = get_review_checklist(session, comparison_id=comparison_id)
+    assert checklist is not None
+    return checklist
+
+
+@router.post(
+    "/task-proposals/{proposal_id}/dismiss",
+    response_model=AdminReviewChecklistResponse,
+    operation_id="dismissAdminImpactTaskProposal",
+    responses={
+        **auth_responses,
+        403: {"model": ApiError, "description": "The admin action header is invalid."},
+        404: {"model": ApiError, "description": "The task proposal was not found."},
+        409: {"model": ApiError, "description": "The proposal was already decided."},
+    },
+)
+def dismiss_admin_impact_task_proposal(
+    session: DatabaseSession,
+    admin: AuthenticatedAdmin,
+    _action: ReviewChecklistHeader,
+    proposal_id: Annotated[str, Path(min_length=1, max_length=120)],
+) -> AdminReviewChecklistResponse:
+    try:
+        review = decide_task_proposal(
+            session, proposal_id=proposal_id, accept=False, actor=admin.username
+        )
+    except ReviewChecklistError as error:
+        session.rollback()
+        raise _checklist_error(error) from error
+    comparison_id = review.comparison_id
+    session.commit()
+    checklist = get_review_checklist(session, comparison_id=comparison_id)
+    assert checklist is not None
+    return checklist
 
 
 @router.post(

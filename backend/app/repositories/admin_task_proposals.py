@@ -18,7 +18,7 @@ from app.schemas import (
 )
 
 
-def _proposal_options():
+def proposal_options():
     evidence = (
         selectinload(ReviewTaskProposal.citations)
         .selectinload(ReviewTaskProposalCitation.comparison_evidence)
@@ -47,7 +47,7 @@ def list_task_proposal_models(
         session.scalars(
             select(ReviewTaskProposal)
             .where(ReviewTaskProposal.impact_explanation_draft_id == draft.id)
-            .options(*_proposal_options())
+            .options(*proposal_options())
             .order_by(ReviewTaskProposal.sequence)
         ).all()
     )

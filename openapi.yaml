@@ -179,6 +179,42 @@ paths:
                 $ref: "#/components/schemas/PublicChangePage"
         "422":
           $ref: "#/components/responses/ValidationError"
+  /api/changes/export.csv:
+    get:
+      operationId: exportChangesCsv
+      tags: [Public changes]
+      summary: Export filtered, evidence-backed comparison fields as CSV
+      description: |
+        Applies the current public Measure Explorer filters and returns one row
+        per published comparison field. Drafts, incomplete evidence, private
+        review notes, and administrative workflow data are excluded.
+      parameters:
+        - $ref: "#/components/parameters/SearchQuery"
+        - $ref: "#/components/parameters/PerformanceYear"
+        - $ref: "#/components/parameters/FromYear"
+        - $ref: "#/components/parameters/ToYear"
+        - $ref: "#/components/parameters/ChangeStatus"
+        - $ref: "#/components/parameters/AffectedField"
+        - $ref: "#/components/parameters/VerificationStatus"
+        - name: collection_type
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/CollectionType"
+      responses:
+        "200":
+          description: UTF-8 CSV containing verified public comparison fields.
+          headers:
+            Content-Disposition:
+              description: Suggested CSV filename.
+              schema:
+                type: string
+          content:
+            text/csv:
+              schema:
+                type: string
+        "422":
+          $ref: "#/components/responses/ValidationError"
   /api/changes/{measure_id}:
     get:
       operationId: getChange
@@ -338,6 +374,34 @@ paths:
                 $ref: "#/components/schemas/AdminReviewSummary"
         "401":
           $ref: "#/components/responses/AdminUnauthorized"
+  /api/admin/review-dashboard:
+    get:
+      operationId: getAdminReviewDashboard
+      tags: [Admin review]
+      summary: List private cross-measure review progress
+      description: |
+        Returns checklist counts and workflow state for authenticated administrators.
+        Reopened reviews are grouped under in_review. Checklist content and internal
+        notes are intentionally excluded from this centralized projection.
+      security:
+        - AdminSessionCookie: []
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/ReviewDashboardStatus"
+      responses:
+        "200":
+          description: Private per-comparison review progress and queue totals.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminReviewDashboard"
+        "401":
+          $ref: "#/components/responses/AdminUnauthorized"
+        "422":
+          $ref: "#/components/responses/ValidationError"
   /api/admin/measures:
     get:
       operationId: listAdminMeasures
@@ -376,6 +440,30 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AdminMeasureDetail"
+        "401":
+          $ref: "#/components/responses/AdminUnauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /api/admin/measures/{measure_id}/review-activity:
+    get:
+      operationId: getAdminMeasureReviewActivity
+      tags: [Admin review]
+      summary: Read a measure's private append-only review activity
+      description: |
+        Returns presentation-ready review events for authenticated administrators.
+        Private notes are included here but are never exposed by public endpoints.
+        Raw event payloads remain internal to the backend.
+      security:
+        - AdminSessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/MeasureId"
+      responses:
+        "200":
+          description: Private review timelines grouped by comparison review.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminMeasureReviewActivity"
         "401":
           $ref: "#/components/responses/AdminUnauthorized"
         "404":
@@ -731,6 +819,259 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiError"
+  /api/admin/comparisons/{comparison_id}/review-checklist:
+    get:
+      operationId: getAdminReviewChecklist
+      tags: [Admin review]
+      summary: Read one private shared comparison checklist
+      description: |
+        Returns all retained checklist items and generated proposal decisions for
+        one comparison. This private workflow never changes a public response.
+      security:
+        - AdminSessionCookie: []
+      parameters:
+        - name: comparison_id
+          in: path
+          required: true
+          schema: {type: integer, minimum: 1}
+      responses:
+        "200":
+          description: The private review checklist, including an empty unstarted state.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminReviewChecklist"
+        "401":
+          $ref: "#/components/responses/AdminUnauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /api/admin/comparisons/{comparison_id}/review-checklist/items:
+    post:
+      operationId: createAdminReviewChecklistItem
+      tags: [Admin review]
+      summary: Add an administrator-authored checklist item
+      security:
+        - AdminSessionCookie: []
+      parameters:
+        - name: comparison_id
+          in: path
+          required: true
+          schema: {type: integer, minimum: 1}
+        - name: X-CMSQI-Admin-Action
+          in: header
+          required: true
+          schema:
+            type: string
+            const: manage-review-checklist
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminReviewChecklistItemCreateRequest"
+      responses:
+        "200":
+          description: The updated shared checklist.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminReviewChecklist"
+        "401":
+          $ref: "#/components/responses/AdminUnauthorized"
+        "403":
+          $ref: "#/components/responses/AdminActionForbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /api/admin/review-checklist/items/{checklist_item_id}:
+    patch:
+      operationId: updateAdminReviewChecklistItem
+      tags: [Admin review]
+      summary: Edit or resolve one accepted checklist item
+      security:
+        - AdminSessionCookie: []
+      parameters:
+        - name: checklist_item_id
+          in: path
+          required: true
+          schema: {type: string, minLength: 1, maxLength: 120}
+        - name: X-CMSQI-Admin-Action
+          in: header
+          required: true
+          schema:
+            type: string
+            const: manage-review-checklist
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminReviewChecklistItemUpdateRequest"
+      responses:
+        "200":
+          description: The updated shared checklist.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminReviewChecklist"
+        "401":
+          $ref: "#/components/responses/AdminUnauthorized"
+        "403":
+          $ref: "#/components/responses/AdminActionForbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /api/admin/reviews/{review_id}/sign-off:
+    post:
+      operationId: signOffAdminReview
+      tags: [Admin review]
+      summary: Sign off a fully resolved private review
+      description: |
+        Completes a review only after every accepted checklist item is either
+        completed or not applicable. Each successful sign-off appends an
+        immutable snapshot; earlier sign-offs remain available after reopening.
+      security:
+        - AdminSessionCookie: []
+      parameters:
+        - name: review_id
+          in: path
+          required: true
+          schema: {type: string, minLength: 1, maxLength: 120}
+        - name: X-CMSQI-Admin-Action
+          in: header
+          required: true
+          schema:
+            type: string
+            const: manage-review-lifecycle
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminReviewLifecycleRequest"
+      responses:
+        "200":
+          description: The completed review with its retained sign-off history.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminReviewChecklist"
+        "401":
+          $ref: "#/components/responses/AdminUnauthorized"
+        "403":
+          $ref: "#/components/responses/AdminActionForbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /api/admin/reviews/{review_id}/reopen:
+    post:
+      operationId: reopenAdminReview
+      tags: [Admin review]
+      summary: Reopen a completed private review
+      description: |
+        Reopens a completed review for another review pass without deleting its
+        prior sign-off snapshots or append-only review events.
+      security:
+        - AdminSessionCookie: []
+      parameters:
+        - name: review_id
+          in: path
+          required: true
+          schema: {type: string, minLength: 1, maxLength: 120}
+        - name: X-CMSQI-Admin-Action
+          in: header
+          required: true
+          schema:
+            type: string
+            const: manage-review-lifecycle
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminReviewLifecycleRequest"
+      responses:
+        "200":
+          description: The reopened review with its prior sign-offs retained.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminReviewChecklist"
+        "401":
+          $ref: "#/components/responses/AdminUnauthorized"
+        "403":
+          $ref: "#/components/responses/AdminActionForbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /api/admin/task-proposals/{proposal_id}/accept:
+    post:
+      operationId: acceptAdminImpactTaskProposal
+      tags: [Admin review]
+      summary: Accept a generated proposal into the shared checklist
+      security:
+        - AdminSessionCookie: []
+      parameters:
+        - name: proposal_id
+          in: path
+          required: true
+          schema: {type: string, minLength: 1, maxLength: 120}
+        - name: X-CMSQI-Admin-Action
+          in: header
+          required: true
+          schema:
+            type: string
+            const: manage-review-checklist
+      responses:
+        "200":
+          description: The proposal decision and updated checklist.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminReviewChecklist"
+        "401":
+          $ref: "#/components/responses/AdminUnauthorized"
+        "403":
+          $ref: "#/components/responses/AdminActionForbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /api/admin/task-proposals/{proposal_id}/dismiss:
+    post:
+      operationId: dismissAdminImpactTaskProposal
+      tags: [Admin review]
+      summary: Dismiss a generated proposal without adding a checklist item
+      security:
+        - AdminSessionCookie: []
+      parameters:
+        - name: proposal_id
+          in: path
+          required: true
+          schema: {type: string, minLength: 1, maxLength: 120}
+        - name: X-CMSQI-Admin-Action
+          in: header
+          required: true
+          schema:
+            type: string
+            const: manage-review-checklist
+      responses:
+        "200":
+          description: The proposal decision and unchanged accepted checklist.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminReviewChecklist"
+        "401":
+          $ref: "#/components/responses/AdminUnauthorized"
+        "403":
+          $ref: "#/components/responses/AdminActionForbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
   /api/admin/impact-explanations/{draft_id}/publish:
     post:
       operationId: publishAdminImpactExplanationDraft
@@ -2175,6 +2516,263 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/AdminImpactTaskProposal"
+    AdminReviewChecklistItem:
+      type: object
+      additionalProperties: false
+      required:
+        - checklist_item_id
+        - review_id
+        - accepted_from_proposal_id
+        - role
+        - title
+        - description
+        - status
+        - notes
+        - resolved_at
+        - resolved_by
+        - created_at
+        - created_by
+        - updated_at
+      properties:
+        checklist_item_id: {type: string}
+        review_id: {type: string}
+        accepted_from_proposal_id: {type: [string, "null"]}
+        role:
+          type: string
+          enum: [data_analyst, aco_quality_manager, both]
+        title: {type: string}
+        description: {type: [string, "null"]}
+        status:
+          type: string
+          enum: [open, completed, not_applicable]
+        notes: {type: [string, "null"]}
+        resolved_at: {type: [string, "null"], format: date-time}
+        resolved_by: {type: [string, "null"]}
+        created_at: {type: string, format: date-time}
+        created_by: {type: string}
+        updated_at: {type: string, format: date-time}
+    AdminReviewChecklistProgress:
+      type: object
+      additionalProperties: false
+      required: [total, open, resolved]
+      properties:
+        total: {type: integer, minimum: 0}
+        open: {type: integer, minimum: 0}
+        resolved: {type: integer, minimum: 0}
+    AdminReviewSignOff:
+      type: object
+      additionalProperties: false
+      required:
+        - signoff_id
+        - sequence
+        - accepted_task_count
+        - resolved_task_count
+        - note
+        - signed_at
+        - signed_by
+      properties:
+        signoff_id: {type: string}
+        sequence: {type: integer, minimum: 1}
+        accepted_task_count: {type: integer, minimum: 0}
+        resolved_task_count: {type: integer, minimum: 0}
+        note: {type: [string, "null"]}
+        signed_at: {type: string, format: date-time}
+        signed_by: {type: string}
+    ReviewDashboardStatus:
+      type: string
+      enum: [pending, in_review, completed, needs_re_review]
+    AdminReviewDashboardItem:
+      type: object
+      additionalProperties: false
+      required:
+        - comparison_id
+        - measure_id
+        - measure_name
+        - program
+        - from_year
+        - to_year
+        - dashboard_status
+        - review_id
+        - review_status
+        - remaining_tasks
+        - progress
+      properties:
+        comparison_id: {type: integer, minimum: 1}
+        measure_id: {type: string}
+        measure_name: {type: string}
+        program: {type: string}
+        from_year: {type: integer, minimum: 2000, maximum: 2100}
+        to_year: {type: integer, minimum: 2000, maximum: 2100}
+        dashboard_status:
+          $ref: "#/components/schemas/ReviewDashboardStatus"
+        review_id: {type: [string, "null"]}
+        review_status:
+          type: [string, "null"]
+          enum: [pending, in_review, completed, reopened, needs_re_review, null]
+        remaining_tasks: {type: integer, minimum: 0}
+        progress:
+          $ref: "#/components/schemas/AdminReviewChecklistProgress"
+    AdminReviewDashboardSummary:
+      type: object
+      additionalProperties: false
+      required: [total, pending, in_review, completed, needs_re_review]
+      properties:
+        total: {type: integer, minimum: 0}
+        pending: {type: integer, minimum: 0}
+        in_review: {type: integer, minimum: 0}
+        completed: {type: integer, minimum: 0}
+        needs_re_review: {type: integer, minimum: 0}
+    AdminReviewDashboard:
+      type: object
+      additionalProperties: false
+      required: [summary, items]
+      properties:
+        summary:
+          $ref: "#/components/schemas/AdminReviewDashboardSummary"
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminReviewDashboardItem"
+    AdminReviewChecklist:
+      type: object
+      additionalProperties: false
+      required:
+        - comparison_id
+        - review_id
+        - review_status
+        - eligible_impact_explanation_draft_id
+        - proposals
+        - items
+        - progress
+        - signoffs
+        - can_sign_off
+        - signoff_blocker
+      properties:
+        comparison_id: {type: integer, minimum: 1}
+        review_id: {type: [string, "null"]}
+        review_status:
+          type: [string, "null"]
+          enum: [pending, in_review, completed, reopened, needs_re_review, null]
+        eligible_impact_explanation_draft_id: {type: [string, "null"]}
+        proposals:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminImpactTaskProposal"
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminReviewChecklistItem"
+        progress:
+          $ref: "#/components/schemas/AdminReviewChecklistProgress"
+        signoffs:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminReviewSignOff"
+        can_sign_off: {type: boolean}
+        signoff_blocker: {type: [string, "null"]}
+    AdminReviewChecklistItemCreateRequest:
+      type: object
+      additionalProperties: false
+      required: [role, title]
+      properties:
+        role:
+          type: string
+          enum: [data_analyst, aco_quality_manager, both]
+        title: {type: string, minLength: 1, maxLength: 500}
+        description: {type: [string, "null"], maxLength: 4000}
+        notes: {type: [string, "null"], maxLength: 4000}
+    AdminReviewChecklistItemUpdateRequest:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        role:
+          type: string
+          enum: [data_analyst, aco_quality_manager, both]
+        title: {type: string, minLength: 1, maxLength: 500}
+        description: {type: [string, "null"], maxLength: 4000}
+        notes: {type: [string, "null"], maxLength: 4000}
+        status:
+          type: string
+          enum: [open, completed, not_applicable]
+    AdminReviewLifecycleRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        note: {type: [string, "null"], maxLength: 4000}
+    ReviewEventType:
+      type: string
+      enum:
+        - review_created
+        - proposal_created
+        - proposal_accepted
+        - proposal_dismissed
+        - task_added
+        - task_edited
+        - task_status_changed
+        - note_added
+        - signed_off
+        - reopened
+        - needs_re_review
+    AdminReviewActivityEvent:
+      type: object
+      additionalProperties: false
+      required:
+        - event_id
+        - sequence
+        - event_type
+        - title
+        - detail
+        - actor
+        - occurred_at
+        - note
+      properties:
+        event_id: {type: string}
+        sequence: {type: integer, minimum: 1}
+        event_type:
+          $ref: "#/components/schemas/ReviewEventType"
+        title: {type: string}
+        detail: {type: string}
+        actor: {type: string}
+        occurred_at: {type: string, format: date-time}
+        note: {type: [string, "null"]}
+    AdminReviewActivityReview:
+      type: object
+      additionalProperties: false
+      required:
+        - review_id
+        - comparison_id
+        - review_status
+        - program
+        - collection_type
+        - from_year
+        - to_year
+        - events
+      properties:
+        review_id: {type: string}
+        comparison_id: {type: integer, minimum: 1}
+        review_status:
+          type: string
+          enum: [pending, in_review, completed, reopened, needs_re_review]
+        program: {type: string}
+        collection_type:
+          $ref: "#/components/schemas/CollectionType"
+        from_year: {type: integer, minimum: 2000, maximum: 2100}
+        to_year: {type: integer, minimum: 2000, maximum: 2100}
+        events:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminReviewActivityEvent"
+    AdminMeasureReviewActivity:
+      type: object
+      additionalProperties: false
+      required: [measure_id, reviews]
+      properties:
+        measure_id: {type: string}
+        reviews:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminReviewActivityReview"
     AdminImpactExplanationReviewRequest:
       type: object
       additionalProperties: false

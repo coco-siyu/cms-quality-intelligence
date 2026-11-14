@@ -312,6 +312,7 @@ def generate_impact_task_proposals(
                 payload={
                     "draft_id": draft.draft_id,
                     "role": proposal.role.value,
+                    "task_title": proposal.title,
                 },
             )
         )

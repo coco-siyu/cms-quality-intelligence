@@ -1,6 +1,6 @@
 # CMS Quality Intelligence — Implementation Backlog
 
-## Checkpoint status (November 8, 2026)
+## Checkpoint status (November 10, 2026)
 
 - Tasks 1, 2, 5–12: implemented and verified through Checkpoints A, B, C1,
   and C2.1–C2.5. The official PY2025–PY2026 roster has two-source evidence,
@@ -25,9 +25,9 @@
   in `docs/m1-validation.md`.
 - Task 38 is complete: environment-managed single-admin credentials, signed
   HttpOnly sessions, backend authorization, and authenticated private-review
-  endpoints are implemented and contract-tested. Task 57 has a first queue and
-  per-measure evidence view, while the full checklist/status dashboard remains
-  open. Individual review mutations and guarded field publication are implemented.
+  endpoints are implemented and contract-tested. Task 57 now provides the full
+  private cross-measure checklist/status dashboard and per-measure navigation.
+  Individual review mutations and guarded field publication are implemented.
 - Tasks 39–42 are implemented: authenticated administrators can manage an
   allowlisted cms.gov source registry, retrieve bounded HTML/PDF content,
   inspect locator-preserving text extraction, and retain hash-addressed source,
@@ -651,7 +651,7 @@ snapshots, and sequenced append-only review events. Proposals retain the exact
 impact-explanation draft that generated them, while accepted tasks, prior
 completion metadata, sign-offs, and events remain independent historical records.
 Database constraints reject incomplete completion/decision metadata and sign-off
-snapshots whose accepted/resolved counts disagree. Task 58 will validate those
+snapshots whose accepted/resolved counts disagree. Task 58 validates those
 snapshot counts against the active checklist before sign-off. Migration and
 persistence tests verify that explanation regeneration and review reopening append
 new records without erasing earlier reviewer actions. No public or administrative
@@ -680,21 +680,88 @@ remains Task 56.
 Goal: Let the admin manage one shared checklist per review.
 Description: Support accepting suggested items, adding/editing tasks, marking completed or not applicable, and filtering by All / Data Analyst / ACO Quality Manager. Persist edits and events while retaining previous tasks when AI suggestions are regenerated.
 
+Implementation status (complete, 2026-11-10): The comparison desk now opens a
+private two-column follow-up workspace that keeps optional AI suggestions
+separate from the accepted human checklist. Administrators can generate the
+current approved explanation's suggestion batch, accept or dismiss individual
+suggestions, add and edit manual tasks, record private notes, and mark accepted
+items open, completed, or not applicable. All / Data Analyst / ACO Quality
+Manager filters operate on the one shared checklist, with shared-role items
+visible in both role views. Protected FastAPI endpoints persist every mutation,
+append proposal, edit, and status events, and return progress without exposing
+tasks through public APIs. Regenerating suggestions for a later explanation
+version adds a new pending batch while earlier accepted and resolved tasks remain
+unchanged. Focused backend and frontend tests cover authentication, explicit
+action headers, proposal conversion, manual tasks, edits, completion, filtering,
+progress, and regeneration retention. Final sign-off and reopening are Task 58,
+and the centralized cross-measure queue is Task 57; both are now complete.
+
 ## 57. Build the centralized admin review dashboard
 Goal: Make outstanding measure reviews and tasks visible in one place.
 Description: Show per-measure review status, remaining accepted tasks, checklist progress, and links to the corresponding measure's admin view. Include filters for Pending, In Review, Completed, and Needs Re-review and keep internal notes private.
+
+Implementation status (complete, 2026-11-10): The protected admin workspace now
+includes a cross-measure review dashboard backed by a dedicated authenticated
+read model. Each comparison reports its workflow status, accepted checklist
+progress, remaining open tasks, performance-year pair, and a link to the existing
+private measure view. Filters cover Pending, In Review, Completed, and Needs
+Re-review; reopened reviews are grouped under In Review without changing their
+stored status. Queue totals remain stable while a filter is active, and urgent
+re-review work sorts first. The compact response excludes checklist text and
+internal notes, and no public route exposes dashboard records. Backend and
+frontend tests cover authentication, status projection and filtering, progress
+counts, private-note exclusion, navigation, and responsive queue rendering.
+Formal completion, sign-off, and reopening are implemented by Task 58.
 
 ## 58. Implement final sign-off and review reopening
 Goal: Distinguish task completion from formal review completion.
 Description: Require all accepted checklist items to be completed or marked not applicable before the admin can sign off. Allow later reopening and re-sign-off while appending timestamped events and preserving older sign-offs.
 
+Implementation status (complete, 2026-11-11): The private checklist now exposes
+formal completion eligibility separately from task progress. Protected lifecycle
+endpoints reject sign-off while any accepted item remains open, append an
+immutable sign-off snapshot after explicit administrator confirmation, and lock
+completed checklist mutations until the review is reopened. Reopening preserves
+all prior snapshots and events, and a later sign-off receives the next sequence
+instead of replacing history. A newly detected official source revision moves a
+completed review to Needs Re-review while retaining its earlier sign-off. The
+compact checklist dialog shows the current blocker, optional sign-off note,
+latest sign-off, and reopen action; the complete private activity ledger remains
+Task 59. Backend lifecycle, authorization, source-staleness, OpenAPI contract,
+and frontend interaction tests cover the workflow.
+
 ## 59. Build the private review activity timeline
 Goal: Preserve an auditable record of what was reviewed and changed.
 Description: Render append-only task edits, notes, approval changes, sign-offs, and reopen events on each admin measure page. Verify public visitors only see the permitted verification status and last-reviewed information, not internal timeline content.
 
+Implementation status (complete, 2026-11-11): Each authenticated admin measure
+page now renders a private, newest-first activity ledger grouped by comparison
+review. The protected read model turns append-only proposal, checklist, status,
+note, sign-off, reopen, and Needs Re-review events into concise summaries while
+retaining their true sequence, actor, timestamp, and private note. Future task
+events snapshot the task title and relevant note at the time of the mutation so
+later edits do not make the audit entry ambiguous. Raw event payloads remain
+internal, the formal OpenAPI contract exposes only the presentation-safe private
+shape, and public responses are tested to exclude activity and notes. Backend
+authorization/read-model tests and frontend measure-page tests cover ordering,
+content, empty/error states, and responsive rendering.
+
 ## 60. Implement CSV export of verified change data
 Goal: Let analysts download structured, source-backed comparisons.
 Description: Export the currently filtered public measure/change dataset with stable IDs, comparison years, change types, affected fields, and evidence URLs. Exclude unverified fields and private review notes, and test CSV escaping and exported row counts.
+
+Implementation status (complete, 2026-11-13): Measure Explorer now requests a
+server-generated CSV using its current search, year, change-status, field, and
+public verification filters. The export reuses the public measure selector and
+the fresh evidence validation applied to `GET /api/changes`, then writes one row
+per published comparison field with stable measure identity, year pair, status,
+field values, evidence IDs and official URLs, and publication timestamps. CSV
+serialization handles quotes, commas, and newlines and neutralizes text that a
+spreadsheet could interpret as a formula. Drafts, incomplete evidence, private
+measures, reviewer identities, notes, checklists, and audit events remain absent.
+Backend tests cover filtering, row counts, escaping, formula safety, filenames,
+and private-data exclusion; frontend integration coverage verifies the active
+URL filters are sent to the export endpoint.
 
 ## 61. Implement Excel export of verified change data
 Goal: Provide spreadsheet-friendly output for quality teams.

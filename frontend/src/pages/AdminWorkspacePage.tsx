@@ -4,6 +4,7 @@ import { AlertTriangle, ArrowRight, Database, FileCheck2, LogOut, Search, Shield
 
 import { ErrorState, LoadingState } from "../components/cms/shared";
 import { AdminComparisonDesk } from "../components/cms/AdminComparisonDesk";
+import { AdminReviewDashboard } from "../components/cms/AdminReviewDashboard";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import {
@@ -141,6 +142,8 @@ function ReviewWorkspace({ username }: { username: string }) {
           </article>
         ))}
       </section>
+
+      <AdminReviewDashboard />
 
       <AdminComparisonDesk />
 

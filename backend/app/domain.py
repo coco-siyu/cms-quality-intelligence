@@ -154,6 +154,13 @@ class MeasureReviewStatus(StrEnum):
     NEEDS_RE_REVIEW = "needs_re_review"
 
 
+class ReviewDashboardStatus(StrEnum):
+    PENDING = "pending"
+    IN_REVIEW = "in_review"
+    COMPLETED = "completed"
+    NEEDS_RE_REVIEW = "needs_re_review"
+
+
 class ReviewRole(StrEnum):
     DATA_ANALYST = "data_analyst"
     ACO_QUALITY_MANAGER = "aco_quality_manager"

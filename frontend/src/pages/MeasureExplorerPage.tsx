@@ -1,10 +1,12 @@
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { Download } from "lucide-react";
+import { useState } from "react";
 
 import { MeasureTable } from "../components/cms/MeasureTable";
 import { ErrorState, LoadingState } from "../components/cms/shared";
 import { Button } from "../components/ui/button";
-import { apiSummaryToMeasure } from "../features/measures/api/adapters";
+import { apiSummaryToMeasure, filtersToApiFilters } from "../features/measures/api/adapters";
+import { changeApi } from "../features/measures/api/client";
 import { useApiMeasureList, usePerformanceYears } from "../features/measures/api/queries";
 import { getDataMode, type DataMode } from "../features/measures/dataMode";
 import { parseDemoFilters } from "../features/measures/demo/filters";
@@ -15,7 +17,7 @@ function csvCell(value: string | number) {
   return `"${String(value).replaceAll('"', '""')}"`;
 }
 
-function exportMeasures(measures: DemoMeasure[], dataMode: DataMode) {
+function exportDemoMeasures(measures: DemoMeasure[]) {
   const header = ["measure_id", "name", "change_status", "affected_area", "years", "review"];
   const rows = measures.map((measure) => [
     measure.id,
@@ -32,8 +34,16 @@ function exportMeasures(measures: DemoMeasure[], dataMode: DataMode) {
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
-  anchor.download =
-    dataMode === "demo" ? "fictional-measure-prototype.csv" : "published-measures.csv";
+  anchor.download = "fictional-measure-prototype.csv";
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
   anchor.click();
   URL.revokeObjectURL(url);
 }
@@ -44,14 +54,30 @@ function ExplorerContent({
   measures,
   performanceYears,
   total,
+  onExport,
 }: {
   dataMode: DataMode;
   filters: DemoFilters;
   measures: DemoMeasure[];
   performanceYears: number[];
   total: number;
+  onExport: () => Promise<void> | void;
 }) {
   const navigate = useNavigate({ from: "/measures" });
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
+
+  const handleExport = async () => {
+    setIsExporting(true);
+    setExportError(null);
+    try {
+      await onExport();
+    } catch (error) {
+      setExportError(error instanceof Error ? error.message : "The CSV could not be exported.");
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   return (
     <div className="visual-page explorer-page">
@@ -64,14 +90,17 @@ function ExplorerContent({
             years.
           </p>
         </div>
-        <Button
-          type="button"
-          onClick={() => exportMeasures(measures, dataMode)}
-          disabled={measures.length === 0}
-          className="export-button"
-        >
-          <Download aria-hidden="true" /> Export CSV
-        </Button>
+        <div className="export-control">
+          <Button
+            type="button"
+            onClick={() => void handleExport()}
+            disabled={measures.length === 0 || isExporting}
+            className="export-button"
+          >
+            <Download aria-hidden="true" /> {isExporting ? "Exporting…" : "Export CSV"}
+          </Button>
+          {exportError ? <p role="alert">{exportError}</p> : null}
+        </div>
       </header>
 
       <MeasureTable
@@ -104,6 +133,7 @@ function DemoMeasureExplorerPage() {
       measures={measureQuery.data.items}
       performanceYears={[2025, 2026]}
       total={measureQuery.data.total}
+      onExport={() => exportDemoMeasures(measureQuery.data.items)}
     />
   );
 }
@@ -137,6 +167,13 @@ function ApiMeasureExplorerPage() {
       measures={measureQuery.data.items.map(apiSummaryToMeasure)}
       performanceYears={performanceYearsQuery.data.years}
       total={measureQuery.data.pagination.total_items}
+      onExport={async () => {
+        const result = await changeApi.exportCsv({
+          ...filtersToApiFilters(filters),
+          collection_type: "program_roster",
+        });
+        downloadBlob(result.blob, result.filename);
+      }}
     />
   );
 }

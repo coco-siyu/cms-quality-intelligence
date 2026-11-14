@@ -2996,6 +2996,20 @@ h3 {
   border-radius: 9px;
 }
 
+.export-control {
+  display: grid;
+  justify-items: end;
+  gap: 8px;
+}
+
+.export-control [role="alert"] {
+  max-width: 320px;
+  margin: 0;
+  color: var(--destructive);
+  font-size: 12px;
+  text-align: right;
+}
+
 .measures-section.route-section {
   padding: 24px;
   margin-top: 34px;
@@ -3765,6 +3779,235 @@ h3 {
   font-size: 11px;
 }
 
+.admin-review-dashboard {
+  padding: 28px;
+  margin-top: 18px;
+}
+
+.admin-review-dashboard > header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.admin-review-dashboard > header h2 {
+  margin-top: 7px;
+  color: var(--navy);
+  font-size: 32px;
+}
+
+.admin-review-dashboard > header p:last-child {
+  margin-top: 5px;
+  color: var(--muted-foreground);
+  font-size: 11px;
+}
+
+.admin-review-dashboard-total {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--muted-foreground);
+  font-size: 11px;
+}
+
+.admin-review-dashboard-total svg {
+  width: 16px;
+}
+
+.admin-review-dashboard-total strong {
+  color: var(--navy);
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 400;
+}
+
+.admin-review-dashboard-filters {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 1px;
+  margin-top: 24px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--border);
+}
+
+.admin-review-dashboard-filters button {
+  display: flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 14px;
+  border: 0;
+  background: var(--card);
+  color: var(--muted-foreground);
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.admin-review-dashboard-filters button:hover {
+  background: var(--secondary);
+  color: var(--foreground);
+}
+
+.admin-review-dashboard-filters button:focus-visible {
+  position: relative;
+  z-index: 1;
+  outline: 2px solid var(--navy);
+  outline-offset: -3px;
+}
+
+.admin-review-dashboard-filters button.is-active {
+  background: var(--navy);
+  color: white;
+}
+
+.admin-review-dashboard-filters strong {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 400;
+}
+
+.admin-review-dashboard-list {
+  display: grid;
+  margin-top: 18px;
+}
+
+.admin-review-dashboard-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: 5px minmax(280px, 1.5fr) minmax(125px, 0.5fr) minmax(180px, 0.8fr) auto;
+  align-items: center;
+  gap: 20px;
+  min-height: 104px;
+  padding: 18px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.admin-review-dashboard-marker {
+  width: 3px;
+  height: 54px;
+  border-radius: 999px;
+  background: var(--powder);
+}
+
+.admin-review-dashboard-row.status-in_review .admin-review-dashboard-marker {
+  background: var(--navy);
+}
+
+.admin-review-dashboard-row.status-completed .admin-review-dashboard-marker {
+  background: var(--olive);
+}
+
+.admin-review-dashboard-row.status-needs_re_review .admin-review-dashboard-marker {
+  background: var(--warning);
+}
+
+.admin-review-dashboard-measure {
+  min-width: 0;
+}
+
+.admin-review-dashboard-measure h3 {
+  margin-top: 4px;
+  overflow: hidden;
+  color: var(--navy);
+  font-family: var(--font-display);
+  font-size: 21px;
+  font-weight: 400;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-review-dashboard-measure small {
+  display: block;
+  margin-top: 7px;
+  color: var(--muted-foreground);
+  font-size: 10px;
+}
+
+.admin-review-dashboard-state,
+.admin-review-dashboard-progress {
+  display: grid;
+  gap: 8px;
+}
+
+.admin-review-dashboard-state small,
+.admin-review-dashboard-progress span {
+  color: var(--muted-foreground);
+  font-size: 10px;
+}
+
+.admin-review-dashboard-badge {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  gap: 6px;
+  color: var(--secondary-foreground);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.admin-review-dashboard-badge svg {
+  width: 14px;
+}
+
+.admin-review-dashboard-badge.status-needs_re_review {
+  color: var(--warning);
+}
+
+.admin-review-dashboard-progress strong {
+  color: var(--foreground);
+}
+
+.admin-review-dashboard-progress [role="progressbar"] {
+  height: 4px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--secondary);
+}
+
+.admin-review-dashboard-progress [role="progressbar"] > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--navy);
+}
+
+.admin-review-dashboard-row > a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--navy);
+  font-size: 11px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.admin-review-dashboard-row > a:hover {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.admin-review-dashboard-row > a svg {
+  width: 15px;
+}
+
+.admin-review-dashboard-empty {
+  display: grid;
+  min-height: 112px;
+  place-items: center;
+  gap: 10px;
+  margin-top: 18px;
+  color: var(--muted-foreground);
+  font-size: 11px;
+  text-align: center;
+}
+
 .admin-comparison-desk {
   padding: 28px;
   margin-top: 18px;
@@ -4421,6 +4664,411 @@ h3 {
   font-family: var(--font-display);
   font-size: 24px;
   font-weight: 400;
+}
+
+.admin-impact-checklist-dialog {
+  width: min(calc(100% - 28px), 1180px);
+  max-width: 1180px;
+  max-height: min(92vh, 980px);
+  padding: 0;
+  overflow-y: auto;
+}
+
+.impact-checklist-heading {
+  position: sticky;
+  z-index: 2;
+  top: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 28px 34px 22px;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--card) 96%, transparent);
+  backdrop-filter: blur(12px);
+}
+
+.impact-checklist-heading h2,
+.impact-checklist-columns h3 {
+  color: var(--navy);
+  font-family: var(--font-display);
+  font-weight: 400;
+}
+
+.impact-checklist-heading h2 {
+  margin-top: 6px;
+  font-size: 34px;
+}
+
+.impact-checklist-heading [data-radix-dialog-description] {
+  margin-top: 6px;
+  font-size: 11px;
+}
+
+.impact-checklist-progress {
+  display: grid;
+  min-width: 86px;
+  justify-items: end;
+}
+
+.impact-checklist-progress strong {
+  color: var(--navy);
+  font-family: var(--font-display);
+  font-size: 31px;
+  font-weight: 400;
+  line-height: 1;
+}
+
+.impact-checklist-progress span {
+  color: var(--muted-foreground);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.impact-checklist-body {
+  padding: 20px 34px 34px;
+}
+
+.impact-checklist-filters {
+  display: flex;
+  width: fit-content;
+  gap: 4px;
+  padding: 3px;
+  border-radius: 9px;
+  background: var(--muted);
+}
+
+.impact-checklist-filters button {
+  padding: 7px 11px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  font: inherit;
+  font-size: 10px;
+}
+
+.impact-checklist-filters button:hover {
+  color: var(--navy);
+}
+
+.impact-checklist-filters button[aria-pressed="true"] {
+  background: var(--card);
+  color: var(--navy);
+  box-shadow: 0 1px 4px rgb(29 42 65 / 8%);
+  font-weight: 700;
+}
+
+.impact-checklist-filters button:focus-visible {
+  outline: 2px solid var(--powder);
+  outline-offset: 2px;
+}
+
+.impact-checklist-body > .admin-form-error {
+  margin-top: 14px;
+}
+
+.impact-checklist-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 0.88fr) minmax(0, 1.12fr);
+  gap: 0;
+  margin-top: 18px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.impact-checklist-columns > section {
+  min-width: 0;
+  padding: 22px;
+}
+
+.impact-checklist-columns > section + section {
+  border-left: 1px solid var(--border);
+  background: color-mix(in srgb, var(--background) 72%, var(--card));
+}
+
+.impact-checklist-columns > section > header {
+  display: flex;
+  min-height: 44px;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.impact-checklist-columns h3 {
+  margin-top: 4px;
+  font-size: 25px;
+}
+
+.impact-checklist-columns header button svg,
+.impact-checklist-item footer button svg,
+.impact-suggestion-list footer button svg {
+  width: 14px;
+}
+
+.impact-suggestion-list,
+.impact-checklist-list {
+  display: grid;
+  gap: 9px;
+  margin-top: 16px;
+}
+
+.impact-suggestion-list > article,
+.impact-checklist-item,
+.impact-checklist-new {
+  padding: 15px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--card);
+}
+
+.impact-suggestion-list > article > span,
+.impact-checklist-item header span:first-child,
+.impact-checklist-fields label > span {
+  color: var(--olive);
+  font-family: var(--font-mono);
+  font-size: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.impact-suggestion-list h4,
+.impact-checklist-item h4 {
+  margin-top: 5px;
+  color: var(--navy);
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 400;
+  line-height: 1.25;
+}
+
+.impact-suggestion-list p,
+.impact-checklist-item > p {
+  margin-top: 7px;
+  color: var(--secondary-foreground);
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.impact-suggestion-list small {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.impact-suggestion-list small a {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--muted-foreground);
+  font-size: 8px;
+}
+
+.impact-suggestion-list small svg {
+  width: 9px;
+}
+
+.impact-suggestion-list footer,
+.impact-checklist-item > footer,
+.impact-checklist-item form > footer,
+.impact-checklist-new > footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.impact-checklist-item > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.impact-checklist-status {
+  flex: 0 0 auto;
+  padding: 4px 7px;
+  border-radius: 999px;
+  background: var(--muted);
+  color: var(--muted-foreground);
+  font-size: 8px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.impact-checklist-item.status-completed {
+  border-left: 3px solid var(--olive);
+}
+
+.impact-checklist-item.status-not_applicable {
+  opacity: 0.72;
+}
+
+.impact-checklist-item > small {
+  display: block;
+  padding-top: 9px;
+  margin-top: 9px;
+  border-top: 1px solid var(--border);
+  color: var(--muted-foreground);
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.impact-checklist-state-actions {
+  display: flex;
+  gap: 2px;
+  margin-left: auto;
+}
+
+.impact-checklist-fields {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
+  gap: 10px;
+}
+
+.impact-checklist-fields label {
+  display: grid;
+  gap: 5px;
+}
+
+.impact-checklist-fields label.wide {
+  grid-column: 1 / -1;
+}
+
+.impact-checklist-fields input,
+.impact-checklist-fields select,
+.impact-checklist-fields textarea {
+  width: 100%;
+  padding: 9px 10px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--background);
+  color: var(--foreground);
+  font: inherit;
+  font-size: 10px;
+}
+
+.impact-checklist-fields textarea {
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.impact-checklist-fields :is(input, select, textarea):focus-visible {
+  border-color: var(--powder);
+  outline: 2px solid color-mix(in srgb, var(--powder) 22%, transparent);
+}
+
+.impact-checklist-new {
+  margin-top: 16px;
+  background: var(--powder-soft);
+}
+
+.impact-checklist-blank {
+  display: grid;
+  min-height: 170px;
+  place-items: center;
+  align-content: center;
+  gap: 8px;
+  color: var(--muted-foreground);
+  text-align: center;
+  font-size: 10px;
+}
+
+.impact-checklist-blank svg {
+  width: 20px;
+}
+
+.impact-review-completion {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 18px 20px;
+  margin-top: 16px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--powder);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--powder-soft) 44%, var(--card));
+}
+
+.impact-review-completion.is-complete {
+  border-left-color: var(--olive);
+  background: color-mix(in srgb, var(--muted) 58%, var(--card));
+}
+
+.impact-review-completion-copy {
+  min-width: 0;
+}
+
+.impact-review-completion-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.impact-review-completion-title > svg {
+  width: 18px;
+  color: var(--navy);
+}
+
+.impact-review-completion h3 {
+  margin-top: 3px;
+  color: var(--navy);
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 400;
+}
+
+.impact-review-completion-copy > p {
+  margin-top: 8px;
+  color: var(--muted-foreground);
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.impact-review-completion-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.impact-review-completion-actions label {
+  display: grid;
+  gap: 5px;
+}
+
+.impact-review-completion-actions label > span {
+  color: var(--muted-foreground);
+  font-size: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.impact-review-completion-actions input {
+  width: min(260px, 30vw);
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--card);
+  color: var(--foreground);
+  font: inherit;
+  font-size: 10px;
+}
+
+.impact-review-completion-actions input:focus-visible {
+  border-color: var(--powder);
+  outline: 2px solid color-mix(in srgb, var(--powder) 22%, transparent);
+}
+
+.impact-review-completion-actions button svg {
+  width: 14px;
 }
 
 .admin-queue {
@@ -5161,6 +5809,211 @@ h3 {
 .admin-membership-strip strong {
   color: var(--navy);
   font-size: 13px;
+}
+
+.admin-review-activity {
+  margin-top: 46px;
+}
+
+.admin-review-activity > header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.admin-review-activity > header h2 {
+  margin-top: 5px;
+  color: var(--navy);
+  font-size: 32px;
+}
+
+.admin-review-activity > header p:last-child {
+  margin-top: 7px;
+  color: var(--muted-foreground);
+  font-size: 11px;
+}
+
+.admin-review-activity > header > span {
+  color: var(--olive);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.admin-review-activity-groups {
+  display: grid;
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.admin-review-activity-group {
+  padding: 0;
+  overflow: hidden;
+}
+
+.admin-review-activity-group > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 16px 22px;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--powder-soft) 48%, var(--card));
+}
+
+.admin-review-activity-group > header > div {
+  display: grid;
+  gap: 3px;
+}
+
+.admin-review-activity-group > header strong {
+  color: var(--navy);
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 400;
+}
+
+.admin-review-activity-group > header small {
+  color: var(--muted-foreground);
+  font-size: 9px;
+}
+
+.admin-review-activity-group > header > span {
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: var(--muted);
+  color: var(--muted-foreground);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.admin-review-activity-group > header > span.status-completed {
+  background: color-mix(in srgb, var(--olive), white 84%);
+  color: var(--olive);
+}
+
+.admin-review-activity-group > header > span.status-needs_re_review {
+  background: color-mix(in srgb, var(--butter), white 62%);
+  color: var(--foreground);
+}
+
+.admin-review-activity-group ol {
+  padding: 8px 22px 10px;
+  margin: 0;
+  list-style: none;
+}
+
+.admin-review-activity-group li {
+  position: relative;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 13px;
+}
+
+.admin-review-activity-marker {
+  position: relative;
+  display: grid;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  margin-top: 18px;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--card);
+  color: var(--navy);
+}
+
+.admin-review-activity-group li:not(:last-child)::before {
+  position: absolute;
+  top: 44px;
+  bottom: -18px;
+  left: 12px;
+  width: 1px;
+  background: var(--border);
+  content: "";
+}
+
+.admin-review-activity-marker svg {
+  width: 12px;
+}
+
+.admin-review-activity-group li.event-signed_off .admin-review-activity-marker {
+  border-color: var(--olive);
+  color: var(--olive);
+}
+
+.admin-review-activity-group li:is(.event-reopened, .event-needs_re_review) .admin-review-activity-marker {
+  border-color: var(--butter);
+  background: color-mix(in srgb, var(--butter), white 72%);
+}
+
+.admin-review-activity-group li > div {
+  min-width: 0;
+  padding: 17px 0 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.admin-review-activity-group li:last-child > div {
+  border-bottom: 0;
+}
+
+.admin-review-activity-group li header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.admin-review-activity-group li header strong {
+  color: var(--navy);
+  font-size: 11px;
+}
+
+.admin-review-activity-group time,
+.admin-review-activity-group li > div > small {
+  color: var(--muted-foreground);
+  font-family: var(--font-mono);
+  font-size: 8px;
+}
+
+.admin-review-activity-group li p {
+  margin-top: 5px;
+  color: var(--secondary-foreground);
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.admin-review-activity-group blockquote {
+  padding: 8px 10px;
+  margin: 9px 0 0;
+  border-left: 2px solid var(--powder);
+  background: var(--powder-soft);
+  color: var(--secondary-foreground);
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+.admin-review-activity-group li > div > small {
+  display: block;
+  margin-top: 8px;
+}
+
+.admin-review-activity-empty {
+  display: grid;
+  min-height: 108px;
+  place-items: center;
+  gap: 10px;
+  padding: 20px;
+  margin-top: 16px;
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  color: var(--muted-foreground);
+  font-size: 11px;
+  text-align: center;
 }
 
 .admin-variants {
@@ -5920,6 +6773,11 @@ h3 {
   .admin-metrics {
     grid-template-columns: repeat(3, 1fr);
   }
+
+  .admin-review-dashboard-row {
+    grid-template-columns: 5px minmax(220px, 1.4fr) minmax(120px, 0.65fr) minmax(150px, 0.8fr) auto;
+    gap: 14px;
+  }
 }
 
 @media (max-width: 780px) {
@@ -6193,6 +7051,22 @@ h3 {
     flex-direction: column;
   }
 
+  .admin-review-activity > header,
+  .admin-review-activity-group li header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .admin-review-activity-group > header {
+    align-items: flex-start;
+  }
+
+  .admin-review-activity-group ol {
+    padding-right: 16px;
+    padding-left: 16px;
+  }
+
   .admin-identity,
   .admin-search {
     width: 100%;
@@ -6204,6 +7078,52 @@ h3 {
 
   .admin-metrics {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .admin-review-dashboard {
+    padding: 22px 16px;
+  }
+
+  .admin-review-dashboard > header {
+    align-items: flex-start;
+  }
+
+  .admin-review-dashboard-filters {
+    display: flex;
+    overflow-x: auto;
+  }
+
+  .admin-review-dashboard-filters button {
+    min-width: 126px;
+    flex: 1 0 auto;
+  }
+
+  .admin-review-dashboard-row {
+    grid-template-columns: 4px 1fr auto;
+    gap: 12px;
+    padding: 20px 0;
+  }
+
+  .admin-review-dashboard-marker {
+    grid-row: 1 / span 3;
+    height: 100%;
+  }
+
+  .admin-review-dashboard-measure {
+    grid-column: 2 / -1;
+  }
+
+  .admin-review-dashboard-state {
+    grid-column: 2;
+  }
+
+  .admin-review-dashboard-progress {
+    grid-column: 2 / -1;
+  }
+
+  .admin-review-dashboard-row > a {
+    grid-column: 3;
+    grid-row: 2;
   }
 
   .admin-comparison-desk {
@@ -6269,6 +7189,73 @@ h3 {
   }
 
   .impact-review-actions button {
+    width: 100%;
+  }
+
+  .impact-checklist-heading {
+    align-items: flex-start;
+    padding: 24px 18px 18px;
+  }
+
+  .impact-checklist-progress {
+    justify-items: start;
+  }
+
+  .impact-checklist-body {
+    padding: 16px 18px 22px;
+  }
+
+  .impact-checklist-filters {
+    width: 100%;
+    overflow-x: auto;
+  }
+
+  .impact-checklist-filters button {
+    flex: 1 0 auto;
+  }
+
+  .impact-checklist-columns {
+    grid-template-columns: 1fr;
+  }
+
+  .impact-checklist-columns > section {
+    padding: 18px 14px;
+  }
+
+  .impact-checklist-columns > section + section {
+    border-top: 1px solid var(--border);
+    border-left: 0;
+  }
+
+  .impact-checklist-state-actions {
+    width: 100%;
+    flex-wrap: wrap;
+    margin-left: 0;
+  }
+
+  .impact-checklist-item > footer {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .impact-checklist-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .impact-checklist-fields label.wide {
+    grid-column: auto;
+  }
+
+  .impact-review-completion,
+  .impact-review-completion-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .impact-review-completion-actions,
+  .impact-review-completion-actions label,
+  .impact-review-completion-actions input,
+  .impact-review-completion-actions button {
     width: 100%;
   }
 

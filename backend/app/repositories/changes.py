@@ -20,6 +20,7 @@ from app.models import (
     SourceRevision,
     SpecificationField,
 )
+from app.repositories.measures import MeasureFilters, list_filtered_measure_ids
 from app.schemas import PaginationMeta, PublicChangePage, PublicChangeRecord
 from app.services.comparison_evidence import build_public_change_record
 
@@ -121,6 +122,21 @@ def list_public_changes(session: Session, filters: ChangeFilters) -> PublicChang
             total_pages=math.ceil(total_items / filters.page_size) if total_items else 0,
         ),
     )
+
+
+def list_public_changes_for_export(
+    session: Session,
+    *,
+    change_filters: ChangeFilters,
+    measure_filters: MeasureFilters,
+) -> list[PublicChangeRecord]:
+    """Return every public comparison selected by the Measure Explorer filters."""
+
+    measure_ids = list_filtered_measure_ids(session, measure_filters)
+    if not measure_ids:
+        return []
+    statement = _filtered_statement(change_filters).where(Measure.measure_id.in_(measure_ids))
+    return _project_public_changes(session, statement)
 
 
 def get_public_change(

@@ -1,13 +1,25 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Query
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, Response
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.domain import AffectedField, ChangeStatus, CollectionType
-from app.repositories.changes import ChangeFilters, get_public_change, list_public_changes
+from app.domain import (
+    AffectedField,
+    ChangeStatus,
+    CollectionType,
+    PublicVerificationStatus,
+)
+from app.repositories.changes import (
+    ChangeFilters,
+    get_public_change,
+    list_public_changes,
+    list_public_changes_for_export,
+)
+from app.repositories.measures import MeasureFilters
 from app.repositories.public_impact_explanations import get_public_impact_explanation
 from app.schemas import ApiError, PublicChangePage, PublicChangeRecord, PublicImpactExplanation
+from app.services.change_export import build_public_change_csv
 
 router = APIRouter(prefix="/api/changes", tags=["Public changes"])
 DatabaseSession = Annotated[Session, Depends(get_db)]
@@ -66,6 +78,64 @@ def changes(
             page=page,
             page_size=page_size,
         ),
+    )
+
+
+@router.get(
+    "/export.csv",
+    operation_id="exportChangesCsv",
+    response_class=Response,
+    responses={
+        200: {
+            "description": "CSV rows for the filtered, verified public comparison fields.",
+            "content": {"text/csv": {"schema": {"type": "string"}}},
+        },
+        **validation_response,
+    },
+)
+def export_changes_csv(
+    session: DatabaseSession,
+    q: Annotated[str | None, Query(max_length=200)] = None,
+    performance_year: Annotated[int | None, Query(ge=2000, le=2100)] = None,
+    from_year: Annotated[int | None, Query(ge=2000, le=2100)] = None,
+    to_year: Annotated[int | None, Query(ge=2000, le=2100)] = None,
+    change_status: ChangeStatus | None = None,
+    affected_field: AffectedField | None = None,
+    verification_status: PublicVerificationStatus | None = None,
+    collection_type: CollectionType | None = None,
+) -> Response:
+    _validate_year_pair(from_year, to_year)
+    measure_filters = MeasureFilters(
+        q=q,
+        performance_year=performance_year,
+        from_year=from_year,
+        to_year=to_year,
+        change_status=change_status,
+        affected_field=affected_field,
+        verification_status=verification_status,
+    )
+    records = list_public_changes_for_export(
+        session,
+        change_filters=ChangeFilters(
+            from_year=from_year,
+            to_year=to_year,
+            change_status=change_status,
+            affected_field=affected_field,
+            collection_type=collection_type,
+        ),
+        measure_filters=measure_filters,
+    )
+    year_suffix = (
+        f"-{from_year}-{to_year}" if from_year is not None and to_year is not None else ""
+    )
+    return Response(
+        content=build_public_change_csv(records, affected_field=affected_field),
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": (
+                f'attachment; filename="cms-quality-changes{year_suffix}.csv"'
+            )
+        },
     )
 
 

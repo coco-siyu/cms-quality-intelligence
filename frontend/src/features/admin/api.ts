@@ -120,6 +120,42 @@ export type AdminMeasureDetail = {
   versions: AdminMeasureVersion[];
 };
 
+export type AdminReviewEventType =
+  | "review_created"
+  | "proposal_created"
+  | "proposal_accepted"
+  | "proposal_dismissed"
+  | "task_added"
+  | "task_edited"
+  | "task_status_changed"
+  | "note_added"
+  | "signed_off"
+  | "reopened"
+  | "needs_re_review";
+
+export type AdminMeasureReviewActivity = {
+  measure_id: string;
+  reviews: {
+    review_id: string;
+    comparison_id: number;
+    review_status: Exclude<AdminReviewChecklist["review_status"], null>;
+    program: string;
+    collection_type: string;
+    from_year: number;
+    to_year: number;
+    events: {
+      event_id: string;
+      sequence: number;
+      event_type: AdminReviewEventType;
+      title: string;
+      detail: string;
+      actor: string;
+      occurred_at: string;
+      note: string | null;
+    }[];
+  }[];
+};
+
 export type AdminComparison = {
   comparison_id: number;
   measure_id: string;
@@ -194,6 +230,103 @@ export type AdminImpactExplanationDraft = {
   provider_response_id: string | null;
   created_at: string;
   created_by: string;
+};
+
+export type AdminReviewRole = "data_analyst" | "aco_quality_manager" | "both";
+export type AdminChecklistStatus = "open" | "completed" | "not_applicable";
+
+export type AdminImpactTaskProposal = {
+  proposal_id: string;
+  review_id: string;
+  impact_explanation_draft_id: string;
+  sequence: number;
+  role: AdminReviewRole;
+  title: string;
+  description: string | null;
+  status: "pending" | "accepted" | "dismissed";
+  evidence: AdminComparison["fields"][number]["evidence"];
+  provider: string;
+  model: string;
+  prompt_version: string;
+  input_digest: string;
+  provider_response_id: string | null;
+  decided_at: string | null;
+  decided_by: string | null;
+  created_at: string;
+  created_by: string;
+};
+
+export type AdminReviewChecklistItem = {
+  checklist_item_id: string;
+  review_id: string;
+  accepted_from_proposal_id: string | null;
+  role: AdminReviewRole;
+  title: string;
+  description: string | null;
+  status: AdminChecklistStatus;
+  notes: string | null;
+  resolved_at: string | null;
+  resolved_by: string | null;
+  created_at: string;
+  created_by: string;
+  updated_at: string;
+};
+
+export type AdminReviewChecklist = {
+  comparison_id: number;
+  review_id: string | null;
+  review_status: "pending" | "in_review" | "completed" | "reopened" | "needs_re_review" | null;
+  eligible_impact_explanation_draft_id: string | null;
+  proposals: AdminImpactTaskProposal[];
+  items: AdminReviewChecklistItem[];
+  progress: { total: number; open: number; resolved: number };
+  signoffs: {
+    signoff_id: string;
+    sequence: number;
+    accepted_task_count: number;
+    resolved_task_count: number;
+    note: string | null;
+    signed_at: string;
+    signed_by: string;
+  }[];
+  can_sign_off: boolean;
+  signoff_blocker: string | null;
+};
+
+export type AdminReviewDashboardStatus =
+  | "pending"
+  | "in_review"
+  | "completed"
+  | "needs_re_review";
+
+export type AdminReviewDashboard = {
+  summary: {
+    total: number;
+    pending: number;
+    in_review: number;
+    completed: number;
+    needs_re_review: number;
+  };
+  items: {
+    comparison_id: number;
+    measure_id: string;
+    measure_name: string;
+    program: string;
+    from_year: number;
+    to_year: number;
+    dashboard_status: AdminReviewDashboardStatus;
+    review_id: string | null;
+    review_status: AdminReviewChecklist["review_status"];
+    remaining_tasks: number;
+    progress: AdminReviewChecklist["progress"];
+  }[];
+};
+
+export type AdminReviewChecklistItemInput = {
+  role: AdminReviewRole;
+  title: string;
+  description: string | null;
+  notes: string | null;
 };
 
 export type AdminSourceExtraction = {
@@ -420,6 +553,14 @@ export const adminApi = {
   summary(signal?: AbortSignal) {
     return adminRequest<AdminReviewSummary>("/api/admin/review-summary", { signal });
   },
+  reviewDashboard(status?: AdminReviewDashboardStatus, signal?: AbortSignal) {
+    const search = new URLSearchParams();
+    if (status) search.set("status", status);
+    const query = search.size > 0 ? `?${search}` : "";
+    return adminRequest<AdminReviewDashboard>(`/api/admin/review-dashboard${query}`, {
+      signal,
+    });
+  },
   measures(q: string, signal?: AbortSignal) {
     const search = new URLSearchParams({ page_size: "100" });
     if (q.trim()) search.set("q", q.trim());
@@ -428,6 +569,12 @@ export const adminApi = {
   measure(measureId: string, signal?: AbortSignal) {
     return adminRequest<AdminMeasureDetail>(
       `/api/admin/measures/${encodeURIComponent(measureId)}`,
+      { signal },
+    );
+  },
+  measureReviewActivity(measureId: string, signal?: AbortSignal) {
+    return adminRequest<AdminMeasureReviewActivity>(
+      `/api/admin/measures/${encodeURIComponent(measureId)}/review-activity`,
       { signal },
     );
   },
@@ -481,6 +628,67 @@ export const adminApi = {
     return adminRequest<{ items: AdminImpactExplanationDraft[] }>(
       `/api/admin/comparisons/${comparisonId}/impact-explanations`,
       { signal },
+    );
+  },
+  reviewChecklist(comparisonId: number, signal?: AbortSignal) {
+    return adminRequest<AdminReviewChecklist>(
+      `/api/admin/comparisons/${comparisonId}/review-checklist`,
+      { signal },
+    );
+  },
+  generateTaskProposals(draftId: string) {
+    return adminRequest<{ items: AdminImpactTaskProposal[] }>(
+      `/api/admin/impact-explanations/${encodeURIComponent(draftId)}/task-proposals/generate`,
+      {
+        method: "POST",
+        headers: { "X-CMSQI-Admin-Action": "generate-task-proposals" },
+      },
+    );
+  },
+  decideTaskProposal(proposalId: string, decision: "accept" | "dismiss") {
+    return adminRequest<AdminReviewChecklist>(
+      `/api/admin/task-proposals/${encodeURIComponent(proposalId)}/${decision}`,
+      {
+        method: "POST",
+        headers: { "X-CMSQI-Admin-Action": "manage-review-checklist" },
+      },
+    );
+  },
+  createChecklistItem(comparisonId: number, item: AdminReviewChecklistItemInput) {
+    return adminRequest<AdminReviewChecklist>(
+      `/api/admin/comparisons/${comparisonId}/review-checklist/items`,
+      {
+        method: "POST",
+        headers: { "X-CMSQI-Admin-Action": "manage-review-checklist" },
+        body: JSON.stringify(item),
+      },
+    );
+  },
+  updateChecklistItem(
+    checklistItemId: string,
+    update: Partial<AdminReviewChecklistItemInput> & { status?: AdminChecklistStatus },
+  ) {
+    return adminRequest<AdminReviewChecklist>(
+      `/api/admin/review-checklist/items/${encodeURIComponent(checklistItemId)}`,
+      {
+        method: "PATCH",
+        headers: { "X-CMSQI-Admin-Action": "manage-review-checklist" },
+        body: JSON.stringify(update),
+      },
+    );
+  },
+  updateReviewLifecycle(
+    reviewId: string,
+    action: "sign-off" | "reopen",
+    note: string | null,
+  ) {
+    return adminRequest<AdminReviewChecklist>(
+      `/api/admin/reviews/${encodeURIComponent(reviewId)}/${action}`,
+      {
+        method: "POST",
+        headers: { "X-CMSQI-Admin-Action": "manage-review-lifecycle" },
+        body: JSON.stringify({ note }),
+      },
     );
   },
   generateImpactExplanation(comparisonId: number, regenerate: boolean) {
@@ -642,6 +850,18 @@ export function useAdminReviewSummary(enabled: boolean) {
   });
 }
 
+export function useAdminReviewDashboard(
+  status: AdminReviewDashboardStatus | undefined,
+  enabled: boolean,
+) {
+  return useQuery({
+    queryKey: ["admin-review", "dashboard", status ?? "all"],
+    queryFn: ({ signal }) => adminApi.reviewDashboard(status, signal),
+    enabled,
+    retry: false,
+  });
+}
+
 export function useAdminMeasures(q: string, enabled: boolean) {
   return useQuery({
     queryKey: ["admin-review", "measures", q],
@@ -660,6 +880,15 @@ export function useAdminMeasure(measureId: string, enabled: boolean) {
   });
 }
 
+export function useAdminMeasureReviewActivity(measureId: string, enabled: boolean) {
+  return useQuery({
+    queryKey: ["admin-review", "review-activity", measureId],
+    queryFn: ({ signal }) => adminApi.measureReviewActivity(measureId, signal),
+    enabled: enabled && Boolean(measureId),
+    retry: false,
+  });
+}
+
 export function useAdminComparisons(fromYear: number, toYear: number, enabled: boolean) {
   return useQuery({
     queryKey: ["admin-review", "comparisons", fromYear, toYear],
@@ -673,10 +902,12 @@ export function useAdminComparisonPreparation(fromYear: number, toYear: number) 
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: () => adminApi.prepareComparisons(fromYear, toYear),
-    onSuccess: () =>
+    onSuccess: () => {
       void queryClient.invalidateQueries({
         queryKey: ["admin-review", "comparisons", fromYear, toYear],
-      }),
+      });
+      void queryClient.invalidateQueries({ queryKey: ["admin-review", "dashboard"] });
+    },
   });
 }
 
@@ -722,6 +953,92 @@ export function useAdminImpactExplanationDrafts(
     queryFn: ({ signal }) => adminApi.impactExplanationDrafts(comparisonId ?? 0, signal),
     enabled: enabled && comparisonId !== null,
     retry: false,
+  });
+}
+
+export function useAdminReviewChecklist(comparisonId: number | null, enabled: boolean) {
+  return useQuery({
+    queryKey: ["admin-review", "checklist", comparisonId],
+    queryFn: ({ signal }) => adminApi.reviewChecklist(comparisonId ?? 0, signal),
+    enabled: enabled && comparisonId !== null,
+    retry: false,
+  });
+}
+
+export function useAdminTaskProposalGeneration(comparisonId: number | null) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (draftId: string) => adminApi.generateTaskProposals(draftId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: ["admin-review", "checklist", comparisonId],
+      });
+      void queryClient.invalidateQueries({ queryKey: ["admin-review", "review-activity"] });
+    },
+  });
+}
+
+export function useAdminTaskProposalDecision(comparisonId: number | null) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ proposalId, decision }: { proposalId: string; decision: "accept" | "dismiss" }) =>
+      adminApi.decideTaskProposal(proposalId, decision),
+    onSuccess: (checklist) => {
+      queryClient.setQueryData(["admin-review", "checklist", comparisonId], checklist);
+      void queryClient.invalidateQueries({ queryKey: ["admin-review", "dashboard"] });
+      void queryClient.invalidateQueries({ queryKey: ["admin-review", "review-activity"] });
+    },
+  });
+}
+
+export function useAdminChecklistItemCreate(comparisonId: number | null) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (item: AdminReviewChecklistItemInput) =>
+      adminApi.createChecklistItem(comparisonId ?? 0, item),
+    onSuccess: (checklist) => {
+      queryClient.setQueryData(["admin-review", "checklist", comparisonId], checklist);
+      void queryClient.invalidateQueries({ queryKey: ["admin-review", "dashboard"] });
+      void queryClient.invalidateQueries({ queryKey: ["admin-review", "review-activity"] });
+    },
+  });
+}
+
+export function useAdminChecklistItemUpdate(comparisonId: number | null) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      checklistItemId,
+      update,
+    }: {
+      checklistItemId: string;
+      update: Partial<AdminReviewChecklistItemInput> & { status?: AdminChecklistStatus };
+    }) => adminApi.updateChecklistItem(checklistItemId, update),
+    onSuccess: (checklist) => {
+      queryClient.setQueryData(["admin-review", "checklist", comparisonId], checklist);
+      void queryClient.invalidateQueries({ queryKey: ["admin-review", "dashboard"] });
+      void queryClient.invalidateQueries({ queryKey: ["admin-review", "review-activity"] });
+    },
+  });
+}
+
+export function useAdminReviewLifecycle(comparisonId: number | null) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      reviewId,
+      action,
+      note,
+    }: {
+      reviewId: string;
+      action: "sign-off" | "reopen";
+      note: string | null;
+    }) => adminApi.updateReviewLifecycle(reviewId, action, note),
+    onSuccess: (checklist) => {
+      queryClient.setQueryData(["admin-review", "checklist", comparisonId], checklist);
+      void queryClient.invalidateQueries({ queryKey: ["admin-review", "dashboard"] });
+      void queryClient.invalidateQueries({ queryKey: ["admin-review", "review-activity"] });
+    },
   });
 }
 

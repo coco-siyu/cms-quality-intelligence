@@ -7,6 +7,7 @@ import {
   FileSearch,
   GitCompareArrows,
   Globe2,
+  ListChecks,
   RefreshCw,
 } from "lucide-react";
 
@@ -21,6 +22,7 @@ import { Button } from "../ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "../ui/dialog";
 import { StatusMark } from "./shared";
 import { AdminImpactReviewDialog } from "./AdminImpactReviewDialog";
+import { AdminImpactChecklistDialog } from "./AdminImpactChecklistDialog";
 
 const FROM_YEAR = 2025;
 const TO_YEAR = 2026;
@@ -200,6 +202,7 @@ export function AdminComparisonDesk() {
   const publication = useAdminComparisonPublication(FROM_YEAR, TO_YEAR);
   const [reviewing, setReviewing] = useState<AdminComparison | null>(null);
   const [impactReviewing, setImpactReviewing] = useState<AdminComparison | null>(null);
+  const [checklistReviewing, setChecklistReviewing] = useState<AdminComparison | null>(null);
 
   const items = comparisons.data?.items ?? [];
   const reviewed = items.filter((item) => item.review_decision !== "pending").length;
@@ -292,6 +295,14 @@ export function AdminComparisonDesk() {
             <footer>
               <Button
                 variant="ghost"
+                onClick={() => setChecklistReviewing(comparison)}
+                aria-label={`Open checklist ${comparison.measure_id}`}
+              >
+                <ListChecks aria-hidden="true" />
+                Tasks
+              </Button>
+              <Button
+                variant="ghost"
                 onClick={() => setImpactReviewing(comparison)}
                 aria-label={`Review AI impact ${comparison.measure_id}`}
               >
@@ -324,6 +335,10 @@ export function AdminComparisonDesk() {
       <AdminImpactReviewDialog
         comparison={impactReviewing}
         onClose={() => setImpactReviewing(null)}
+      />
+      <AdminImpactChecklistDialog
+        comparison={checklistReviewing}
+        onClose={() => setChecklistReviewing(null)}
       />
     </section>
   );

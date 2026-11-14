@@ -9,7 +9,9 @@ from sqlalchemy.orm import Session
 from app.auth import hash_admin_password
 from app.config import Settings, get_settings
 from app.domain import (
+    ChecklistTaskStatus,
     ImpactExplanationReviewDecision,
+    MeasureReviewStatus,
     ReviewEventType,
     ReviewRole,
     TaskProposalStatus,
@@ -18,10 +20,15 @@ from app.models import (
     ImpactExplanationDraft,
     MeasureComparison,
     MeasureReview,
+    ReviewChecklistItem,
     ReviewEvent,
     ReviewTaskProposal,
 )
 from app.repositories.admin_task_proposals import list_task_proposal_models
+from app.schemas import (
+    AdminReviewChecklistItemCreateRequest,
+    AdminReviewChecklistItemUpdateRequest,
+)
 from app.services.ai_impact_explanation import ImpactComparisonInput
 from app.services.ai_impact_task_proposals import (
     ImpactTaskGenerationError,
@@ -42,6 +49,11 @@ from app.services.impact_task_proposals import (
     ImpactTaskCitation,
     ImpactTaskProposal,
     ImpactTaskProposalOutput,
+)
+from app.services.review_checklists import (
+    add_checklist_item,
+    decide_task_proposal,
+    update_checklist_item,
 )
 from app.services.semantic_classification import SemanticEvidenceExcerpt
 
@@ -283,6 +295,11 @@ def test_contract_rejects_production_sql() -> None:
             citations=[ImpactTaskCitation(evidence_id="EVIDENCE-1")],
         )
 
+    with pytest.raises(ValidationError):
+        AdminReviewChecklistItemUpdateRequest()
+    with pytest.raises(ValidationError):
+        AdminReviewChecklistItemUpdateRequest(title=None)
+
 
 def test_provider_configuration_is_explicit() -> None:
     with pytest.raises(ImpactTaskGenerationError) as error:
@@ -356,3 +373,162 @@ def test_admin_generation_and_listing_are_private(
     assert listed.status_code == 200
     assert listed.json() == generated.json()
     assert list_task_proposal_models(seeded_session, draft_id="DOES-NOT-EXIST") is None
+
+
+def test_checklist_accepts_edits_and_preserves_prior_tasks_after_regeneration(
+    seeded_session: Session,
+) -> None:
+    first_draft = _approved_draft(seeded_session, sequence=1)
+    first_batch = generate_impact_task_proposals(
+        seeded_session,
+        first_draft,
+        provider=FakeTaskProvider(),
+        created_by="generator",
+    )
+    seeded_session.commit()
+
+    accepted_review = decide_task_proposal(
+        seeded_session,
+        proposal_id=first_batch[0].proposal_id,
+        accept=True,
+        actor="reviewer",
+    )
+    decide_task_proposal(
+        seeded_session,
+        proposal_id=first_batch[1].proposal_id,
+        accept=False,
+        actor="reviewer",
+    )
+    manual = add_checklist_item(
+        seeded_session,
+        comparison_id=first_draft.comparison_id,
+        request=AdminReviewChecklistItemCreateRequest(
+            role=ReviewRole.BOTH,
+            title="Confirm the shared handoff",
+            description="Check the approved year-specific workflow with both teams.",
+            notes="Coordinate during the next review session.",
+        ),
+        actor="reviewer",
+    )
+    accepted = seeded_session.scalar(
+        select(ReviewChecklistItem).where(
+            ReviewChecklistItem.accepted_from_proposal_id == first_batch[0].id
+        )
+    )
+    assert accepted is not None
+    update_checklist_item(
+        seeded_session,
+        checklist_item_id=accepted.checklist_item_id,
+        request=AdminReviewChecklistItemUpdateRequest(
+            title="Validate the year-specific data mapping",
+            status=ChecklistTaskStatus.COMPLETED,
+        ),
+        actor="reviewer",
+    )
+    seeded_session.commit()
+
+    second_draft = _approved_draft(seeded_session, sequence=2)
+    second_batch = generate_impact_task_proposals(
+        seeded_session,
+        second_draft,
+        provider=FakeTaskProvider(),
+        created_by="generator",
+    )
+    seeded_session.commit()
+
+    items = seeded_session.scalars(
+        select(ReviewChecklistItem).order_by(ReviewChecklistItem.created_at)
+    ).all()
+    assert accepted_review.status == MeasureReviewStatus.IN_REVIEW
+    assert [item.checklist_item_id for item in items] == [
+        accepted.checklist_item_id,
+        manual.checklist_item_id,
+    ]
+    assert items[0].status == ChecklistTaskStatus.COMPLETED
+    assert items[0].resolved_by == "reviewer"
+    assert len(second_batch) == 2
+    assert all(item.status == TaskProposalStatus.PENDING for item in second_batch)
+
+    event_types = seeded_session.scalars(
+        select(ReviewEvent.event_type).order_by(ReviewEvent.sequence)
+    ).all()
+    assert ReviewEventType.PROPOSAL_ACCEPTED in event_types
+    assert ReviewEventType.PROPOSAL_DISMISSED in event_types
+    assert ReviewEventType.TASK_ADDED in event_types
+    assert ReviewEventType.TASK_EDITED in event_types
+    assert ReviewEventType.TASK_STATUS_CHANGED in event_types
+
+
+def test_admin_checklist_api_is_private_and_persists_mutations(
+    client: TestClient,
+    seeded_session: Session,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    draft = _approved_draft(seeded_session)
+    comparison_id = draft.comparison_id
+    checklist_path = f"/api/admin/comparisons/{comparison_id}/review-checklist"
+    assert client.get(checklist_path).status_code == 401
+
+    client.app.dependency_overrides[get_settings] = lambda: Settings(
+        admin_username="reviewer",
+        admin_password_hash=hash_admin_password(
+            "correct horse battery staple", salt=b"test-salt-16byte"
+        ),
+        admin_session_secret="test-session-secret-with-sufficient-entropy",
+        openai_api_key="test-key",
+        ai_impact_model="test-model",
+    )
+    assert (
+        client.post(
+            "/api/admin/session",
+            json={"username": "reviewer", "password": "correct horse battery staple"},
+        ).status_code
+        == 200
+    )
+    monkeypatch.setattr(
+        "app.api.admin.task_proposal_provider_from_settings",
+        lambda _settings: FakeTaskProvider(),
+    )
+    generated = client.post(
+        f"/api/admin/impact-explanations/{draft.draft_id}/task-proposals/generate",
+        headers={"X-CMSQI-Admin-Action": "generate-task-proposals"},
+    )
+    assert generated.status_code == 200
+    first_proposal_id = generated.json()["items"][0]["proposal_id"]
+
+    wrong_header = client.post(
+        f"/api/admin/task-proposals/{first_proposal_id}/accept",
+        headers={"X-CMSQI-Admin-Action": "generate-task-proposals"},
+    )
+    assert wrong_header.status_code == 403
+
+    accepted = client.post(
+        f"/api/admin/task-proposals/{first_proposal_id}/accept",
+        headers={"X-CMSQI-Admin-Action": "manage-review-checklist"},
+    )
+    assert accepted.status_code == 200
+    assert accepted.json()["progress"] == {"total": 1, "open": 1, "resolved": 0}
+    accepted_item = accepted.json()["items"][0]
+    assert accepted_item["accepted_from_proposal_id"] == first_proposal_id
+
+    manual = client.post(
+        f"{checklist_path}/items",
+        headers={"X-CMSQI-Admin-Action": "manage-review-checklist"},
+        json={
+            "role": "aco_quality_manager",
+            "title": "Confirm the operational handoff",
+            "description": "Review the approved evidence with the operations team.",
+            "notes": None,
+        },
+    )
+    assert manual.status_code == 200
+    assert manual.json()["progress"]["total"] == 2
+
+    completed = client.patch(
+        f"/api/admin/review-checklist/items/{accepted_item['checklist_item_id']}",
+        headers={"X-CMSQI-Admin-Action": "manage-review-checklist"},
+        json={"status": "completed", "notes": "Validated against the cited source."},
+    )
+    assert completed.status_code == 200
+    assert completed.json()["progress"] == {"total": 2, "open": 1, "resolved": 1}
+    assert completed.json()["items"][0]["resolved_by"] == "reviewer"

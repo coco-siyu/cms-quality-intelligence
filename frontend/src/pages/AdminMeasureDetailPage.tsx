@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 
 import { ErrorState, LoadingState } from "../components/cms/shared";
+import { AdminReviewActivityTimeline } from "../components/cms/AdminReviewActivityTimeline";
 import { Button } from "../components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "../components/ui/dialog";
 import {
@@ -357,6 +358,8 @@ export function AdminMeasureDetailPage() {
           </article>
         ))}
       </section>
+
+      <AdminReviewActivityTimeline measureId={measureId} />
 
       <section className="admin-variants">
         <div className="admin-variants-heading">
