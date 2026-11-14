@@ -20,6 +20,16 @@ def create_app() -> FastAPI:
     application.include_router(admin_router)
     application.include_router(sources_router)
 
+    @application.get(
+        "/health",
+        response_model=HealthResponse,
+        tags=["System"],
+        operation_id="getHealth",
+    )
+    async def health() -> HealthResponse:
+        """Report whether the API process is available."""
+        return HealthResponse(status="ok")
+
     @application.exception_handler(RequestValidationError)
     async def validation_error_handler(
         _request: Request, exception: RequestValidationError
@@ -50,14 +60,3 @@ def create_app() -> FastAPI:
 
 
 app = create_app()
-
-
-@app.get(
-    "/health",
-    response_model=HealthResponse,
-    tags=["System"],
-    operation_id="getHealth",
-)
-async def health() -> HealthResponse:
-    """Report whether the API process is available."""
-    return HealthResponse(status="ok")

@@ -177,7 +177,10 @@ def test_xlsx_export_opens_with_public_rows_and_data_dictionary(client: TestClie
     assert rows[0]["evidence_urls"] == (
         "https://example.invalid/cms-quality-intelligence/demo-source"
     )
-    assert workbook["Changes"].freeze_panes == "A2"
+    changes_sheet = workbook["Changes"]
+    assert changes_sheet.freeze_panes == "A2"
+    assert changes_sheet.auto_filter.ref is None
+    assert changes_sheet.tables["PublicChanges"].ref == "A1:R2"
     dictionary_rows = list(
         workbook["Data Dictionary"].iter_rows(min_row=2, values_only=True)
     )

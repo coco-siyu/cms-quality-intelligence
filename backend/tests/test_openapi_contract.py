@@ -1,14 +1,45 @@
 from pathlib import Path
+from typing import Any
 
+import pytest
 import yaml
+from fastapi.testclient import TestClient
+from jsonschema import Draft202012Validator
 from openapi_spec_validator import validate
 
 from app.main import app
 
+CONTRACT_PATH = Path(__file__).parents[2] / "openapi.yaml"
+
+
+def _contract() -> dict[str, Any]:
+    return yaml.safe_load(CONTRACT_PATH.read_text(encoding="utf-8"))
+
+
+def _assert_json_response_matches_contract(
+    contract: dict[str, Any],
+    *,
+    path: str,
+    status_code: int,
+    payload: object,
+) -> None:
+    response = contract["paths"][path]["get"]["responses"][str(status_code)]
+    if "$ref" in response:
+        reference = response["$ref"]
+        response = contract
+        for part in reference.removeprefix("#/").split("/"):
+            response = response[part]
+    schema = response["content"]["application/json"]["schema"]
+    validation_schema = {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "components": contract["components"],
+        **schema,
+    }
+    Draft202012Validator(validation_schema).validate(payload)
+
 
 def test_root_openapi_contract_is_valid() -> None:
-    contract_path = Path(__file__).parents[2] / "openapi.yaml"
-    contract = yaml.safe_load(contract_path.read_text(encoding="utf-8"))
+    contract = _contract()
 
     validate(contract)
 
@@ -107,7 +138,23 @@ def test_root_openapi_contract_is_valid() -> None:
 
 
 def test_runtime_openapi_exposes_contract_operation_ids_and_error_models() -> None:
+    contract = _contract()
     schema = app.openapi()
+    http_methods = {"get", "post", "put", "patch", "delete"}
+    contract_operations = {
+        (path, method, operation["operationId"])
+        for path, path_item in contract["paths"].items()
+        for method, operation in path_item.items()
+        if method in http_methods
+    }
+    runtime_operations = {
+        (path, method, operation["operationId"])
+        for path, path_item in schema["paths"].items()
+        for method, operation in path_item.items()
+        if method in http_methods
+    }
+    assert runtime_operations == contract_operations
+
     operations = {
         "/health": "getHealth",
         "/api/performance-years": "listPerformanceYears",
@@ -216,4 +263,93 @@ def test_runtime_openapi_exposes_contract_operation_ids_and_error_models() -> No
     )
     assert detail_responses["404"]["content"]["application/json"]["schema"]["$ref"].endswith(
         "/ApiError"
+    )
+
+
+@pytest.mark.parametrize(
+    ("request_path", "contract_path", "parameters", "expected_status"),
+    [
+        ("/health", "/health", {}, 200),
+        ("/api/performance-years", "/api/performance-years", {}, 200),
+        (
+            "/api/measures",
+            "/api/measures",
+            {"from_year": 2025, "to_year": 2026, "page_size": 100},
+            200,
+        ),
+        (
+            "/api/measures/DEMO-001",
+            "/api/measures/{measure_id}",
+            {"from_year": 2025, "to_year": 2026},
+            200,
+        ),
+        (
+            "/api/measures/DEMO-001/navigation",
+            "/api/measures/{measure_id}/navigation",
+            {"from_year": 2025, "to_year": 2026},
+            200,
+        ),
+        (
+            "/api/measures/DEMO-001/versions",
+            "/api/measures/{measure_id}/versions",
+            {"performance_year": 2025},
+            200,
+        ),
+        (
+            "/api/changes",
+            "/api/changes",
+            {"from_year": 2025, "to_year": 2026},
+            200,
+        ),
+        (
+            "/api/changes/DEMO-001",
+            "/api/changes/{measure_id}",
+            {
+                "program": "Fictional Quality Program",
+                "collection_type": "program_roster",
+                "from_year": 2025,
+                "to_year": 2026,
+            },
+            200,
+        ),
+        (
+            "/api/changes/DEMO-001/impact-explanation",
+            "/api/changes/{measure_id}/impact-explanation",
+            {
+                "program": "Fictional Quality Program",
+                "collection_type": "program_roster",
+                "from_year": 2025,
+                "to_year": 2026,
+            },
+            404,
+        ),
+        (
+            "/api/measures/DOES-NOT-EXIST",
+            "/api/measures/{measure_id}",
+            {"from_year": 2025, "to_year": 2026},
+            404,
+        ),
+        (
+            "/api/changes",
+            "/api/changes",
+            {"from_year": 2025, "to_year": 2025},
+            422,
+        ),
+    ],
+)
+def test_public_json_responses_match_checked_in_openapi_schemas(
+    client: TestClient,
+    request_path: str,
+    contract_path: str,
+    parameters: dict[str, object],
+    expected_status: int,
+) -> None:
+    response = client.get(request_path, params=parameters)
+
+    assert response.status_code == expected_status
+    _assert_json_response_matches_contract(
+        _contract(),
+        path=contract_path,
+        status_code=expected_status,
+        payload=response.json(),
     )

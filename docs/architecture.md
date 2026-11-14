@@ -89,7 +89,9 @@ relative URLs and does not need deployment-specific CORS exceptions.
 
 ## Contracts and trust boundaries
 
-- `openapi.yaml` is the frontend/backend contract and is checked by tests.
+- `openapi.yaml` is the frontend/backend contract. Tests require its operation
+  set to match FastAPI's runtime routes and validate representative public
+  success and error payloads against the checked-in response schemas.
 - Public and private data are separated in backend queries, not merely hidden in
   the interface.
 - Public CSV and Excel exports reuse the Measure Explorer selection and the same

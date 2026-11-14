@@ -466,6 +466,39 @@ describe("public frontend API integration", () => {
     expect(listUrl).toContain("from_year=2025");
   });
 
+  it("shows the Measure Explorer empty state without substituting demo records", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.includes("/api/performance-years")) {
+          return Promise.resolve(jsonResponse(performanceYears));
+        }
+        if (url.includes("/api/measures?")) {
+          return Promise.resolve(
+            jsonResponse({
+              items: [],
+              pagination: {
+                page: 1,
+                page_size: 100,
+                total_items: 0,
+                total_pages: 0,
+              },
+            }),
+          );
+        }
+        return apiFetch(input);
+      }),
+    );
+
+    await renderApiRoute("/measures?q=no-match&from=2025&to=2026");
+
+    expect(await screen.findByText("Showing 0 of 0 measures")).toBeInTheDocument();
+    expect(screen.getByText("No measures match these filters.")).toBeVisible();
+    expect(screen.queryByText("Fictional API Contract Measure")).not.toBeInTheDocument();
+    expect(screen.queryByText("Breast Cancer Screening")).not.toBeInTheDocument();
+  });
+
   it("downloads the server-filtered public comparison CSV", async () => {
     const fetchMock = vi.fn((input: RequestInfo | URL) => {
       const url = String(input);

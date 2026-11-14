@@ -784,6 +784,18 @@ download behavior.
 Goal: Catch incompatibilities between React and FastAPI.
 Description: Validate API responses against `openapi.yaml` and test homepage filters, measure navigation, comparison, role toggles, and failure/empty states using mocked backend responses. Make the combined test command reproducible locally.
 
+Implementation status (complete, 2026-11-13): Contract tests compare every
+checked-in public and administrative operation to FastAPI's runtime operation
+set and validate representative successful and error JSON responses against the
+schemas in `openapi.yaml`. The application-factory health route now matches the
+module-level runtime contract. Mocked-backend React integration tests cover
+homepage search and change filters, Measure Explorer URL filters and honest
+empty/error states, server-authoritative detail navigation, evidence-backed
+comparison, role switching without duplicate requests, same-year behavior,
+source-backed public boundaries, and filtered CSV/Excel downloads. `make check`
+remains the reproducible combined backend, frontend, lint, build, and secret
+guard command.
+
 ## 63. Add security and data-handling checks
 Goal: Prevent exposure of credentials or internal review data.
 Description: Test backend authorization, official-source URL restrictions, safe document retrieval, output encoding, and private/public record separation; run a dependency and secret scan. Document findings and fixes in `security/` with a no-PHI and AI tool/data policy.

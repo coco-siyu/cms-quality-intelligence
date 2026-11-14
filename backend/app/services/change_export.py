@@ -205,7 +205,6 @@ def build_public_change_xlsx(
             for cell in changes[letter][1:]:
                 cell.number_format = "yyyy-mm-dd hh:mm"
 
-    changes.auto_filter.ref = f"A1:R{max(changes.max_row, 1)}"
     if rows:
         changes_table = Table(displayName="PublicChanges", ref=f"A1:R{changes.max_row}")
         changes_table.tableStyleInfo = TableStyleInfo(
@@ -216,6 +215,8 @@ def build_public_change_xlsx(
             showColumnStripes=False,
         )
         changes.add_table(changes_table)
+    else:
+        changes.auto_filter.ref = "A1:R1"
 
     dictionary = workbook.create_sheet("Data Dictionary")
     dictionary.sheet_view.showGridLines = False

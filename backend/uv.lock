@@ -95,6 +95,7 @@ dependencies = [
 [package.dev-dependencies]
 dev = [
     { name = "httpx" },
+    { name = "jsonschema" },
     { name = "openapi-spec-validator" },
     { name = "pytest" },
     { name = "pyyaml" },
@@ -119,6 +120,7 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "httpx", specifier = ">=0.28.0,<1.0.0" },
+    { name = "jsonschema", specifier = ">=4.26,<5.0" },
     { name = "openapi-spec-validator", specifier = ">=0.7.2,<1.0.0" },
     { name = "pytest", specifier = ">=9.0.0,<10.0.0" },
     { name = "pyyaml", specifier = ">=6.0.0,<7.0.0" },
