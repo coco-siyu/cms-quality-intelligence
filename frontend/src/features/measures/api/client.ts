@@ -48,12 +48,13 @@ async function apiGet<T>(path: string, signal?: AbortSignal): Promise<T> {
 async function apiDownload(
   path: string,
   fallbackFilename: string,
+  accept: string,
   signal?: AbortSignal,
 ): Promise<{ blob: Blob; filename: string }> {
   let response: Response;
   try {
     response = await fetch(`${apiBaseUrl}${path}`, {
-      headers: { Accept: "text/csv" },
+      headers: { Accept: accept },
       signal,
     });
   } catch (error) {
@@ -163,6 +164,15 @@ export const changeApi = {
     return apiDownload(
       `/api/changes/export.csv${queryString(parameters)}`,
       "cms-quality-changes.csv",
+      "text/csv",
+      signal,
+    );
+  },
+  exportXlsx(parameters: ChangeExportParameters, signal?: AbortSignal) {
+    return apiDownload(
+      `/api/changes/export.xlsx${queryString(parameters)}`,
+      "cms-quality-changes.xlsx",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       signal,
     );
   },

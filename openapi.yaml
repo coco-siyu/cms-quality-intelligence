@@ -215,6 +215,44 @@ paths:
                 type: string
         "422":
           $ref: "#/components/responses/ValidationError"
+  /api/changes/export.xlsx:
+    get:
+      operationId: exportChangesXlsx
+      tags: [Public changes]
+      summary: Export filtered, evidence-backed comparison fields as Excel
+      description: |
+        Applies the current public Measure Explorer filters and returns one row
+        per published comparison field in a workbook with a data dictionary.
+        Drafts, incomplete evidence, private review notes, and administrative
+        workflow data are excluded.
+      parameters:
+        - $ref: "#/components/parameters/SearchQuery"
+        - $ref: "#/components/parameters/PerformanceYear"
+        - $ref: "#/components/parameters/FromYear"
+        - $ref: "#/components/parameters/ToYear"
+        - $ref: "#/components/parameters/ChangeStatus"
+        - $ref: "#/components/parameters/AffectedField"
+        - $ref: "#/components/parameters/VerificationStatus"
+        - name: collection_type
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/CollectionType"
+      responses:
+        "200":
+          description: XLSX workbook containing verified public comparison fields.
+          headers:
+            Content-Disposition:
+              description: Suggested Excel filename.
+              schema:
+                type: string
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+        "422":
+          $ref: "#/components/responses/ValidationError"
   /api/changes/{measure_id}:
     get:
       operationId: getChange

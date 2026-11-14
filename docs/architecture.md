@@ -92,10 +92,11 @@ relative URLs and does not need deployment-specific CORS exceptions.
 - `openapi.yaml` is the frontend/backend contract and is checked by tests.
 - Public and private data are separated in backend queries, not merely hidden in
   the interface.
-- Public CSV export reuses the Measure Explorer selection and the same
+- Public CSV and Excel exports reuse the Measure Explorer selection and the same
   evidence-valid comparison projection as the JSON API. The backend emits one
   allowlisted row per published comparison field; it never serializes review
-  notes, checklist data, drafts, or raw administrative models.
+  notes, checklist data, drafts, or raw administrative models. The Excel
+  workbook adds a data dictionary but no calculated or inferred fields.
 - Admin sessions are signed, HttpOnly cookies. Production HTTPS deployments must
   set `CMSQI_ADMIN_SESSION_SECURE=true`.
 - Official CMS evidence is the factual source of truth. AI output is advisory.

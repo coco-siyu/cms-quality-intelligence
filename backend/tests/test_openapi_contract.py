@@ -93,6 +93,17 @@ def test_root_openapi_contract_is_valid() -> None:
         "VerificationStatus",
     }
     assert "text/csv" in export_operation["responses"]["200"]["content"]
+    xlsx_export_operation = contract["paths"]["/api/changes/export.xlsx"]["get"]
+    xlsx_export_parameter_refs = {
+        parameter["$ref"].rsplit("/", 1)[-1]
+        for parameter in xlsx_export_operation["parameters"]
+        if "$ref" in parameter
+    }
+    assert xlsx_export_parameter_refs >= export_parameter_refs
+    assert (
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        in xlsx_export_operation["responses"]["200"]["content"]
+    )
 
 
 def test_runtime_openapi_exposes_contract_operation_ids_and_error_models() -> None:
@@ -106,6 +117,7 @@ def test_runtime_openapi_exposes_contract_operation_ids_and_error_models() -> No
         "/api/measures/{measure_id}/versions": "listMeasureVersions",
         "/api/changes": "listChanges",
         "/api/changes/export.csv": "exportChangesCsv",
+        "/api/changes/export.xlsx": "exportChangesXlsx",
         "/api/changes/{measure_id}": "getChange",
         "/api/changes/{measure_id}/impact-explanation": "getImpactExplanation",
     }
@@ -115,6 +127,9 @@ def test_runtime_openapi_exposes_contract_operation_ids_and_error_models() -> No
     assert set(
         schema["paths"]["/api/changes/export.csv"]["get"]["responses"]["200"]["content"]
     ) == {"text/csv"}
+    assert set(
+        schema["paths"]["/api/changes/export.xlsx"]["get"]["responses"]["200"]["content"]
+    ) == {"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}
 
     admin_operations = {
         ("/api/admin/session", "get"): "getAdminSession",

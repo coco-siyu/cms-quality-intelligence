@@ -767,6 +767,19 @@ URL filters are sent to the export endpoint.
 Goal: Provide spreadsheet-friendly output for quality teams.
 Description: Generate an XLSX workbook containing public measure/change data and a clear data dictionary or source sheet. Use the same verified/public selection rules as CSV and verify it opens with expected columns and no formula injection from source text.
 
+Implementation status (complete, 2026-11-13): Measure Explorer now offers an
+Excel download alongside CSV and sends the same active public filters to both
+server-generated exports. The XLSX endpoint reuses the public measure selector,
+fresh evidence validation, and one-row-per-comparison-field projection used by
+CSV. Its Changes sheet contains only allowlisted verified public values and
+official evidence links; a separate Data Dictionary sheet defines every stable
+column. Text that could be interpreted as a spreadsheet formula is stored as
+literal text, timestamps and years retain native spreadsheet types, and the
+workbook includes readable widths, wrapping, filters, and a frozen header.
+Reader-based tests cover workbook structure, expected rows, filter parity,
+formula safety, filenames, media types, private-data exclusion, and frontend
+download behavior.
+
 ## 62. Add API contract and frontend behavior tests
 Goal: Catch incompatibilities between React and FastAPI.
 Description: Validate API responses against `openapi.yaml` and test homepage filters, measure navigation, comparison, role toggles, and failure/empty states using mocked backend responses. Make the combined test command reproducible locally.

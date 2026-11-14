@@ -3002,6 +3002,13 @@ h3 {
   gap: 8px;
 }
 
+.export-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 .export-control [role="alert"] {
   max-width: 320px;
   margin: 0;

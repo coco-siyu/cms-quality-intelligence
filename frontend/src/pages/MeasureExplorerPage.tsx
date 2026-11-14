@@ -54,28 +54,32 @@ function ExplorerContent({
   measures,
   performanceYears,
   total,
-  onExport,
+  onExportCsv,
+  onExportXlsx,
 }: {
   dataMode: DataMode;
   filters: DemoFilters;
   measures: DemoMeasure[];
   performanceYears: number[];
   total: number;
-  onExport: () => Promise<void> | void;
+  onExportCsv: () => Promise<void> | void;
+  onExportXlsx?: () => Promise<void> | void;
 }) {
   const navigate = useNavigate({ from: "/measures" });
-  const [isExporting, setIsExporting] = useState(false);
+  const [exportingFormat, setExportingFormat] = useState<"csv" | "xlsx" | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
 
-  const handleExport = async () => {
-    setIsExporting(true);
+  const handleExport = async (format: "csv" | "xlsx") => {
+    const exporter = format === "csv" ? onExportCsv : onExportXlsx;
+    if (!exporter) return;
+    setExportingFormat(format);
     setExportError(null);
     try {
-      await onExport();
+      await exporter();
     } catch (error) {
-      setExportError(error instanceof Error ? error.message : "The CSV could not be exported.");
+      setExportError(error instanceof Error ? error.message : "The file could not be exported.");
     } finally {
-      setIsExporting(false);
+      setExportingFormat(null);
     }
   };
 
@@ -91,14 +95,29 @@ function ExplorerContent({
           </p>
         </div>
         <div className="export-control">
-          <Button
-            type="button"
-            onClick={() => void handleExport()}
-            disabled={measures.length === 0 || isExporting}
-            className="export-button"
-          >
-            <Download aria-hidden="true" /> {isExporting ? "Exporting…" : "Export CSV"}
-          </Button>
+          <div className="export-actions">
+            <Button
+              type="button"
+              variant={onExportXlsx ? "outline" : "default"}
+              onClick={() => void handleExport("csv")}
+              disabled={measures.length === 0 || exportingFormat !== null}
+              className="export-button"
+            >
+              <Download aria-hidden="true" />
+              {exportingFormat === "csv" ? "Exporting…" : "Export CSV"}
+            </Button>
+            {onExportXlsx ? (
+              <Button
+                type="button"
+                onClick={() => void handleExport("xlsx")}
+                disabled={measures.length === 0 || exportingFormat !== null}
+                className="export-button"
+              >
+                <Download aria-hidden="true" />
+                {exportingFormat === "xlsx" ? "Exporting…" : "Export Excel"}
+              </Button>
+            ) : null}
+          </div>
           {exportError ? <p role="alert">{exportError}</p> : null}
         </div>
       </header>
@@ -133,7 +152,7 @@ function DemoMeasureExplorerPage() {
       measures={measureQuery.data.items}
       performanceYears={[2025, 2026]}
       total={measureQuery.data.total}
-      onExport={() => exportDemoMeasures(measureQuery.data.items)}
+      onExportCsv={() => exportDemoMeasures(measureQuery.data.items)}
     />
   );
 }
@@ -167,8 +186,15 @@ function ApiMeasureExplorerPage() {
       measures={measureQuery.data.items.map(apiSummaryToMeasure)}
       performanceYears={performanceYearsQuery.data.years}
       total={measureQuery.data.pagination.total_items}
-      onExport={async () => {
+      onExportCsv={async () => {
         const result = await changeApi.exportCsv({
+          ...filtersToApiFilters(filters),
+          collection_type: "program_roster",
+        });
+        downloadBlob(result.blob, result.filename);
+      }}
+      onExportXlsx={async () => {
+        const result = await changeApi.exportXlsx({
           ...filtersToApiFilters(filters),
           collection_type: "program_roster",
         });

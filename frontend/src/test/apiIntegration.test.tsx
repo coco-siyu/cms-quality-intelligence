@@ -518,6 +518,59 @@ describe("public frontend API integration", () => {
     expect(revokeObjectURL).toHaveBeenCalledWith("blob:public-change-export");
   });
 
+  it("downloads the server-filtered public comparison Excel workbook", async () => {
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("/api/changes/export.xlsx?")) {
+        return Promise.resolve(
+          new Response(new Uint8Array([80, 75, 3, 4]), {
+            headers: {
+              "Content-Type":
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+              "Content-Disposition": (
+                'attachment; filename="cms-quality-changes-2025-2026.xlsx"'
+              ),
+            },
+          }),
+        );
+      }
+      return apiFetch(input);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const createObjectURL = vi.fn(() => "blob:public-change-workbook");
+    const revokeObjectURL = vi.fn();
+    class MockURL extends URL {}
+    Object.defineProperties(MockURL, {
+      createObjectURL: { value: createObjectURL },
+      revokeObjectURL: { value: revokeObjectURL },
+    });
+    vi.stubGlobal("URL", MockURL);
+    const downloadedFilenames: string[] = [];
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (
+      this: HTMLAnchorElement,
+    ) {
+      downloadedFilenames.push(this.download);
+    });
+
+    await renderApiRoute(
+      "/measures?q=follow-up&status=modified&year=2026&field=Definition&review=Approved&from=2025&to=2026",
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "Export Excel" }));
+
+    await vi.waitFor(() => expect(createObjectURL).toHaveBeenCalledOnce());
+    const exportUrl = requestedUrl(fetchMock, "/api/changes/export.xlsx?");
+    expect(exportUrl).toContain("q=follow-up");
+    expect(exportUrl).toContain("performance_year=2026");
+    expect(exportUrl).toContain("change_status=modified");
+    expect(exportUrl).toContain("affected_field=definition");
+    expect(exportUrl).toContain("verification_status=verified");
+    expect(exportUrl).toContain("from_year=2025");
+    expect(exportUrl).toContain("to_year=2026");
+    expect(exportUrl).toContain("collection_type=program_roster");
+    expect(downloadedFilenames).toEqual(["cms-quality-changes-2025-2026.xlsx"]);
+    expect(revokeObjectURL).toHaveBeenCalledWith("blob:public-change-workbook");
+  });
+
   it("shows an explicit API error and never substitutes demo fixtures", async () => {
     vi.stubGlobal(
       "fetch",
