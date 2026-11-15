@@ -60,6 +60,12 @@ jobs:
       - frontend
     steps:
       - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - name: Install locked integration-test dependencies
+        working-directory: backend
+        run: uv sync --frozen
       - name: Prepare non-secret build environment
         run: cp .env.example .env
       - name: Validate Compose configuration
