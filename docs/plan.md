@@ -158,8 +158,12 @@ candidate normalization; authoritative M2 field/change comparison is not implied
 Task 46 adds non-blocking execution and a polled document workspace with run
 history, completion counts, timestamped per-source stages, and persistent failure
 reasons. Unexpected processing exceptions are recorded as interrupted runs rather
-than disappearing behind a stalled browser request. Bounded retry policy remains
-Task 47; Task 46 does not retry or force processing.
+than disappearing behind a stalled browser request. Task 47 adds bounded retries
+for transient transport, throttling, and CMS server failures; deterministic
+validation/extraction failures stop immediately. Attempt counts, retry exhaustion,
+and administrator-attention state are durable. Force reprocessing creates a new
+extraction and private normalization for the existing immutable revision without
+deleting earlier extractions, reviews, or published fields.
 
 **When sources change:** preserve old source versions. Flag reviews based on older versions as outdated and require re-verification before publication. Revisions that affect completed reviews set status to **Needs Re-review**. Previous signed-off work must remain recoverable.
 

@@ -496,6 +496,10 @@ export type AdminIngestionRun = {
     stage: AdminIngestionStage;
     source_check_id: string | null;
     source_check_outcome: AdminSourceCheck["outcome"] | null;
+    attempt_count: number;
+    max_attempts: number;
+    retry_exhausted: boolean;
+    requires_attention: boolean;
     started_at: string | null;
     completed_at: string | null;
     error: string | null;
@@ -1156,7 +1160,12 @@ export function useAdminSourceCheck() {
   return useMutation({
     mutationFn: ({ sourceId, force }: { sourceId: string; force: boolean }) =>
       adminApi.checkSource(sourceId, force),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["admin-sources"] }),
+    onSuccess: (_source, variables) => {
+      void queryClient.invalidateQueries({ queryKey: ["admin-sources"] });
+      if (variables.force) {
+        void queryClient.invalidateQueries({ queryKey: ["admin-review"] });
+      }
+    },
   });
 }
 

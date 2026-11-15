@@ -1,4 +1,5 @@
 from datetime import UTC, datetime
+from time import sleep
 from uuid import uuid4
 
 import httpx
@@ -65,10 +66,16 @@ def create_ingestion_run(
     *,
     created_by: str,
     max_sources: int,
+    max_attempts: int = 3,
 ) -> IngestionRun:
     if max_sources < 1:
         raise IngestionRunError(
             "ingestion_limit_invalid", "The ingestion source limit must be at least one."
+        )
+    if max_attempts < 1 or max_attempts > 5:
+        raise IngestionRunError(
+            "ingestion_attempt_limit_invalid",
+            "The ingestion attempt limit must be between one and five.",
         )
 
     active_run = session.scalar(
@@ -105,6 +112,7 @@ def create_ingestion_run(
             IngestionRunItem(
                 item_id=f"CMS-INGEST-ITEM-{run_key}-{index}",
                 sequence=index,
+                max_attempts=max_attempts,
                 stage=IngestionItemStage.PENDING,
                 source_document=source,
             )
@@ -138,78 +146,109 @@ def execute_ingestion_run(
     try:
         for item in sorted(run.items, key=lambda value: value.sequence):
             item.started_at = _now()
-            _event(session, item, IngestionItemStage.DOWNLOADING, "Retrieving official CMS source.")
-            session.commit()
-            try:
-                def extraction_started(run_item: IngestionRunItem = item) -> None:
-                    _event(
-                        session,
-                        run_item,
-                        IngestionItemStage.EXTRACTING,
-                        "Extracting traceable text from the changed source revision.",
-                    )
-                    session.commit()
-
-                check = fetch_registered_source(
+            for attempt in range(1, item.max_attempts + 1):
+                item.attempt_count = attempt
+                _event(
                     session,
-                    item.source_document,
-                    settings=settings,
-                    checked_by=checked_by,
-                    force=False,
-                    client=http_client,
-                    on_extraction_started=extraction_started,
+                    item,
+                    IngestionItemStage.DOWNLOADING,
+                    f"Retrieving official CMS source (attempt {attempt} of {item.max_attempts}).",
                 )
-                item.source_check = check
+                session.commit()
+                try:
+                    def extraction_started(run_item: IngestionRunItem = item) -> None:
+                        _event(
+                            session,
+                            run_item,
+                            IngestionItemStage.EXTRACTING,
+                            "Extracting traceable text from the changed source revision.",
+                        )
+                        session.commit()
 
-                if check.outcome == SourceCheckOutcome.UNCHANGED:
-                    _event(
+                    check = fetch_registered_source(
                         session,
-                        item,
-                        IngestionItemStage.COMPARING,
-                        "Content hash compared with stored revisions.",
+                        item.source_document,
+                        settings=settings,
+                        checked_by=checked_by,
+                        force=False,
+                        client=http_client,
+                        on_extraction_started=extraction_started,
                     )
-                    final_stage = IngestionItemStage.UNCHANGED
-                    detail = "The retrieved content matches an existing immutable revision."
-                elif check.extraction is None:
-                    final_stage = IngestionItemStage.FAILED
-                    detail = "The source check did not produce an extraction."
-                elif check.extraction.status == SourceExtractionStatus.FAILED:
-                    final_stage = IngestionItemStage.FAILED
-                    detail = check.extraction.error or "Text extraction failed."
-                elif check.extraction.status == SourceExtractionStatus.MANUAL_REVIEW:
-                    final_stage = IngestionItemStage.AWAITING_VERIFICATION
-                    detail = check.extraction.error or "Manual source review is required."
-                else:
-                    try:
+                    item.source_check = check
+
+                    if check.outcome == SourceCheckOutcome.UNCHANGED:
                         _event(
                             session,
                             item,
                             IngestionItemStage.COMPARING,
-                            "Matching extracted identity and fields to private stored versions.",
+                            "Content hash compared with stored revisions.",
                         )
-                        normalization = normalize_extraction(
-                            session, check.extraction, created_by=checked_by
-                        )
-                        detail = (
-                            "Private normalized candidates are ready for verification "
-                            f"({normalization.status.value})."
-                        )
-                        final_stage = IngestionItemStage.AWAITING_VERIFICATION
-                    except SourceNormalizationError as error:
+                        final_stage = IngestionItemStage.UNCHANGED
+                        detail = "The retrieved content matches an existing immutable revision."
+                    elif check.extraction is None:
                         final_stage = IngestionItemStage.FAILED
-                        detail = error.message
+                        detail = "The source check did not produce an extraction."
+                    elif check.extraction.status == SourceExtractionStatus.FAILED:
+                        final_stage = IngestionItemStage.FAILED
+                        detail = check.extraction.error or "Text extraction failed."
+                    elif check.extraction.status == SourceExtractionStatus.MANUAL_REVIEW:
+                        final_stage = IngestionItemStage.AWAITING_VERIFICATION
+                        detail = check.extraction.error or "Manual source review is required."
+                    else:
+                        try:
+                            _event(
+                                session,
+                                item,
+                                IngestionItemStage.COMPARING,
+                                "Matching extracted identity and fields to private "
+                                "stored versions.",
+                            )
+                            normalization = normalize_extraction(
+                                session, check.extraction, created_by=checked_by
+                            )
+                            detail = (
+                                "Private normalized candidates are ready for verification "
+                                f"({normalization.status.value})."
+                            )
+                            final_stage = IngestionItemStage.AWAITING_VERIFICATION
+                        except SourceNormalizationError as error:
+                            final_stage = IngestionItemStage.FAILED
+                            detail = error.message
 
-                if final_stage == IngestionItemStage.FAILED:
-                    item.error = detail
+                    if final_stage == IngestionItemStage.FAILED:
+                        item.error = detail
+                        item.requires_attention = True
+                        run.failed_count += 1
+                    item.completed_at = _now()
+                    _event(session, item, final_stage, detail)
+                    break
+                except SourceFetchError as error:
+                    item.source_check = error.check
+                    can_retry = error.retryable and attempt < item.max_attempts
+                    if can_retry:
+                        _event(
+                            session,
+                            item,
+                            IngestionItemStage.DOWNLOADING,
+                            f"Temporary retrieval failure: {error.message} Retrying automatically.",
+                        )
+                        session.commit()
+                        delay = settings.ingestion_retry_backoff_seconds * attempt
+                        if delay > 0:
+                            sleep(delay)
+                        continue
+                    item.error = error.message
+                    item.retry_exhausted = error.retryable
+                    item.requires_attention = True
+                    item.completed_at = _now()
                     run.failed_count += 1
-                item.completed_at = _now()
-                _event(session, item, final_stage, detail)
-            except SourceFetchError as error:
-                item.source_check = error.check
-                item.error = error.message
-                item.completed_at = _now()
-                run.failed_count += 1
-                _event(session, item, IngestionItemStage.FAILED, error.message)
+                    detail = (
+                        f"Automatic retries exhausted after {attempt} attempts: {error.message}"
+                        if error.retryable
+                        else f"Permanent retrieval failure; retry not attempted: {error.message}"
+                    )
+                    _event(session, item, IngestionItemStage.FAILED, detail)
+                    break
             run.completed_count += 1
             session.commit()
 

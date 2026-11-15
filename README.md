@@ -47,9 +47,10 @@ normalized candidate values; rows without a captured excerpt direct the reviewer
 to the exact locator and official source. Separately, the source registry accepts
 only allowlisted cms.gov HTML/PDF URLs, records bounded retrieval attempts, stores
 immutable content-hash revisions, extracts text with section/page locators, skips
-unchanged files, and supports append-only force re-extraction. A separate protected
-normalization action converts recognized document labels into typed private field
-candidates with exact segment evidence. Only exact existing identities can reach
+unchanged files, and supports append-only force reprocessing that re-extracts and
+normalizes while preserving prior history. A separate protected normalization
+action converts recognized document labels into typed private field candidates
+with exact segment evidence. Only exact existing identities can reach
 the review queue; incomplete and ambiguous results remain unresolved. An optional
 clarification action can inspect bounded excerpts from additional registered CMS
 sources and retain a schema-validated proposal or disagreement for human review.
@@ -271,11 +272,16 @@ The source registry is available at `/admin/sources`. Register only a vetted
 official CMS URL, then use **Check source** to create a private retrieval event.
 Use **Check for updates** to run the same safe path for every active source. The
 registry-wide action is capped by `CMSQI_INGESTION_RUN_MAX_SOURCES` (25 by default)
-and returns a durable queued run for background processing. The page refreshes
-progress while that run is active and preserves timestamped source-level stages,
-final outcomes, and errors in run history.
-**Force re-extract** reruns text extraction for identical bytes while retaining
-the prior extraction. **Normalize candidates** applies deterministic field rules to
+and returns a durable queued run for background processing. Temporary transport,
+throttling, and CMS server failures retry up to
+`CMSQI_INGESTION_RUN_MAX_ATTEMPTS` (3 by default), with a short configurable
+backoff. The page refreshes progress while that run is active and preserves
+attempt counts, timestamped source-level stages, final outcomes, and errors in
+run history. Permanent and exhausted failures are marked for administrator
+attention.
+**Force reprocess** reruns text extraction and private normalization for identical
+bytes while retaining every prior extraction, review, and published field.
+**Normalize candidates** applies deterministic field rules to
 the latest successful extraction and may stage exact identity matches in the
 private review queue. **Inspect candidates** shows unresolved fields. When the
 optional provider is configured, **Clarify with AI** searches additional active

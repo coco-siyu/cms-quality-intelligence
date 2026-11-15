@@ -8,12 +8,19 @@ from sqlalchemy.orm import Session
 
 from app.config import Settings
 from app.domain import SourceCheckOutcome, SourceExtractionStatus
-from app.models import SourceCheck, SourceDocument, SourceExtraction, SourceRevision
+from app.models import (
+    SourceCheck,
+    SourceDocument,
+    SourceExtraction,
+    SourceNormalization,
+    SourceRevision,
+)
 from app.services.source_ingestion import (
     SourceFetchError,
     extract_pdf,
     fetch_registered_source,
 )
+from app.services.source_normalization import normalize_extraction
 from app.services.source_registry import SourceRegistryError, validate_official_cms_url
 
 
@@ -111,6 +118,10 @@ def test_html_checks_preserve_revisions_and_forced_extraction_history(
             force=False,
             client=client,
         )
+        assert first.extraction is not None
+        first_normalization = normalize_extraction(
+            session, first.extraction, created_by="reviewer"
+        )
         unchanged = fetch_registered_source(
             session,
             source,
@@ -127,6 +138,10 @@ def test_html_checks_preserve_revisions_and_forced_extraction_history(
             force=True,
             client=client,
         )
+        assert forced.extraction is not None
+        forced_normalization = normalize_extraction(
+            session, forced.extraction, created_by="reviewer"
+        )
     session.commit()
 
     assert first.outcome == SourceCheckOutcome.NEW_REVISION
@@ -135,6 +150,10 @@ def test_html_checks_preserve_revisions_and_forced_extraction_history(
     assert forced.outcome == SourceCheckOutcome.REPROCESSED
     assert session.query(SourceRevision).count() == 1
     assert session.query(SourceExtraction).count() == 2
+    assert session.query(SourceNormalization).count() == 2
+    assert first_normalization.id != forced_normalization.id
+    assert first_normalization.source_extraction.forced is False
+    assert forced_normalization.source_extraction.forced is True
     assert forced.extraction is not None
     assert [segment.locator for segment in forced.extraction.segments] == [
         "HTML heading: Quality requirements",

@@ -251,6 +251,11 @@ export function AdminSourcesPage() {
                 <div className="ingestion-item-times">
                   <span>Started {formatDate(item.started_at)}</span>
                   <span>{item.completed_at ? `Finished ${formatDate(item.completed_at)}` : "Not finished"}</span>
+                  <span>
+                    {item.attempt_count === 0
+                      ? `Up to ${item.max_attempts} attempts`
+                      : `${item.attempt_count} of ${item.max_attempts} attempts used`}
+                  </span>
                 </div>
                 <div className="ingestion-stage-trail" aria-label={`${item.source_id} processing history`}>
                   {item.events.map((event) => (
@@ -261,7 +266,14 @@ export function AdminSourcesPage() {
                     </div>
                   ))}
                 </div>
-                {item.error && <p className="ingestion-item-error" role="alert">{item.error}</p>}
+                {item.requires_attention && (
+                  <p className="ingestion-item-error" role="alert">
+                    {item.retry_exhausted
+                      ? "Automatic retries exhausted. Administrator action is required."
+                      : "Administrator action is required."}
+                  </p>
+                )}
+                {item.error && <p className="ingestion-item-error">{item.error}</p>}
               </li>
             ))}
           </ol>
@@ -416,7 +428,7 @@ export function AdminSourcesPage() {
                   disabled={mutationPending || !source.is_active || source.revision_count === 0}
                   onClick={() => checkSource.mutate({ sourceId: source.source_id, force: true })}
                 >
-                  <RotateCcw aria-hidden="true" /> Force re-extract
+                  <RotateCcw aria-hidden="true" /> Force reprocess
                 </Button>
                 <Button
                   variant="outline"

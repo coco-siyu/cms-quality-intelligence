@@ -1,5 +1,6 @@
 from collections.abc import Generator
 from datetime import UTC, datetime
+from types import SimpleNamespace
 
 import pytest
 from fastapi.testclient import TestClient
@@ -384,6 +385,53 @@ def test_admin_ingestion_run_requires_explicit_action_and_stays_private(
     assert listed.status_code == 200
     assert listed.json()["items"][0]["run_id"] == created.json()["run_id"]
     assert admin_client.get("/api/measures").json()["items"] == []
+
+
+def test_force_reprocess_runs_extraction_and_private_normalization(
+    admin_client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _login_admin(admin_client)
+    created = admin_client.post(
+        "/api/admin/sources",
+        headers={"X-CMSQI-Admin-Action": "source-registry"},
+        json={
+            "source_id": "CMS-FORCE-REPROCESS",
+            "title": "Official CMS force reprocess source",
+            "official_url": "https://www.cms.gov/quality/force-reprocess",
+            "source_format": "html",
+        },
+    )
+    assert created.status_code == 201
+
+    captured: dict[str, object] = {}
+    extraction = SimpleNamespace(status=SourceExtractionStatus.EXTRACTED)
+
+    def fake_fetch(*_args: object, **kwargs: object) -> SimpleNamespace:
+        captured["force"] = kwargs["force"]
+        return SimpleNamespace(extraction=extraction)
+
+    def fake_normalize(
+        _session: Session, value: object, *, created_by: str
+    ) -> SimpleNamespace:
+        captured["extraction"] = value
+        captured["created_by"] = created_by
+        return SimpleNamespace()
+
+    monkeypatch.setattr("app.api.sources.fetch_registered_source", fake_fetch)
+    monkeypatch.setattr("app.api.sources.normalize_extraction", fake_normalize)
+
+    response = admin_client.post(
+        "/api/admin/sources/CMS-FORCE-REPROCESS/check",
+        headers={"X-CMSQI-Admin-Action": "source-check"},
+        json={"force": True},
+    )
+
+    assert response.status_code == 200
+    assert captured == {
+        "force": True,
+        "extraction": extraction,
+        "created_by": "reviewer",
+    }
 
 
 def test_admin_can_normalize_an_extraction_without_publishing_candidates(

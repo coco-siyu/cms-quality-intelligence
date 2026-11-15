@@ -246,6 +246,15 @@ def test_initial_migration_builds_and_reverts_schema(
         "published_at",
         "published_by",
     }.issubset(candidate_columns)
+    ingestion_item_columns = {
+        column["name"] for column in inspect(engine).get_columns("ingestion_run_items")
+    }
+    assert {
+        "attempt_count",
+        "max_attempts",
+        "retry_exhausted",
+        "requires_attention",
+    }.issubset(ingestion_item_columns)
     comparison_field_columns = {
         column["name"] for column in inspect(engine).get_columns("measure_comparison_fields")
     }

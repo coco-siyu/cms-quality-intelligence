@@ -1234,6 +1234,10 @@ describe("private admin review workspace", () => {
           stage: "downloading",
           source_check_id: null,
           source_check_outcome: null,
+          attempt_count: 1,
+          max_attempts: 3,
+          retry_exhausted: false,
+          requires_attention: false,
           started_at: "2026-10-26T12:10:00Z",
           completed_at: null,
           error: null,
@@ -1324,6 +1328,20 @@ describe("private admin review workspace", () => {
       expect(JSON.parse(String(checkCall?.[1]?.body))).toEqual({ force: false });
     });
 
+    const forceReprocess = screen.getByRole("button", { name: "Force reprocess" });
+    await waitFor(() => expect(forceReprocess).toBeEnabled());
+    fireEvent.click(forceReprocess);
+    await waitFor(() => {
+      const forceCall = fetchMock.mock.calls.find(
+        ([input, init]) =>
+          String(input).endsWith("/CMS-PY2026-APP-REQ/check") &&
+          JSON.parse(String(init?.body)).force === true,
+      );
+      expect(forceCall?.[1]?.headers).toMatchObject({
+        "X-CMSQI-Admin-Action": "source-check",
+      });
+    });
+
     fireEvent.click(screen.getByRole("button", { name: "Normalize candidates" }));
     await waitFor(() => {
       const normalizationCall = fetchMock.mock.calls.find(([input]) =>
@@ -1359,6 +1377,10 @@ describe("private admin review workspace", () => {
       stage: "unchanged",
       source_check_id: "CMS-CHECK-COMPLETE",
       source_check_outcome: "unchanged",
+      attempt_count: 1,
+      max_attempts: 3,
+      retry_exhausted: false,
+      requires_attention: false,
       started_at: "2026-10-26T12:00:00Z",
       completed_at: "2026-10-26T12:00:02Z",
       error: null,
@@ -1399,6 +1421,9 @@ describe("private admin review workspace", () => {
             stage: "failed",
             source_check_id: "CMS-CHECK-FAILED",
             source_check_outcome: "failed",
+            attempt_count: 3,
+            retry_exhausted: true,
+            requires_attention: true,
             error: "CMS returned HTTP 503 while retrieving the document.",
             events: [
               {
@@ -1427,6 +1452,7 @@ describe("private admin review workspace", () => {
             stage: "extracting",
             source_check_id: null,
             source_check_outcome: null,
+            attempt_count: 1,
             completed_at: null,
             events: [
               {
@@ -1472,6 +1498,10 @@ describe("private admin review workspace", () => {
       screen.getByText("CMS returned HTTP 503 while retrieving the document.", {
         selector: ".ingestion-item-error",
       }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("3 of 3 attempts used")).toBeInTheDocument();
+    expect(
+      screen.getByText("Automatic retries exhausted. Administrator action is required."),
     ).toBeInTheDocument();
     expect(screen.getByText("1 failed")).toBeInTheDocument();
   });

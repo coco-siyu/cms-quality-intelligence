@@ -670,6 +670,10 @@ class IngestionRunItem(Base):
         UniqueConstraint("ingestion_run_id", "sequence"),
         UniqueConstraint("ingestion_run_id", "source_document_id"),
         CheckConstraint("sequence >= 1"),
+        CheckConstraint("attempt_count >= 0"),
+        CheckConstraint("max_attempts >= 1"),
+        CheckConstraint("max_attempts <= 5"),
+        CheckConstraint("attempt_count <= max_attempts"),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -684,6 +688,10 @@ class IngestionRunItem(Base):
         ForeignKey("source_checks.id", ondelete="RESTRICT")
     )
     sequence: Mapped[int] = mapped_column(Integer)
+    attempt_count: Mapped[int] = mapped_column(Integer, default=0)
+    max_attempts: Mapped[int] = mapped_column(Integer, default=3)
+    retry_exhausted: Mapped[bool] = mapped_column(Boolean, default=False)
+    requires_attention: Mapped[bool] = mapped_column(Boolean, default=False)
     stage: Mapped[IngestionItemStage] = mapped_column(
         ingestion_item_stage_enum, default=IngestionItemStage.PENDING, index=True
     )

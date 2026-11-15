@@ -1,6 +1,7 @@
 from functools import lru_cache
 from pathlib import Path
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 REPOSITORY_ENV_FILE = Path(__file__).resolve().parents[2] / ".env"
@@ -27,6 +28,8 @@ class Settings(BaseSettings):
     source_fetch_max_bytes: int = 25 * 1024 * 1024
     source_fetch_max_redirects: int = 5
     ingestion_run_max_sources: int = 25
+    ingestion_run_max_attempts: int = Field(default=3, ge=1, le=5)
+    ingestion_retry_backoff_seconds: float = Field(default=1.0, ge=0, le=60)
     openai_api_key: str | None = None
     ai_clarification_model: str | None = None
     ai_clarification_timeout_seconds: float = 45.0

@@ -38,11 +38,19 @@ REDIRECT_STATUSES = {301, 302, 303, 307, 308}
 
 
 class SourceFetchError(RuntimeError):
-    def __init__(self, code: str, message: str, check: SourceCheck) -> None:
+    def __init__(
+        self,
+        code: str,
+        message: str,
+        check: SourceCheck,
+        *,
+        retryable: bool = False,
+    ) -> None:
         super().__init__(message)
         self.code = code
         self.message = message
         self.check = check
+        self.retryable = retryable
 
 
 @dataclass(frozen=True)
@@ -252,6 +260,15 @@ def _content_kind(content: bytes, mime_type: str) -> str | None:
     return None
 
 
+def _is_retryable_fetch_error(error: Exception) -> bool:
+    if isinstance(error, httpx.TransportError):
+        return True
+    if isinstance(error, httpx.HTTPStatusError):
+        status_code = error.response.status_code
+        return status_code in {408, 425, 429} or status_code >= 500
+    return False
+
+
 def _record_failed_check(
     session: Session,
     source: SourceDocument,
@@ -353,7 +370,12 @@ def fetch_registered_source(
             forced=force,
             message=str(error),
         )
-        raise SourceFetchError("source_fetch_failed", str(error), check) from error
+        raise SourceFetchError(
+            "source_fetch_failed",
+            str(error),
+            check,
+            retryable=_is_retryable_fetch_error(error),
+        ) from error
     finally:
         if owns_client:
             http_client.close()

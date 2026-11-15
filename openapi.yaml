@@ -1355,8 +1355,10 @@ paths:
       summary: Check every active registered CMS source for updates.
       description: |
         Creates a durable private run before retrieval begins. Each source moves through
-        bounded download, extraction, content comparison, and verification staging. This
-        operation never publishes measure records.
+        bounded download, extraction, content comparison, and verification staging.
+        Temporary transport, throttling, and server failures retry up to the configured
+        attempt limit; permanent and exhausted failures require administrator attention.
+        This operation never publishes measure records.
       security:
         - AdminSessionCookie: []
       parameters:
@@ -1461,7 +1463,8 @@ paths:
       description: |
         Every redirect is revalidated against the cms.gov allowlist. New content
         creates an immutable revision. Unchanged content creates only a check event;
-        force=true creates a new extraction for the existing revision.
+        force=true creates a new extraction and private normalization for the existing
+        revision while preserving earlier extraction, review, and publication history.
       security:
         - AdminSessionCookie: []
       parameters:
@@ -3461,6 +3464,10 @@ components:
         - stage
         - source_check_id
         - source_check_outcome
+        - attempt_count
+        - max_attempts
+        - retry_exhausted
+        - requires_attention
         - started_at
         - completed_at
         - error
@@ -3477,6 +3484,10 @@ components:
           oneOf:
             - $ref: "#/components/schemas/SourceCheckOutcome"
             - type: "null"
+        attempt_count: {type: integer, minimum: 0}
+        max_attempts: {type: integer, minimum: 1}
+        retry_exhausted: {type: boolean}
+        requires_attention: {type: boolean}
         started_at: {type: [string, "null"], format: date-time}
         completed_at: {type: [string, "null"], format: date-time}
         error: {type: [string, "null"]}

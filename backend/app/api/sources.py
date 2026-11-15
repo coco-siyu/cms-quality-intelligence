@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.auth import AdminIdentity, require_admin
 from app.config import Settings, get_settings
 from app.database import get_db
+from app.domain import SourceExtractionStatus
 from app.repositories.ingestion_runs import (
     get_ingestion_run,
     ingestion_run_response,
@@ -209,6 +210,7 @@ def create_admin_ingestion_run(
             session,
             created_by=admin.username,
             max_sources=settings.ingestion_run_max_sources,
+            max_attempts=settings.ingestion_run_max_attempts,
         )
         run_id = run.run_id
         session.commit()
@@ -347,18 +349,30 @@ def check_admin_source(
     if source is None:
         raise _not_found(source_id)
     try:
-        fetch_registered_source(
+        check = fetch_registered_source(
             session,
             source,
             settings=settings,
             checked_by=admin.username,
             force=request.force,
         )
+        if (
+            request.force
+            and check.extraction is not None
+            and check.extraction.status == SourceExtractionStatus.EXTRACTED
+        ):
+            normalize_extraction(session, check.extraction, created_by=admin.username)
     except SourceFetchError as error:
         session.commit()
         status_code = 409 if error.code == "source_inactive" else 502
         raise HTTPException(
             status_code=status_code,
+            detail={"code": error.code, "message": error.message, "details": []},
+        ) from error
+    except SourceNormalizationError as error:
+        session.commit()
+        raise HTTPException(
+            status_code=409,
             detail={"code": error.code, "message": error.message, "details": []},
         ) from error
     session.commit()

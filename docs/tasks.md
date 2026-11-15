@@ -49,11 +49,11 @@
   and keeps each record private until a separate publication action succeeds.
   The two one-sided roster records remain explicitly skipped rather than being
   inferred as additions or removals. Tasks
-  44–46 and 48–49 provide AI
-  clarification, durable ingestion progress, manual review, and the safe
-  partial-publication slice. Task 50 now marks source-dependent versions,
+  44–49 provide AI clarification, durable ingestion progress, bounded recovery,
+  force reprocessing, manual review, and the safe partial-publication slice.
+  Task 50 now marks source-dependent versions,
   pending candidates, completed draft reviews, comparison evidence, and impact
-  explanations stale when a new revision is detected. Task 47 remains open.
+  explanations stale when a new revision is detected.
   Task 31 now renders exact,
   evidence-backed side-by-side comparisons when the public API has an approved
   record, with an explicit reference-only fallback when it does not.
@@ -506,7 +506,7 @@ another run is active, and the configurable active-source limit fails closed
 instead of silently processing a partial registry. This task does not
 publish records, invoke optional AI, retry failures, or implement M2 semantic
 measure comparison. Detailed progress/error presentation and bounded retries
-remain Tasks 46–47.
+are implemented separately by Tasks 46–47.
 
 ## 46. Add ingestion progress and error states to admin UI
 Goal: Explain what each document is doing and why it failed.
@@ -519,12 +519,24 @@ overall progress, start/finish timestamps, each document's current stage, its fu
 timestamped stage trail, and the stored reason for failure. Completed,
 completed-with-errors, interrupted, and still-running work have distinct states.
 Unexpected processing exceptions are persisted as interrupted runs, with the
-active document marked failed when one was in progress. This task intentionally
-does not add retries or new force-reprocess behavior; those remain Task 47.
+active document marked failed when one was in progress. This task itself does
+not add retries or force-reprocess behavior; Task 47 now supplies them.
 
 ## 47. Add bounded retries and force-reprocess controls
 Goal: Recover transient source failures without unnecessary work.
 Description: Retry temporary network or processing errors a limited number of times and report failures requiring admin attention. Provide a protected force-reprocess control for an existing source revision while preserving its previous verified output and review history.
+
+Implementation status (complete for MVP, 2026-11-15): Registry-wide ingestion
+now records a configurable per-source attempt limit and automatically retries
+temporary transport failures, HTTP 408/425/429 responses, and CMS 5xx responses
+with bounded backoff. Permanent URL, size, redirect, content-format, extraction,
+and normalization failures stop without wasteful retries. Each private run item
+exposes attempts used, its snapshotted limit, retry exhaustion, and explicit
+administrator-attention state alongside its append-only stage trail. The protected
+**Force reprocess** action creates a new extraction and normalization for the
+existing immutable source revision; previous extractions, candidate reviews, and
+published fields remain intact. Neither automatic retries nor force reprocessing
+approve or publish data.
 
 ## 48. Build the editable change verification queue
 Goal: Let the admin correct AI-extracted records before publication.
@@ -828,11 +840,12 @@ proxying.
 Goal: Reject changes that break the application or its safety boundaries.
 Description: Configure GitHub Actions to run backend unit/integration tests, frontend tests/build, API contract checks, and baseline security scans on pull requests. Keep cloud secrets out of PR workflows and document how to reproduce failures locally.
 
-Implementation status (implemented, hosted verification pending, 2026-10-27): GitHub Actions now runs
+Implementation status (complete, hosted verification passed 2026-11-15): GitHub Actions now runs
 locked backend lint/tests including OpenAPI contract checks, frontend tests/lint/
 build, Compose validation, both image builds, and the repository credential
-guard. CodeQL and Dependabot provide the baseline hosted security layer. The
-workflow files must be pushed before their first hosted result can be reviewed.
+guard. CodeQL and Dependabot provide the baseline hosted security layer. All four
+CI jobs (backend, frontend, secret guard, and the Compose integration stack) pass
+on `main`; the hosted run also gates Render auto-deployment.
 
 ## 66. Deploy and verify the public demo
 Goal: Publish a reliable portfolio-accessible application.

@@ -719,6 +719,10 @@ class AdminIngestionItemResponse(BaseModel):
     stage: IngestionItemStage
     source_check_id: str | None
     source_check_outcome: SourceCheckOutcome | None
+    attempt_count: int
+    max_attempts: int
+    retry_exhausted: bool
+    requires_attention: bool
     started_at: datetime | None
     completed_at: datetime | None
     error: str | None
