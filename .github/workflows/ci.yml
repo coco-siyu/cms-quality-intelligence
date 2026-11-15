@@ -22,6 +22,8 @@ jobs:
           enable-cache: true
       - name: Install locked dependencies
         run: uv sync --frozen
+      - name: Audit backend dependencies
+        run: uv run pip-audit --local --skip-editable --progress-spinner off
       - name: Lint backend
         run: uv run ruff check .
       - name: Test backend and API contract
@@ -41,6 +43,8 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - name: Install locked dependencies
         run: npm ci
+      - name: Audit production frontend dependencies
+        run: npm audit --omit=dev --audit-level=moderate
       - name: Test frontend
         run: npm test
       - name: Lint frontend

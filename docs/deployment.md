@@ -74,6 +74,18 @@ minute to wake. The free database is limited to 1 GB, has no backups, and expire
 retained or upgrade/migrate the database. Never represent the preview as a
 durable production deployment.
 
+Run the complete public-preview verification at any time with:
+
+```sh
+make verify-preview
+```
+
+In addition to the basic smoke test, this checks the eight published identities,
+fourteen year memberships, absence of `DEMO-*` records, two official CMS roster
+references for each checked year, unauthenticated Admin rejection, and the
+HTTP-to-HTTPS redirect. It prints a roster fingerprint and last-verified marker
+that can be compared before and after a controlled application restart.
+
 ## Recommended layouts
 
 Choose one of these without changing application behavior:
@@ -135,7 +147,7 @@ normal revert commit on `main`; do not rewrite shared history.
 - [x] Public API returns the eight roster identities and 14 memberships after bootstrap.
 - [x] `/api/admin/...` returns `401` without an authenticated session.
 - [x] Admin authentication uses a Secure, HttpOnly, SameSite=Lax cookie.
-- [ ] Database data persists after an application restart.
+- [x] Database data persists after an application restart.
 - [x] Each published roster record exposes two official CMS evidence references.
 - [x] No `.env`, private key, production credential, private draft response, or
   internal review response is public. The disposable Zoomcamp preview login is
@@ -150,7 +162,19 @@ Complete this only after deployment:
 | --- | --- |
 | Public URL | `https://cms-quality-intelligence-web.onrender.com` |
 | API URL | `https://cms-quality-intelligence-api.onrender.com` |
-| Verified application revision | `92212ad` |
+| Last dashboard-confirmed application revision | `9096087` |
 | Deployment environment | Render Free: Nginx/React, FastAPI, PostgreSQL 16 |
-| Verified at | 2026-10-28 02:45 UTC |
-| Verified by | Automated checks, public boundary probes, and authenticated UI review |
+| Latest public verification | 2026-11-15 19:08 UTC |
+| Verified by | `make verify-preview`, a controlled Render API restart, public boundary probes, and prior authenticated UI review |
+
+The November 15 public verification passed with eight measures, fourteen
+memberships, CMS-only roster evidence, working same-origin proxying, and a `401`
+for an unauthenticated private request. A controlled restart of only the Render
+API service completed successfully. The post-restart verification retained the
+same roster fingerprint
+`d6c2fcfdfc6ff0cbe50010e18d13f3f9a7367c4e05d99991671fbd98679a3209` and
+the same `2026-10-18T18:54:47Z` last-verified marker, demonstrating that the
+published roster persisted in the separate PostgreSQL service rather than being
+regenerated during application startup. The live comparison endpoint still
+returns zero published records, so the preview has not yet received the current
+local comparison/export/security work.

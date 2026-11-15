@@ -499,6 +499,39 @@ describe("public frontend API integration", () => {
     expect(screen.queryByText("Breast Cancer Screening")).not.toBeInTheDocument();
   });
 
+  it("renders API text as text instead of executable markup", async () => {
+    const unsafeName = '<img src="x" onerror="window.__cmsqiXss = true">';
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.includes("/api/performance-years")) {
+          return Promise.resolve(jsonResponse(performanceYears));
+        }
+        if (url.includes("/api/measures?")) {
+          return Promise.resolve(
+            jsonResponse({
+              items: [{ ...summary, name: unsafeName }],
+              pagination: {
+                page: 1,
+                page_size: 100,
+                total_items: 1,
+                total_pages: 1,
+              },
+            }),
+          );
+        }
+        return apiFetch(input);
+      }),
+    );
+
+    await renderApiRoute("/measures?from=2025&to=2026");
+
+    expect(await screen.findByText(unsafeName)).toBeVisible();
+    expect(document.querySelector('img[src="x"]')).toBeNull();
+    expect((window as Window & { __cmsqiXss?: boolean }).__cmsqiXss).toBeUndefined();
+  });
+
   it("downloads the server-filtered public comparison CSV", async () => {
     const fetchMock = vi.fn((input: RequestInfo | URL) => {
       const url = String(input);

@@ -2,7 +2,7 @@ SHELL := /bin/bash
 
 .DEFAULT_GOAL := help
 
-.PHONY: help setup db dev containers container-logs stop seed preview-data admin-credentials smoke integration-test check security-check backend-check frontend-check
+.PHONY: help setup db dev containers container-logs stop seed preview-data admin-credentials smoke verify-preview integration-test check security-check security-audit backend-check frontend-check
 
 help:
 	@echo "CMS Quality Intelligence local commands"
@@ -15,8 +15,10 @@ help:
 	@echo "  make containers         Build and start the complete containerized application"
 	@echo "  make container-logs     Follow logs from the containerized application"
 	@echo "  make smoke              Check frontend, API, and database-backed endpoint"
+	@echo "  make verify-preview     Verify the deployed Render public preview"
 	@echo "  make integration-test   Test the isolated three-service Compose stack"
 	@echo "  make security-check     Check tracked files for common credential leaks"
+	@echo "  make security-audit     Scan secrets and production dependency advisories"
 	@echo "  make stop               Stop all Docker Compose services"
 	@echo "  make check              Run backend and frontend verification"
 
@@ -50,6 +52,11 @@ container-logs:
 smoke:
 	./scripts/smoke.sh
 
+verify-preview:
+	CMSQI_SMOKE_FRONTEND_URL=https://cms-quality-intelligence-web.onrender.com \
+	CMSQI_SMOKE_API_URL=https://cms-quality-intelligence-api.onrender.com \
+	./scripts/verify-preview.sh
+
 integration-test: .env
 	./scripts/test-compose.sh
 
@@ -73,6 +80,10 @@ check: security-check backend-check frontend-check
 
 security-check:
 	./scripts/check-secrets.sh
+
+security-audit: security-check
+	cd backend && uv run pip-audit --local --skip-editable --progress-spinner off
+	cd frontend && npm audit --omit=dev --audit-level=moderate
 
 backend-check:
 	cd backend && uv run ruff check app tests

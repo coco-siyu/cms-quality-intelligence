@@ -800,12 +800,17 @@ guard command.
 Goal: Prevent exposure of credentials or internal review data.
 Description: Test backend authorization, official-source URL restrictions, safe document retrieval, output encoding, and private/public record separation; run a dependency and secret scan. Document findings and fixes in `security/` with a no-PHI and AI tool/data policy.
 
-Implementation status (partially complete, 2026-10-27): Authorization, private/
-public isolation, and bounded source retrieval have automated backend coverage.
-The local credential guard passed, CodeQL is configured for Python and
-JavaScript/TypeScript, Dependabot monitors application/images/actions, and
-`security/README.md` records the policies and evidence. The first hosted CodeQL
-and dependency-monitoring results require a push before this task is verified.
+Implementation status (complete, 2026-11-14): Authorization, private/public
+isolation, CMS-only HTTPS source retrieval, redirect revalidation, bounded
+downloads, content-type handling, and inert browser rendering of API-provided
+markup have automated coverage. `make security-audit` now runs the credential
+guard plus Python and production npm advisory scans, and CI enforces both
+dependency audits on pushes and pull requests. The audit remediated vulnerable
+locked versions of pypdf, certifi, opentelemetry-api, and seroval without
+expanding their declared compatibility ranges. The dated report in `security/`
+records commands, results, the remaining development-only lint-tool advisories,
+and the no-PHI and AI data-use policy. CodeQL and Dependabot remain configured
+for hosted static analysis and ongoing dependency monitoring.
 
 ## 64. Compose the full local application
 Goal: Bring frontend, backend, and database up with one command.
@@ -833,15 +838,19 @@ workflow files must be pushed before their first hosted result can be reviewed.
 Goal: Publish a reliable portfolio-accessible application.
 Description: Select low-cost managed hosting or a single cloud VM based on actual operating costs, then deploy public React/FastAPI services and a persistent database. Verify HTTPS, public read access, protected admin operations, source links, and database persistence after restart; record the live URL and deployment steps.
 
-Implementation status (public preview deployed, production verification pending,
-2026-10-27): Render Free hosts the React/Nginx frontend, FastAPI API, and a
-private-network PostgreSQL 16 database. HTTPS redirects, direct SPA routes,
-same-origin API proxying, API health, the eight-measure published roster,
-two-source public evidence, the populated private review queue, authenticated
-Admin access, and unauthenticated Admin rejection pass at revision `92212ad`.
-Restart persistence independent of the idempotent bootstrap and the remaining
-manual production checks are still open; the free database is temporary and is
-not a production durability claim.
+Implementation status (complete, 2026-11-15): Render Free hosts the
+React/Nginx frontend, FastAPI API, and a
+private-network PostgreSQL 16 database. `make verify-preview` now reproduces the
+live checks for HTTPS redirect, direct SPA routes, same-origin API proxying, API
+health, eight published measures, fourteen memberships, CMS-only two-source
+roster evidence, absence of fictional public fixtures, and unauthenticated Admin
+rejection. Those checks passed before and after a controlled API-only restart;
+the roster fingerprint and last-verified marker remained identical, confirming
+that the published data persisted in PostgreSQL independently of the idempotent
+bootstrap. The preview currently returns no published comparison records and
+therefore has not yet received the current local comparison/export/security
+work. Render Free's temporary database is still a preview constraint, not a
+production durability claim.
 
 ## 67. Document the AI-assisted development workflow
 Goal: Show how AI tools were used and checked for the Zoomcamp rubric.
