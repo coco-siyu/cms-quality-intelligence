@@ -860,10 +860,10 @@ roster evidence, absence of fictional public fixtures, and unauthenticated Admin
 rejection. Those checks passed before and after a controlled API-only restart;
 the roster fingerprint and last-verified marker remained identical, confirming
 that the published data persisted in PostgreSQL independently of the idempotent
-bootstrap. The preview currently returns no published comparison records and
-therefore has not yet received the current local comparison/export/security
-work. Render Free's temporary database is still a preview constraint, not a
-production durability claim.
+bootstrap. After the final release deployed, an authenticated human review and
+separate publication action added one evidence-gated Quality ID 001 comparison
+to the public endpoint. Render Free's temporary database is still a preview
+constraint, not a production durability claim.
 
 ## 67. Document the AI-assisted development workflow
 Goal: Show how AI tools were used and checked for the Zoomcamp rubric.
@@ -890,6 +890,16 @@ Description: Document a reusable validation workflow and add a hook or guardrail
 Goal: Satisfy course security and DevOps evidence with real output.
 Description: Run an open-source PR/code audit, deterministic security checks, and an operational health or failure-diagnosis check against this repository. Save actual tool versions, commands, findings, triage decisions, and remediation notes under `security/` and `ops/` rather than fabricating clean reports.
 
+Implementation status (complete, 2026-11-15): Ran Bandit 1.9.4 against the
+backend, current Python and npm advisory scans, the repository secret guard,
+exact-revision GitHub CI and CodeQL verification, and the live Render preview
+check. The dated `security/` report preserves one medium and 13 low Bandit
+findings, seven development-only npm advisories, triage decisions, and the GitHub
+alert-list permission limitation rather than claiming a clean report. The dated
+`ops/` report records the live deployment, first public comparison, clean-clone
+test results, and a reproduced crash in the host's obsolete Docker Compose RC
+plugin with a concrete upgrade and retest path.
+
 ## 72. Create a final reproducibility and submission guide
 Goal: Enable a new reviewer to run and assess the finished MVP.
 Description: Update `README.md` with problem statement, architecture, setup, migrations, test commands, environment-variable template, deployment/demo URL, and known limitations. Add a concise rubric-evidence index and verify the instructions from a clean checkout before calling the release complete.
@@ -898,6 +908,17 @@ Implementation status (partially complete, 2026-10-27): The README, architecture
 AI-development record, deployment checklist, container workflow, and Zoomcamp
 evidence index are present. Clean-host container verification, a deployed demo
 URL, and a final official-rubric recheck remain required.
+
+Implementation status (complete, 2026-11-15): Added a final reproducibility
+guide and updated the README, deployment record, and Zoomcamp evidence index with
+the problem boundary, architecture links, locked setup, migrations, test and
+security commands, environment template, public URLs, reviewer path, and known
+limitations. A fresh temporary clone installed both lockfiles and passed the
+secret guard, Ruff, 242 backend tests, 42 frontend tests, ESLint, and the
+production build. GitHub's clean runner passed the exact revision's container
+integration job. The official 2026 course repository was rechecked and linked;
+it still warns that requirements may change, so one submission-day check remains
+an operational step rather than an undocumented assumption.
 
 ## Post-MVP — Explicitly Deferred (Do Not Block Initial Release)
 

@@ -32,6 +32,10 @@ guard and production dependency scans pass after the recorded lockfile updates.
 CodeQL and Dependabot remain the hosted follow-up layer; do not describe a
 hosted run as passing without checking its GitHub result for the relevant commit.
 
+Task 71's release audit, including Bandit output, current dependency results,
+hosted workflow links, residual findings, and triage decisions, is recorded in
+[`task-71-audit-2026-11-15.md`](task-71-audit-2026-11-15.md).
+
 ## Human checks before release
 
 - Review generated dependency updates rather than merging them automatically.

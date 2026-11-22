@@ -162,19 +162,16 @@ Complete this only after deployment:
 | --- | --- |
 | Public URL | `https://cms-quality-intelligence-web.onrender.com` |
 | API URL | `https://cms-quality-intelligence-api.onrender.com` |
-| Last dashboard-confirmed application revision | `9096087` |
+| Last dashboard-confirmed application revision | `80db70b` |
 | Deployment environment | Render Free: Nginx/React, FastAPI, PostgreSQL 16 |
-| Latest public verification | 2026-11-15 19:08 UTC |
-| Verified by | `make verify-preview`, a controlled Render API restart, public boundary probes, and prior authenticated UI review |
+| Latest public verification | 2026-11-15 23:17 UTC |
+| Verified by | `make verify-preview`, exact-commit Render dashboards, public comparison probe, and authenticated publication workflow |
 
 The November 15 public verification passed with eight measures, fourteen
 memberships, CMS-only roster evidence, working same-origin proxying, and a `401`
-for an unauthenticated private request. A controlled restart of only the Render
-API service completed successfully. The post-restart verification retained the
-same roster fingerprint
-`d6c2fcfdfc6ff0cbe50010e18d13f3f9a7367c4e05d99991671fbd98679a3209` and
-the same `2026-10-18T18:54:47Z` last-verified marker, demonstrating that the
-published roster persisted in the separate PostgreSQL service rather than being
-regenerated during application startup. The live comparison endpoint still
-returns zero published records, so the preview has not yet received the current
-local comparison/export/security work.
+for an unauthenticated private request. The API and frontend dashboards both
+showed revision `80db70b` live. After an authenticated human approval and a
+separate publication action, the live comparison endpoint returned one verified
+record for Quality ID 001. The latest roster response fingerprint was
+`8243a53c7ccaad91a8cc1faa998f20b7d40cb1c7c8fa7b04802c069ebb53e795`; its
+`2026-10-18T18:54:47Z` last-verified marker remained unchanged.

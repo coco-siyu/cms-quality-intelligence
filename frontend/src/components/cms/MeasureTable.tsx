@@ -47,7 +47,7 @@ export function MeasureTable({
           <Search size={15} />
           <Input
             aria-label="Search measures"
-            placeholder="Search by ID, name, or description"
+            placeholder="Search ID, name, or description"
             type="search"
             value={filters.q}
             onChange={(event) => onFiltersChange({ q: event.target.value })}

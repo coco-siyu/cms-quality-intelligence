@@ -17,6 +17,8 @@ trust decisions, processing flow, and local/deployed runtime layouts.
 See [`docs/deployment.md`](docs/deployment.md) for the local container workflow,
 the Render Free preview procedure, required secrets, and public verification
 checklist.
+See [`docs/reproducibility.md`](docs/reproducibility.md) for the clean-checkout
+review path, release evidence, rubric index, and known limitations.
 
 ## Current status
 
@@ -135,6 +137,24 @@ production system. The Admin workspace contains no patient-level data, but it
 does include writable review controls; reviewers should inspect the workflow
 without approving, publishing, or changing source records. The credential must
 be rotated or removed after the course review period.
+
+The public preview currently includes eight verified roster measures and one
+human-reviewed, evidence-backed PY2025–PY2026 comparison for Quality ID 001.
+Detailed clinical fields and the other prepared comparisons remain private.
+
+### Release scope and limitations
+
+- Quality IDs 113 and 484 remain unclassified one-sided records; absence from
+  PY2025 is not treated as proof that CMS added them in PY2026.
+- Optional AI generation is disabled without a configured provider and never
+  bypasses human review or the separate publication action.
+- Render Free is a disposable preview that can sleep and has no durable backup
+  guarantee. The public demo credential must be rotated after course review.
+- Scheduled source checks, production observability, backup drills, and the
+  development-agent extension tasks are post-MVP work.
+
+The complete reviewer path and environment-specific limitations are in
+[`docs/reproducibility.md`](docs/reproducibility.md).
 
 ## Quick local start
 
@@ -399,5 +419,10 @@ source-backed and admin-verified before being exposed as verified data.
   Codex, automated checks, and human review were used.
 - [`docs/deployment.md`](docs/deployment.md) defines production settings and the
   public verification checklist and records the tested Render Free preview URLs.
+- [`docs/reproducibility.md`](docs/reproducibility.md) provides the final
+  clean-checkout workflow, reviewer path, rubric index, and limitations.
+- [`security/task-71-audit-2026-11-15.md`](security/task-71-audit-2026-11-15.md)
+  and [`ops/release-diagnosis-2026-11-15.md`](ops/release-diagnosis-2026-11-15.md)
+  preserve the actual release audit and operational diagnosis.
 - [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs backend, frontend,
   contract, and image-build checks for pushes and pull requests.

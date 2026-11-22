@@ -1,12 +1,14 @@
 # AI Dev Tools Zoomcamp submission evidence
 
-Status date: October 28, 2026
+Status date: November 15, 2026
 
-The current course repository describes the final project as an end-to-end
-application with a clear problem, frontend, backend, API contract, persistence,
-tests, containerization, deployment, and documentation of the AI-assisted
-workflow. The official 2026 materials may still change, so this checklist must be
-compared with the final submission page before submission.
+The official
+[2026 course repository](https://github.com/DataTalksClub/ai-dev-tools-zoomcamp)
+describes the final project as an end-to-end application with a clear problem,
+frontend, backend, API contract, persistence, tests, containerization, public
+deployment, and documentation of the AI-assisted workflow. It also warns that
+2026 details may still change, so compare this checklist with the final
+submission page immediately before submission.
 
 ## Requirement map
 
@@ -21,8 +23,8 @@ compared with the final submission page before submission.
 | Containerization | Backend/frontend Dockerfiles and full `compose.yaml` stack | Complete; both images and the full local smoke check passed October 27, 2026 |
 | Public deployment | `docs/deployment.md` | Render Free preview live; automated public smoke and access-boundary checks pass |
 | AI-assisted workflow documentation | `AGENTS.md` and `docs/ai-development.md` | Complete |
-| Reproducible reviewer instructions | `README.md`, Makefile, smoke script, this guide | Complete locally and exercised against the public preview |
-| CI and baseline security | GitHub Actions, CodeQL, Dependabot, `security/README.md` | Hosted CI and CodeQL pass on application revision `93a9826` |
+| Reproducible reviewer instructions | `README.md`, `docs/reproducibility.md`, Makefile | Clean-clone `make check` passed; exact-commit hosted container job passed |
+| CI and baseline security | GitHub Actions, CodeQL, Dependabot, `security/`, `ops/` | Hosted CI and CodeQL pass on deployed revision `80db70b`; dated findings are preserved |
 
 ## Useful review commands
 
@@ -51,9 +53,11 @@ The demo must not describe unreviewed CMS candidates as verified production data
 
 ## Remaining submission blockers
 
-1. Verify database persistence after a controlled Render restart independently
-   of the idempotent preview bootstrap.
-2. Recheck the official rubric and submission deadline.
-3. For the certificate path, complete the course's required peer reviews.
+1. Recheck the official rubric and submission deadline because the course marks
+   the 2026 details as subject to change.
+2. For the certificate path, complete the course's required peer reviews.
+3. Upgrade the affected Mac's obsolete Docker Compose RC plugin before repeating
+   local container QA; the exact-commit GitHub container job is currently the
+   clean-host container evidence.
 4. Rotate or remove the intentionally public preview login after the review
    period.
